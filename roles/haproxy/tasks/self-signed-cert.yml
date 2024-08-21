@@ -1,0 +1,43 @@
+- name: Generate an empty temp file for CSR
+  ansible.builtin.file:
+    path: /tmp/haproxy-selfsigned.csr
+    state: touch
+    owner: haproxy
+    group: haproxy
+    mode: "0400"
+  register: temp_file
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: /etc/ssl/private/haproxy-selfsigned.key
+    type: Ed25519
+    state: present
+- name: Generate CA CSR to provide ALT names and other options
+  community.crypto.openssl_csr:
+    basicConstraints_critical: true
+    basic_constraints:
+      - CA:TRUE
+    common_name: haproxy-selfsigned
+    keyUsage_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    path: "{{ temp_file.dest }}"
+    privatekey_path: /etc/ssl/private/haproxy-selfsigned.key
+    state: present
+- name: Generate CA certificate
+  community.crypto.x509_certificate:
+    path: /etc/ssl/certs/haproxy-selfsigned.crt
+    privatekey_path: /etc/ssl/private/haproxy-selfsigned.key
+    csr_path: "{{ temp_file.dest }}"
+    provider: selfsigned
+    state: present
+- name: Copy HAProxy format cert to cert dir
+  ansible.builtin.copy:
+    content: |
+      {{ lookup('file', '/etc/ssl/certs/haproxy-selfsigned.crt') }}
+      {{ lookup('file', '/etc/ssl/private/haproxy-selfsigned.key') }}
+    dest: /etc/haproxy/certs/haproxy-selfsigned.pem
+    remote_src: true
+    owner: haproxy
+    group: haproxy
+    mode: "0600"
