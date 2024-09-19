@@ -1,5 +1,2 @@
-cache_valid_time: 86400
-generate_selfsigned_certificate: true
-haproxy_version: 2.9
-tls_frontend_enabled: true
-tls_port: "{{ load_balancer_port | default(443) }}"
+haproxy_cache_valid_time: 86400
+haproxy_version: 3.0

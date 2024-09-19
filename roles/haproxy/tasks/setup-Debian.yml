@@ -3,7 +3,7 @@
     name: software-properties-common
     state: present
     update_cache: true
-    cache_valid_time: "{{ cache_valid_time }}"
+    cache_valid_time: "{{ haproxy_cache_valid_time }}"
 - name: Add apt repository
   ansible.builtin.apt_repository:
     repo: "ppa:vbernat/haproxy-{{ haproxy_version }}"
@@ -13,26 +13,7 @@
     name: haproxy={{ haproxy_version }}.*
     state: present
     update_cache: true
-    cache_valid_time: "{{ cache_valid_time }}"
-- name: Create /etc/haproxy/certs dir
-  ansible.builtin.file:
-    path: /etc/haproxy/certs
-    owner: haproxy
-    group: haproxy
-    mode: "0755"
-    state: directory
-- name: Create a self-signed certificate
-  ansible.builtin.include_tasks: self-signed-cert.yml
-  when: generate_selfsigned_certificate
-  notify: Reload haproxy
-- name: Copy config file
-  ansible.builtin.template:
-    src: haproxy.cfg.j2
-    dest: /etc/haproxy/haproxy.cfg
-    owner: haproxy
-    group: haproxy
-    mode: "0644"
-  notify: Reload haproxy
+    cache_valid_time: "{{ haproxy_cache_valid_time }}"
 - name: Start the systemd service
   ansible.builtin.systemd:
     name: haproxy
