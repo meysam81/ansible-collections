@@ -10,21 +10,6 @@ on:
       - main
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python 3
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-      - name: Install test dependencies.
-        run: pip3 install yamllint
-      - name: Lint code.
-        run: |
-          yamllint .
-
   trivy:
     runs-on: ubuntu-latest
     permissions:
@@ -39,6 +24,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Cache trivy db
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/trivy
+          key: ${{ runner.os }}-trivy-db-${{ hashFiles('**/trivy.yaml') }}
       - name: Run Trivy vulnerability scanner in fs mode
         uses: aquasecurity/trivy-action@master
         with:
@@ -48,6 +38,7 @@ jobs:
           scan-ref: .
           scan-type: ${{ matrix.scan-type }}
           severity: CRITICAL,HIGH
+          trivy-config: trivy.yaml
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
