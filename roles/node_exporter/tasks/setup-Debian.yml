@@ -1,0 +1,66 @@
+---
+- name: Create group {{ node_exporter_group }}
+  ansible.builtin.group:
+    name: "{{ node_exporter_group }}"
+    state: present
+    system: true
+  when: node_exporter_create_user
+- name: Create user {{ node_exporter_owner }}
+  ansible.builtin.user:
+    name: "{{ node_exporter_owner }}"
+    group: "{{ node_exporter_group }}"
+    state: present
+  when: node_exporter_create_user
+- name: Download and read sha256sum file
+  ansible.builtin.set_fact:
+    sha256sum_file_content: "{{ lookup('ansible.builtin.url', node_exporter_sha256sum_url, wantlist=True) }}"
+  when: node_exporter_version and node_exporter_sha256sum_url
+- name: Extract SHA256 checksums for {{ node_exporter_download_url | basename }}
+  ansible.builtin.set_fact:
+    sha256sum: "{{ sha256sum_file_content | select('search', node_exporter_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+  when: node_exporter_version and node_exporter_sha256sum_url
+- name: Download node-exporter
+  ansible.builtin.get_url:
+    url: "{{ node_exporter_download_url }}"
+    dest: /tmp/{{ node_exporter_download_url | basename }}
+    mode: "0644"
+    checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
+    owner: "{{ node_exporter_owner }}"
+    group: "{{ node_exporter_group }}"
+  register: node_exporter_download
+- name: Extract the binary to bin folder
+  ansible.builtin.unarchive:
+    src: "{{ node_exporter_download.dest }}"
+    dest: /usr/local/bin/
+    remote_src: true
+    owner: root
+    group: root
+    extra_opts:
+      - --strip-components=1
+      - --wildcards
+      - "*/node_exporter"
+  notify: Restart node-exporter
+- name: Copy systemd service
+  ansible.builtin.copy:
+    src: node-exporter.service
+    dest: /etc/systemd/system/node-exporter.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart node-exporter
+- name: Start node-exporter systemd service
+  ansible.builtin.systemd:
+    name: node-exporter
+    state: started
+    enabled: true
+    daemon_reload: true
+- name: Do node-exporter HTTP healthcheck
+  ansible.builtin.uri:
+    url: http://localhost:9110/metrics
+    status_code: 200
+    timeout: 2
+  register: healthcheck
+  until: healthcheck.status == 200
+  when: node_exporter_healthcheck_enabled
+  retries: 5
+  delay: 1

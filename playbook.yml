@@ -8,4 +8,5 @@
     - name: Ping
       ansible.builtin.ping:
   roles:
-    - meysam81.general.haproxy
+    - haproxy
+    - node_exporter

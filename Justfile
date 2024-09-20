@@ -10,6 +10,6 @@ publish:
 install:
   ansible-galaxy collection install meysam81-general-$(yq -r .version galaxy.yml).tar.gz
 
-changelog:
-  antsibull-changelog lint
-  antsibull-changelog release --version $(yq -r .version galaxy.yml)
+@role-init rolename:
+  cd roles && \
+    ansible-galaxy role init {{rolename}}

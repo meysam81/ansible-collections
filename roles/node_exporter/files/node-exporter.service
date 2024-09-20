@@ -1,0 +1,22 @@
+[Unit]
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/node_exporter \
+  --web.listen-address=127.0.0.1:9110 \
+  --collector.supervisord \
+  --collector.tcpstat \
+  --collector.systemd \
+  --collector.sysctl \
+  --collector.network_route \
+  --collector.mountstats \
+  --collector.cgroups \
+  --collector.supervisord.url="http://localhost:9001/RPC2"
+Restart=on-failure
+User=node-exporter
+Group=node-exporter
+
+[Install]
+WantedBy=multi-user.target
