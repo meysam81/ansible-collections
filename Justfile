@@ -13,3 +13,6 @@ install:
 @role-init rolename:
   cd roles && \
     ansible-galaxy role init {{rolename}}
+
+changelog:
+  git-cliff --verbose --config cliff.toml > CHANGELOG.md

@@ -22,6 +22,8 @@ All notable changes to this project will be documented in this file.
 - *(CI)* Remove mode and add depth
 - *(CI)* Provide name and mode
 - *(CI)* Now use json_query to capture the value
+- *(CI)* Use ansible builtin functions to extact the path
+- *(CI)* Drop find altogether
 
 ### ⚙️ Miscellaneous Tasks
 
