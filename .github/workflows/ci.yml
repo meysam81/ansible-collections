@@ -93,7 +93,7 @@ jobs:
         run: |
           refname=${{ github.ref_name }}
           refname=${refname#"v"}
-          yq -i '.version = "$refname"' galaxy.yml
+          yq -i ".version = \"$refname\"" galaxy.yml
       - name: Build collection
         run: ansible-galaxy collection build
       - name: Publish to Ansible Galaxy
