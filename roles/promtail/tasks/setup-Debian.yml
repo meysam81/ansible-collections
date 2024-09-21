@@ -29,11 +29,12 @@
   register: promtail_extract
 - name: Install promtail binary
   ansible.builtin.copy:
-    src: "{{ promtail_extract.files | first }}"
+    src: "{{ promtail_extract.dest }}/{{ promtail_extract.files | first }}"
     dest: /usr/local/bin/promtail
     owner: root
     group: root
     mode: "0555"
+    remote_src: true
   notify: Restart promtail
 - name: Create promtail relevant dir
   ansible.builtin.file:
