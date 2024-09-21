@@ -23,6 +23,7 @@
     owner: root
     group: root
     remote_src: true
+    list_files: true
   register: promtail_extract
   when: promtail_download.changed
 - name: Install promtail binary
