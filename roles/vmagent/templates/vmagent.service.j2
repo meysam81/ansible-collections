@@ -9,10 +9,10 @@ ExecStartPre={{ vmagent_bin }} \
 ExecStart={{ vmagent_bin }} \
   -promscrape.config=/etc/vmagent/vmagent.yml \
   -remoteWrite.url={{ vmagent_remote_write_url }} \
-  {% if vmagent_remote_write_token_file -%}
+  {% if vmagent_remote_write_token_file is defined -%}
   -remoteWrite.bearerTokenFile={{ vmagent_remote_write_token_file }} \
   {% endif %}
-  {% if vmagent_basic_auth_username and vmagent_basic_auth_password -%}
+  {% if vmagent_basic_auth_username is defined and vmagent_basic_auth_password is defined -%}
   -remoteWrite.basicAuth.username={{ vmagent_basic_auth_username }} \
   -remoteWrite.basicAuth.passwordFile=/etc/vmagent/remote-url-password \
   {% endif %}
