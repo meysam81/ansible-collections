@@ -22,7 +22,7 @@ file:
 ```yaml
 collections:
   - name: meysam81.general
-    version: 1.0.1
+    version: 1.2.0
 ```
 
 ## License
