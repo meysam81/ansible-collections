@@ -22,10 +22,6 @@
     dest: /tmp/
     owner: root
     group: root
-    extra_opts:
-      - --strip-components=1
-      - --wildcards
-      - "*/promtail*"
     remote_src: true
   register: promtail_extract
   when: promtail_download.changed
