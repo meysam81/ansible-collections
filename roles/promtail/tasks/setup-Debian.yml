@@ -28,10 +28,11 @@
 - name: Find the promtail executable file in {{ promtail_extract.dest }}
   ansible.builtin.find:
     path: "{{ promtail_extract.dest }}"
-    name:
+    patterns:
       - "{{ promtail_extract.files | first }}"
     recurse: true
     depth: 2
+    mode: "0755"
   register: promtail_find
 - name: Install promtail binary
   ansible.builtin.copy:
