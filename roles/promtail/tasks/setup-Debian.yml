@@ -8,17 +8,27 @@
     group: "{{ promtail_group }}"
     checksum: "sha256:{{ promtail_checksum }}"
   register: promtail_download
-- name: Extract & install promtail binary
+- name: Extract promtail
   ansible.builtin.unarchive:
     src: "/tmp/{{ promtail_url | basename }}"
-    dest: /usr/local/bin/
+    dest: /tmp/
     owner: root
     group: root
     extra_opts:
       - --strip-components=1
       - --wildcards
-      - */promtail*
+      - "*/promtail*"
     remote_src: true
+  register: promtail_extract
+  when: promtail_download.changed
+- name: Install promtail binary
+  ansible.builtin.copy:
+    src: "{{ promtail_extract.files | first }}"
+    dest: /usr/local/bin/promtail
+    owner: root
+    group: root
+    mode: "0555"
+  notify: Restart promtail
 - name: Create promtail relevant dir
   ansible.builtin.file:
     path: "{{ item }}"
