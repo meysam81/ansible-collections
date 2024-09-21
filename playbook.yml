@@ -6,8 +6,15 @@
     - name: Ping
       ansible.builtin.ping:
   roles:
-    - haproxy
-    - node_exporter
+    - name: haproxy
+      tags: haproxy
+    - name: node_exporter
+      tags: node_exporter
     - name: vmagent
+      tags: vmagent
       vars:
         vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write') }}"
+    - name: promtail
+      tags: promtail
+      vars:
+        promtail_remote_write_url: "{{ lookup('env', 'PROMTAIL_REMOTE_WRITE_URL') | default('http://localhost:3100/loki/api/v1/push') }}"

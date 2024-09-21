@@ -1,0 +1,16 @@
+[Unit]
+Description=Grafana Promtail
+Documentation=https://github.com/grafana/loki
+
+[Service]
+ExecStart=/usr/local/bin/promtail -config.file /etc/promtail/promtail.yml
+Restart=always
+RestartSec=5
+User={{ promtail_user }}
+Group={{ promtail_group }}
+# readonly path /
+ReadOnlyPaths=/
+ReadWritePaths=/var/lib/promtail
+
+[Install]
+WantedBy=multi-user.target

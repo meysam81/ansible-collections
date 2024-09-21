@@ -1,0 +1,13 @@
+---
+promtail_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') }}"
+promtail_os: linux
+promtail_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version | regex_replace('^v', '') }} /promtail-{{ promtail_os }}-{{ promtail_arch }}.zip
+promtail_version: 3.2.0
+
+promtail_user: promtail
+promtail_group: promtail
+
+promtail_remote_write_username: ""
+promtail_remote_write_password: ""
+
+promtail_bearer_token_file: ""

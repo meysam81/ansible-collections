@@ -1,0 +1,16 @@
+---
+- name: Create group {{ system_user_group }}
+  ansible.builtin.group:
+    name: "{{ system_user_group }}"
+    state: present
+    system: true
+  register: created_group
+- name: Create user {{ system_user_user }}
+  ansible.builtin.user:
+    name: "{{ system_user_user }}"
+    state: present
+    system: true
+    shell: /bin/false
+    create_home: true
+    group: "{{ created_group.name }}"
+    groups: "{{ system_user_groups | default(omit) }}"

@@ -1,0 +1,7 @@
+---
+system_user_user: "{{ promtail_user }}"
+system_user_group: "{{ promtail_group }}"
+system_user_extra_groups:
+  - adm
+
+promtail_remote_write_url:

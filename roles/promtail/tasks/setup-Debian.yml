@@ -1,0 +1,63 @@
+---
+- name: Download promtail
+  ansible.builtin.get_url:
+    url: "{{ promtail_url }}"
+    dest: "/tmp/{{ promtail_url | basename }}"
+    mode: "0444"
+    owner: "{{ promtail_user }}"
+    group: "{{ promtail_group }}"
+    checksum: "sha256:{{ promtail_checksum }}"
+  register: promtail_download
+- name: Extract & install promtail binary
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ promtail_url | basename }}"
+    dest: /usr/local/bin/
+    owner: root
+    group: root
+    extra_opts:
+      - --strip-components=1
+      - --wildcards
+      - */promtail*
+    remote_src: true
+- name: Create promtail relevant dir
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: promtail
+    group: promtail
+    mode: "0755"
+  loop:
+    - /etc/promtail
+    - /var/lib/promtail
+- name: Fetch promtail remote write password file
+  ansible.builtin.copy:
+    content: "{{ promtail_remote_write_password }}"
+    dest: /var/lib/promtail/remote-password-file
+    owner: promtail
+    group: promtail
+    mode: "0400"
+  no_log: true
+  notify: Restart promtail
+  when: promtail_remote_write_password is defined
+- name: Copy promtail config file
+  ansible.builtin.template:
+    src: promtail.yml.j2
+    dest: /etc/promtail/promtail.yml
+    owner: promtail
+    group: promtail
+    mode: "0440"
+  notify: Restart promtail
+- name: Create promtail service
+  ansible.builtin.template:
+    src: promtail.service.j2
+    dest: /etc/systemd/system/promtail.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart promtail
+- name: Start promtail service
+  ansible.builtin.systemd:
+    name: promtail
+    state: started
+    enabled: true
+    daemon_reload: true

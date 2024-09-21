@@ -1,0 +1,33 @@
+galaxy_info:
+  author: Meysam Azad
+  description: Install promtail from GitHub release
+  company: Self employed
+
+  license: Apache-2.0
+
+  min_ansible_version: "2.17"
+
+  platforms:
+    - name: Debian
+      versions:
+        - all
+        - bookworm
+        - bullseye
+        - buster
+    - name: Ubuntu
+      versions:
+        - all
+        - bionic
+        - focal
+        - jammy
+
+  galaxy_tags:
+    - monitoring
+    - loki
+    - logging
+    - promtail
+    - observability
+
+dependencies:
+  - name: meysam81.general.system_user
+    version: "<=2.0.0"
