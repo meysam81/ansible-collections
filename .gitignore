@@ -8,3 +8,4 @@
 
 *.tar.gz
 .vagrant
+.secrets
