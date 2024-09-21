@@ -3,9 +3,9 @@
   ansible.builtin.set_fact:
     sha256sum_file_content: "{{ lookup('ansible.builtin.url', promtail_sha256sum_url, wantlist=True) }}"
   when: promtail_version and promtail_sha256sum_url
-- name: Extract SHA256 checksums for {{ promtail_download_url | basename }}
+- name: Extract SHA256 checksums for {{ promtail_url | basename }}
   ansible.builtin.set_fact:
-    sha256sum: "{{ sha256sum_file_content | select('search', promtail_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+    sha256sum: "{{ sha256sum_file_content | select('search', promtail_url | basename) | map('split', ' ') | map('first') | list | first }}"
   when: promtail_version and promtail_sha256sum_url
 - name: Download promtail
   ansible.builtin.get_url:
