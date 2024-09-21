@@ -10,3 +10,6 @@
   roles:
     - haproxy
     - node_exporter
+    - name: vmagent
+      vars:
+        vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write') }}"

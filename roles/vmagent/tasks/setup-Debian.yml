@@ -1,0 +1,73 @@
+---
+- name: Create group {{ vmagent_group }}
+  ansible.builtin.group:
+    name: "{{ vmagent_group }}"
+    state: present
+    system: true
+  register: created_group
+- name: Create user {{ vmagent_user }}
+  ansible.builtin.user:
+    name: "{{ vmagent_user }}"
+    state: present
+    system: true
+    shell: /bin/false
+    create_home: true
+    group: "{{ created_group.name }}"
+- name: Download vmutils
+  ansible.builtin.get_url:
+    url: "{{ vmagent_vmutils_url }}"
+    dest: "/tmp/{{ vmagent_vmutils_url | basename }}"
+    mode: "0644"
+    owner: "{{ vmagent_user }}"
+    group: "{{ vmagent_group }}"
+  register: vmutils_download
+- name: Extract & install the binaries
+  ansible.builtin.unarchive:
+    src: "{{ vmutils_download.dest }}"
+    dest: /usr/local/bin/
+    remote_src: true
+    owner: root
+    group: root
+    extra_opts:
+      - vmagent-prod
+- name: Ensure vmagent dir exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: vmagent
+    group: vmagent
+    mode: "0755"
+  loop:
+    - /var/lib/vmagent
+    - /var/log/vmagent
+    - /etc/vmagent
+- name: Place the password file
+  ansible.builtin.copy:
+    content: "{{ vmagent_remote_write_password }}"
+    dest: etc/vmagent/remote-url-password
+    owner: "{{ vmagent_user }}"
+    group: "{{ vmagent_group }}"
+    mode: "0400"
+  when: vmagent_remote_write_password
+- name: Copy service file
+  ansible.builtin.template:
+    src: vmagent.service.j2
+    dest: /etc/systemd/system/vmagent.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload vmagent service
+- name: Copy config file
+  ansible.builtin.template:
+    src: vmagent.yml.j2
+    dest: /etc/vmagent/vmagent.yml
+    owner: "{{ vmagent_user }}"
+    group: "{{ vmagent_group }}"
+    mode: "0440"
+  notify: Reload vmagent service
+- name: Start vmagent service
+  ansible.builtin.systemd:
+    name: vmagent
+    state: started
+    enabled: true
+    daemon_reload: true

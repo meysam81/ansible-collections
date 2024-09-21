@@ -9,6 +9,10 @@ on:
     branches:
       - main
 
+env:
+  ANSIBLE_FORCE_COLOR: "1"
+  PY_COLORS: "1"
+
 jobs:
   trivy:
     runs-on: ubuntu-latest
@@ -43,3 +47,29 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-results.sarif"
+
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      prometheus:
+        image: prom/prometheus:v2.54.1
+        ports:
+          - 9090:9090
+    env:
+      VMAGENT_REMOTE_WRITE_URL: http://localhost:9090/api/v1/write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache Vagrant boxes
+        uses: actions/cache@v4
+        with:
+          path: ~/.vagrant.d/boxes
+          key: ${{ runner.os }}-vagrant-${{ hashFiles('Vagrantfile') }}
+      - name: Check vagrant
+        run: vagrant version
+      - name: Check ansible
+        run: ansible --version
+      - name: Vagrant up
+        run: vagrant up

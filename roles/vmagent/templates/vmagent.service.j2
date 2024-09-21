@@ -1,0 +1,36 @@
+[Unit]
+Description=Victoria Metrics - VMAgent
+Documentation=https://docs.victoriametrics.com/vmagent/
+
+[Service]
+ExecStartPre={{ vmagent_bin }} \
+  -promscrape.config=/etc/vmagent/vmagent.yml \
+  -promscrape.config.dryRun
+ExecStart={{ vmagent_bin }} \
+  -promscrape.config=/etc/vmagent/vmagent.yml \
+  -remoteWrite.url={{ vmagent_remote_write_url }} \
+  {% if vmagent_remote_write_token_file -%}
+  -remoteWrite.bearerTokenFile={{ vmagent_remote_write_token_file }} \
+  {% endif %}
+  {% if vmagent_basic_auth_username and vmagent_basic_auth_password -%}
+  -remoteWrite.basicAuth.username={{ vmagent_basic_auth_username }} \
+  -remoteWrite.basicAuth.passwordFile=/etc/vmagent/remote-url-password \
+  {% endif %}
+  -influxListenAddr='' \
+  -httpListenAddr='' \
+  -remoteWrite.tmpDataPath=/var/lib/vmagent/remote-write-data \
+  {% if vmagent_instance_label -%}
+  -remoteWrite.label=instance={{ vmagent_instance_label }} \
+  {% endif %}
+  -remoteWrite.forceVMProto
+ExecReload=/bin/kill -SIGHUP $MAINPID
+Restart=always
+RestartSec=5
+User=vmagent
+Group=vmagent
+ReadOnlyPaths=/
+ReadWritePaths=/var/lib/vmagent
+ReadWritePaths=/var/log/vmagent
+
+[Install]
+WantedBy=multi-user.target
