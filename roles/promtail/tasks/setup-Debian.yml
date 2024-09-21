@@ -24,6 +24,8 @@
     group: root
     remote_src: true
     list_files: true
+    include:
+      - promtail-{{ promtail_os }}-{{ promtail_arch }}
   register: promtail_extract
 - name: Find the promtail executable file in {{ promtail_extract.dest }}
   ansible.builtin.find:
@@ -36,7 +38,7 @@
   register: promtail_find
 - name: Install promtail binary
   ansible.builtin.copy:
-    src: "{{ promtail_find.files | first | json_query('path') }}"
+    src: "{{ promtail_find.files | first | map(attribute='path') | first }}"
     dest: /usr/local/bin/promtail
     owner: root
     group: root
