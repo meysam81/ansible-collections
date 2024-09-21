@@ -1,4 +1,12 @@
 ---
+- name: Download and read sha256sum file
+  ansible.builtin.set_fact:
+    sha256sum_file_content: "{{ lookup('ansible.builtin.url', promtail_sha256sum_url, wantlist=True) }}"
+  when: promtail_version and promtail_sha256sum_url
+- name: Extract SHA256 checksums for {{ promtail_download_url | basename }}
+  ansible.builtin.set_fact:
+    sha256sum: "{{ sha256sum_file_content | select('search', promtail_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+  when: promtail_version and promtail_sha256sum_url
 - name: Download promtail
   ansible.builtin.get_url:
     url: "{{ promtail_url }}"
@@ -6,7 +14,7 @@
     mode: "0444"
     owner: "{{ promtail_user }}"
     group: "{{ promtail_group }}"
-    checksum: "sha256:{{ promtail_checksum }}"
+    checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
   register: promtail_download
 - name: Extract promtail
   ansible.builtin.unarchive:
