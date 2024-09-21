@@ -36,7 +36,7 @@
   register: promtail_find
 - name: Install promtail binary
   ansible.builtin.copy:
-    src: "{{ promtail_find.files | first | attr('path') }}"
+    src: "{{ promtail_find.files | first | json_query('path') }}"
     dest: /usr/local/bin/promtail
     owner: root
     group: root
