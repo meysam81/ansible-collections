@@ -9,7 +9,7 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-A collection of personally often used Ansible roles and playbooks.
+A collection of often personally used Ansible roles and playbooks.
 
 These tend to be useful for my own use case and projects but feel free to open
 a PR or an issue in case you want anything specific added.
@@ -22,7 +22,8 @@ file:
 ```yaml
 collections:
   - name: meysam81.general
-    version: 1.2.0
+    # latest version: https://github.com/meysam81/ansible-collections/releases
+    version: x.x.x
 ```
 
 ## License
