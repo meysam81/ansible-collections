@@ -25,10 +25,17 @@
     remote_src: true
     list_files: true
   register: promtail_extract
-  when: promtail_download.changed
+- name: Find the promtail executable file in {{ promtail_extract.dest }}
+  ansible.builtin.find:
+    path: "{{ promtail_extract.dest }}"
+    name:
+      - "{{ promtail_extract.files | first }}"
+    recurse: true
+    mode: "0555"
+  register: promtail_find
 - name: Install promtail binary
   ansible.builtin.copy:
-    src: "{{ promtail_extract.files | first }}"
+    src: "{{ promtail_find.files | first | attr('path') }}"
     dest: /usr/local/bin/promtail
     owner: root
     group: root
