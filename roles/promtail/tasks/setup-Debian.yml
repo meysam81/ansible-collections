@@ -31,7 +31,7 @@
     name:
       - "{{ promtail_extract.files | first }}"
     recurse: true
-    mode: "0555"
+    depth: 2
   register: promtail_find
 - name: Install promtail binary
   ansible.builtin.copy:
