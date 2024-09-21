@@ -1,4 +1,6 @@
 ---
+- name: Create promtail system user
+  ansible.builtin.import_tasks: user.yml
 - name: Setup Debian
   ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'

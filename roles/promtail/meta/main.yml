@@ -28,6 +28,4 @@ galaxy_info:
     - promtail
     - observability
 
-dependencies:
-  - name: meysam81.general.system_user
-    version: "<=2.0.0"
+dependencies: []

@@ -27,5 +27,6 @@ galaxy_info:
     - victoriametrics
     - observability
     - vmagent
+    - metrics
 
 dependencies: []
