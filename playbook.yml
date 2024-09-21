@@ -2,8 +2,6 @@
   hosts: all
   gather_facts: true
   become: true
-  vars:
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
   pre_tasks:
     - name: Ping
       ansible.builtin.ping:

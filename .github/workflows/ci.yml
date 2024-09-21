@@ -49,7 +49,7 @@ jobs:
           sarif_file: "trivy-results.sarif"
 
   test:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     services:
@@ -62,14 +62,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Cache Vagrant boxes
-        uses: actions/cache@v4
-        with:
-          path: ~/.vagrant.d/boxes
-          key: ${{ runner.os }}-vagrant-${{ hashFiles('Vagrantfile') }}
-      - name: Check vagrant
-        run: vagrant version
       - name: Check ansible
         run: ansible --version
-      - name: Vagrant up
-        run: vagrant up
+      - name: Prepare localhost inventory
+        run: |
+          cat << 'EOF' > localhost.yml
+          all:
+            hosts:
+              localhost:
+                ansible_connection: local
+          EOF
+      - name: Ansible playbook
+        run: ansible-playbook playbook.yml -i localhost.yml
