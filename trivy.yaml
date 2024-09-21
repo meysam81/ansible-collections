@@ -8,3 +8,4 @@ scan:
 severity:
   - HIGH
   - CRITICAL
+cache-dir: $HOME/.cache/trivy
