@@ -1,38 +1,118 @@
-Role Name
-=========
+# node_exporter
 
-A brief description of the role goes here.
+Install node-exporter from GitHub release
 
-Requirements
-------------
+## Table of content
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- [Requirements](#requirements)
+- [Default Variables](#default-variables)
+  - [node_exporter_arch](#node_exporter_arch)
+  - [node_exporter_create_user](#node_exporter_create_user)
+  - [node_exporter_download_url](#node_exporter_download_url)
+  - [node_exporter_group](#node_exporter_group)
+  - [node_exporter_healthcheck_enabled](#node_exporter_healthcheck_enabled)
+  - [node_exporter_os](#node_exporter_os)
+  - [node_exporter_owner](#node_exporter_owner)
+  - [node_exporter_sha256sum_url](#node_exporter_sha256sum_url)
+  - [node_exporter_version](#node_exporter_version)
+- [Dependencies](#dependencies)
+- [License](#license)
+- [Author](#author)
 
-Role Variables
---------------
+---
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Requirements
 
-Dependencies
-------------
+- Minimum Ansible version: `2.17`
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+## Default Variables
 
-Example Playbook
-----------------
+### node_exporter_arch
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+#### Default value
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+```YAML
+node_exporter_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64',
+  'amd64') }}"
+```
 
-License
--------
+### node_exporter_create_user
 
-BSD
+#### Default value
 
-Author Information
-------------------
+```YAML
+node_exporter_create_user: true
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+### node_exporter_download_url
+
+#### Default value
+
+```YAML
+node_exporter_download_url: https://github.com/prometheus/node_exporter/releases/download/v{{
+  node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ node_exporter_version
+  | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ node_exporter_arch }}.tar.gz
+```
+
+### node_exporter_group
+
+#### Default value
+
+```YAML
+node_exporter_group: node-exporter
+```
+
+### node_exporter_healthcheck_enabled
+
+#### Default value
+
+```YAML
+node_exporter_healthcheck_enabled: true
+```
+
+### node_exporter_os
+
+#### Default value
+
+```YAML
+node_exporter_os: linux
+```
+
+### node_exporter_owner
+
+#### Default value
+
+```YAML
+node_exporter_owner: node-exporter
+```
+
+### node_exporter_sha256sum_url
+
+#### Default value
+
+```YAML
+node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{
+  node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
+```
+
+### node_exporter_version
+
+#### Default value
+
+```YAML
+node_exporter_version: 1.8.2
+```
+
+
+
+## Dependencies
+
+None.
+
+## License
+
+Apache-2.0
+
+## Author
+
+Meysam Azad

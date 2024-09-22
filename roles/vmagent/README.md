@@ -1,38 +1,180 @@
-Role Name
-=========
+# vmagent
 
-A brief description of the role goes here.
+Install vmagent from GitHub release
 
-Requirements
-------------
+## Table of content
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- [Requirements](#requirements)
+- [Default Variables](#default-variables)
+  - [vmagent_arch](#vmagent_arch)
+  - [vmagent_bin](#vmagent_bin)
+  - [vmagent_docker_enabled](#vmagent_docker_enabled)
+  - [vmagent_group](#vmagent_group)
+  - [vmagent_haproxy_exporter_enabled](#vmagent_haproxy_exporter_enabled)
+  - [vmagent_instance_label](#vmagent_instance_label)
+  - [vmagent_mongo_exporter_enabled](#vmagent_mongo_exporter_enabled)
+  - [vmagent_node_exporter_enabled](#vmagent_node_exporter_enabled)
+  - [vmagent_os](#vmagent_os)
+  - [vmagent_redis_exporter_enabled](#vmagent_redis_exporter_enabled)
+  - [vmagent_remote_write_password](#vmagent_remote_write_password)
+  - [vmagent_remote_write_token_file](#vmagent_remote_write_token_file)
+  - [vmagent_remote_write_username](#vmagent_remote_write_username)
+  - [vmagent_user](#vmagent_user)
+  - [vmagent_version](#vmagent_version)
+  - [vmagent_vmutils_url](#vmagent_vmutils_url)
+- [Dependencies](#dependencies)
+- [License](#license)
+- [Author](#author)
 
-Role Variables
---------------
+---
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Requirements
 
-Dependencies
-------------
+- Minimum Ansible version: `2.17`
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+## Default Variables
 
-Example Playbook
-----------------
+### vmagent_arch
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+#### Default value
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+```YAML
+vmagent_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64')
+  }}"
+```
 
-License
--------
+### vmagent_bin
 
-BSD
+#### Default value
 
-Author Information
-------------------
+```YAML
+vmagent_bin: /usr/local/bin/vmagent-prod
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+### vmagent_docker_enabled
+
+#### Default value
+
+```YAML
+vmagent_docker_enabled: false
+```
+
+### vmagent_group
+
+#### Default value
+
+```YAML
+vmagent_group: vmagent
+```
+
+### vmagent_haproxy_exporter_enabled
+
+#### Default value
+
+```YAML
+vmagent_haproxy_exporter_enabled: false
+```
+
+### vmagent_instance_label
+
+#### Default value
+
+```YAML
+vmagent_instance_label: ''
+```
+
+### vmagent_mongo_exporter_enabled
+
+#### Default value
+
+```YAML
+vmagent_mongo_exporter_enabled: false
+```
+
+### vmagent_node_exporter_enabled
+
+#### Default value
+
+```YAML
+vmagent_node_exporter_enabled: false
+```
+
+### vmagent_os
+
+#### Default value
+
+```YAML
+vmagent_os: linux
+```
+
+### vmagent_redis_exporter_enabled
+
+#### Default value
+
+```YAML
+vmagent_redis_exporter_enabled: false
+```
+
+### vmagent_remote_write_password
+
+#### Default value
+
+```YAML
+vmagent_remote_write_password: ''
+```
+
+### vmagent_remote_write_token_file
+
+#### Default value
+
+```YAML
+vmagent_remote_write_token_file: ''
+```
+
+### vmagent_remote_write_username
+
+#### Default value
+
+```YAML
+vmagent_remote_write_username: ''
+```
+
+### vmagent_user
+
+#### Default value
+
+```YAML
+vmagent_user: vmagent
+```
+
+### vmagent_version
+
+#### Default value
+
+```YAML
+vmagent_version: 1.103.0
+```
+
+### vmagent_vmutils_url
+
+#### Default value
+
+```YAML
+vmagent_vmutils_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{
+  vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ vmagent_arch
+  }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz
+```
+
+
+
+## Dependencies
+
+None.
+
+## License
+
+Apache-2.0
+
+## Author
+
+Meysam Azad

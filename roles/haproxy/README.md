@@ -1,38 +1,51 @@
-Role Name
-=========
+# haproxy
 
-A brief description of the role goes here.
+Install HAProxy with apt
 
-Requirements
-------------
+## Table of content
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- [Requirements](#requirements)
+- [Default Variables](#default-variables)
+  - [haproxy_cache_valid_time](#haproxy_cache_valid_time)
+  - [haproxy_version](#haproxy_version)
+- [Dependencies](#dependencies)
+- [License](#license)
+- [Author](#author)
 
-Role Variables
---------------
+---
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Requirements
 
-Dependencies
-------------
+- Minimum Ansible version: `2.17`
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+## Default Variables
 
-Example Playbook
-----------------
+### haproxy_cache_valid_time
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+#### Default value
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+```YAML
+haproxy_cache_valid_time: 86400
+```
 
-License
--------
+### haproxy_version
 
-BSD
+#### Default value
 
-Author Information
-------------------
+```YAML
+haproxy_version: 3.0
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+
+
+## Dependencies
+
+None.
+
+## License
+
+Apache-2.0
+
+## Author
+
+Meysam Azad
