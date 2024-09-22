@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(docs)* Use ansible doc to generate role docs
+
+## [1.3.0] - 2024-09-21
+
 ### 🚀 Features
 
 - Create promtail and system user
@@ -24,10 +30,13 @@ All notable changes to this project will be documented in this file.
 - *(CI)* Now use json_query to capture the value
 - *(CI)* Use ansible builtin functions to extact the path
 - *(CI)* Drop find altogether
+- *(CI)* Specify full path to promtail binary
+- *(CI)* Provide the promtail handler
 
 ### ⚙️ Miscellaneous Tasks
 
 - Release v1.3.0
+- Changelog generator to Justfile
 
 ## [1.2.2] - 2024-09-21
 
