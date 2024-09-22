@@ -19,3 +19,6 @@ changelog:
 
 ansible-doctor:
   ansible-doctor -rf ./roles
+
+reqs:
+  pip install -U pip -r requirements.txt
