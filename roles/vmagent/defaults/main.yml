@@ -11,6 +11,7 @@ vmagent_mongo_exporter_enabled: false
 vmagent_node_exporter_enabled: false
 vmagent_os: linux
 vmagent_redis_exporter_enabled: false
+vmagent_remote_write_force_vm_proto: false
 vmagent_remote_write_password: ""
 vmagent_remote_write_token_file: ""
 vmagent_remote_write_username: ""

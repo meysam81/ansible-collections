@@ -16,13 +16,15 @@ ExecStart={{ vmagent_bin }} \
   -remoteWrite.basicAuth.username={{ vmagent_remote_write_username }} \
   -remoteWrite.basicAuth.passwordFile=/etc/vmagent/remote-url-password \
 {% endif %}
-  -influxListenAddr="" \
-  -httpListenAddr={{ vmagent_http_listen_addr }} \
   -remoteWrite.tmpDataPath=/var/lib/vmagent/remote-write-data \
+{% if vmagent_remote_write_force_vm_proto %}
+  -remoteWrite.forceVMProto \
+{% endif %}
 {% if vmagent_instance_label %}
   -remoteWrite.label=instance={{ vmagent_instance_label }} \
 {% endif %}
-  -remoteWrite.forceVMProto
+  -httpListenAddr={{ vmagent_http_listen_addr }} \
+  -influxListenAddr=""
 ExecReload=/bin/kill -SIGHUP $MAINPID
 Restart=always
 RestartSec=5
