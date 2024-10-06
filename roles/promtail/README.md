@@ -34,7 +34,7 @@ Install promtail from GitHub release
 
 ```YAML
 promtail_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64')
-  }}"
+  | replace('aarch64', 'arm64') }}"
 ```
 
 ### promtail_bearer_token_file

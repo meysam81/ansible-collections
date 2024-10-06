@@ -12,8 +12,8 @@ ExecStart={{ vmagent_bin }} \
   {% if vmagent_remote_write_token_file is defined -%}
   -remoteWrite.bearerTokenFile={{ vmagent_remote_write_token_file }} \
   {% endif %}
-  {% if vmagent_basic_auth_username is defined and vmagent_basic_auth_password is defined -%}
-  -remoteWrite.basicAuth.username={{ vmagent_basic_auth_username }} \
+  {% if vmagent_remote_write_username is defined and vmagent_remote_write_password is defined -%}
+  -remoteWrite.basicAuth.username={{ vmagent_remote_write_username }} \
   -remoteWrite.basicAuth.passwordFile=/etc/vmagent/remote-url-password \
   {% endif %}
   -influxListenAddr='' \

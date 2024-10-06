@@ -33,7 +33,7 @@ Install node-exporter from GitHub release
 
 ```YAML
 node_exporter_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64',
-  'amd64') }}"
+  'amd64') | replace('aarch64', 'arm64') }}"
 ```
 
 ### node_exporter_create_user
