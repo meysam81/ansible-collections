@@ -120,7 +120,8 @@ jobs:
           fetch-depth: 0
       - name: Build collection
         run: ansible-galaxy collection build
-      - name: Publish to Ansible Galaxy
+      - id: publish
+        name: Publish to Ansible Galaxy
         run: |
           namespace=$(yq -r .namespace galaxy.yml)
           name=$(yq -r .name galaxy.yml)
@@ -132,6 +133,8 @@ jobs:
           fi
 
           ansible-galaxy collection publish $namespace-$name-$version.tar.gz --token ${{ secrets.ANSIBLE_GALAXY_TOKEN }}
+
+          echo "asset=$namespace-$name-$version.tar.gz" >> $GITHUB_OUTPUT
       - name: Generate a changelog
         uses: orhun/git-cliff-action@v4
         id: git-cliff
@@ -144,6 +147,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create ${{ github.ref_name }} -t ${{ github.ref_name }} -F CHANGELOG.md
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.publish.outputs.asset }}
 
   ansible-lint:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
