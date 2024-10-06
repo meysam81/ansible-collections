@@ -14,6 +14,7 @@
       tags: vmagent
       vars:
         vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write') }}"
+        vmagent_http_listen_addr: ""
     - role: promtail
       tags: promtail
       vars:

@@ -49,6 +49,7 @@
     group: "{{ vmagent_group }}"
     mode: "0400"
   when: vmagent_remote_write_password
+  no_log: true
 - name: Copy service file
   ansible.builtin.template:
     src: vmagent.service.j2
