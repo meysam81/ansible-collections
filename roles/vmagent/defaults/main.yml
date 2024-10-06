@@ -13,6 +13,7 @@ vmagent_redis_exporter_enabled: false
 vmagent_remote_write_password: ""
 vmagent_remote_write_token_file: ""
 vmagent_remote_write_username: ""
+vmagent_scrape_interval: 30s
 vmagent_user: vmagent
 vmagent_version: 1.104.0
 vmagent_vmutils_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ vmagent_arch }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz
