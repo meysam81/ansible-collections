@@ -9,19 +9,19 @@ ExecStartPre={{ vmagent_bin }} \
 ExecStart={{ vmagent_bin }} \
   -promscrape.config=/etc/vmagent/vmagent.yml \
   -remoteWrite.url={{ vmagent_remote_write_url }} \
-  {% if vmagent_remote_write_token_file %}
+{% if vmagent_remote_write_token_file %}
   -remoteWrite.bearerTokenFile={{ vmagent_remote_write_token_file }} \
-  {% endif -%}
-  {% if vmagent_remote_write_username and vmagent_remote_write_password %}
+{% endif %}
+{% if vmagent_remote_write_username and vmagent_remote_write_password %}
   -remoteWrite.basicAuth.username={{ vmagent_remote_write_username }} \
   -remoteWrite.basicAuth.passwordFile=/etc/vmagent/remote-url-password \
-  {% endif -%}
+{% endif %}
   -influxListenAddr="" \
   -httpListenAddr={{ vmagent_http_listen_addr }} \
   -remoteWrite.tmpDataPath=/var/lib/vmagent/remote-write-data \
-  {% if vmagent_instance_label %}
+{% if vmagent_instance_label %}
   -remoteWrite.label=instance={{ vmagent_instance_label }} \
-  {% endif -%}
+{% endif %}
   -remoteWrite.forceVMProto
 ExecReload=/bin/kill -SIGHUP $MAINPID
 Restart=always
