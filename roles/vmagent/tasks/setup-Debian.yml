@@ -44,7 +44,7 @@
 - name: Place the password file
   ansible.builtin.copy:
     content: "{{ vmagent_remote_write_password }}"
-    dest: etc/vmagent/remote-url-password
+    dest: /etc/vmagent/remote-url-password
     owner: "{{ vmagent_user }}"
     group: "{{ vmagent_group }}"
     mode: "0400"
@@ -56,7 +56,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload vmagent service
+  notify: Restart vmagent service
 - name: Copy config file
   ansible.builtin.template:
     src: vmagent.yml.j2
