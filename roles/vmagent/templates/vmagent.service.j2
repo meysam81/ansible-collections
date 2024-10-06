@@ -17,7 +17,7 @@ ExecStart={{ vmagent_bin }} \
   -remoteWrite.basicAuth.passwordFile=/etc/vmagent/remote-url-password \
   {% endif %}
   -influxListenAddr='' \
-  -httpListenAddr='' \
+  -httpListenAddr={{ vmagent_http_listen_addr }} \
   -remoteWrite.tmpDataPath=/var/lib/vmagent/remote-write-data \
   {% if vmagent_instance_label -%}
   -remoteWrite.label=instance={{ vmagent_instance_label }} \

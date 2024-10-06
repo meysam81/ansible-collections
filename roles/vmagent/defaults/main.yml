@@ -4,6 +4,7 @@ vmagent_bin: /usr/local/bin/vmagent-prod
 vmagent_docker_enabled: false
 vmagent_group: vmagent
 vmagent_haproxy_exporter_enabled: false
+vmagent_http_listen_addr: 127.0.0.1:8429
 vmagent_instance_label: ""
 vmagent_mongo_exporter_enabled: false
 vmagent_node_exporter_enabled: false
