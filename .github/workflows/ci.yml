@@ -132,7 +132,9 @@ jobs:
             exit 1
           fi
 
-          ansible-galaxy collection publish $namespace-$name-$version.tar.gz --token ${{ secrets.ANSIBLE_GALAXY_TOKEN }}
+          ansible-galaxy collection publish \
+            $namespace-$name-$version.tar.gz \
+            --token ${{ secrets.ANSIBLE_GALAXY_TOKEN }}
 
           echo "asset=$namespace-$name-$version.tar.gz" >> $GITHUB_OUTPUT
       - name: Generate a changelog

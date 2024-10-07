@@ -2,11 +2,95 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [1.4.9] - 2024-10-06
+
+### ⚙️ Miscellaneous Tasks
+
+- *(CI)* Upload build to release assets
+
+## [1.4.8] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- *(vmagent)* Make VM protocol optional
+
+## [1.4.7] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- *(vmagent)* Modify template indentations
+
+## [1.4.6] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- *(vmagent)* Verify the correctness before release
+
+### ⚙️ Miscellaneous Tasks
+
+- Modify basic auth default keys
+- *(vmagent)* Disable http listen address on tests
+
+## [1.4.5] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- Modify detected arch for ARM64
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.4.5
+
+## [1.4.4] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- *(vmagent)* Modify target password file path
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.4.4
+
+## [1.4.3] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- *(CI)* Run tests before publishing
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.4.3
+
+## [1.4.2] - 2024-10-06
+
+### 🐛 Bug Fixes
+
+- *(vmagent)* Provide undefined var
+
+## [1.4.1] - 2024-10-06
+
+### 🚀 Features
+
+- *(vmagent)* Add fail2ban to scrape config
+
+### ⚙️ Miscellaneous Tasks
+
+- Add molecule for local testing
+- *(docs)* Add the initial badges
+- Upgrade vmagent to v1.104
+- *(vmagent)* Verify with http health check
+- Release v1.4.0
+
+## [1.3.1] - 2024-09-22
+
+### 🐛 Bug Fixes
+
+- *(CI)* Address playbook schema issue (#4)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(docs)* Use ansible doc to generate role docs
+- Release v1.3.1
 
 ## [1.3.0] - 2024-09-21
 
