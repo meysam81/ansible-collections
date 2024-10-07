@@ -1,9 +1,10 @@
 # Ansible Collections
 
+[![GitHub Release](https://img.shields.io/github/v/release/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/releases/latest)
+[![GitHub last commit](https://img.shields.io/github/last-commit/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/commits/main)
+[![License](https://img.shields.io/github/license/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/pulls)
-[![GitHub](https://img.shields.io/github/license/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/blob/main/LICENSE)
-[![GitHub last commit](https://img.shields.io/github/last-commit/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/commits/main)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
