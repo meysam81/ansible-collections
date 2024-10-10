@@ -10,6 +10,7 @@ vmagent_instance_label: ""
 vmagent_mongo_exporter_enabled: false
 vmagent_node_exporter_enabled: false
 vmagent_os: linux
+vmagent_pushgateway_enabled: false
 vmagent_redis_exporter_enabled: false
 vmagent_remote_write_force_vm_proto: false
 vmagent_remote_write_password: ""

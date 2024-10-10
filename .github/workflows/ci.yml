@@ -78,6 +78,7 @@ jobs:
           - node_exporter
           - vmagent
           - promtail
+          - pushgateway
     env:
       VMAGENT_REMOTE_WRITE_URL: http://localhost:9090/api/v1/write
     steps:

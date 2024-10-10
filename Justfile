@@ -22,3 +22,9 @@ ansible-doctor:
 
 reqs:
   pip install -U pip -r requirements.txt
+
+test-vagrant *args:
+  ansible-playbook \
+    -i .vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory \
+    --ssh-common-args "-o StrictHostKeyChecking=no -o PasswordAuthentication=no -o UserKnownHostsFile=/dev/null" \
+    playbook.yml {{args}}

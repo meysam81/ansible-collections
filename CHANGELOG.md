@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(CI)* Add sonar analysis
+- Add sonar properties
+
+## [1.4.11] - 2024-10-07
+
+### ⚙️ Miscellaneous Tasks
+
+- Add release badge
+- Release v1.4.11
+
+## [1.4.10] - 2024-10-07
+
+### ⚙️ Miscellaneous Tasks
+
+- Complete the changelog as of today
+- *(vmagent)* Docify VM protocol argument
+- Release v1.4.10
+
 ## [1.4.9] - 2024-10-06
 
 ### ⚙️ Miscellaneous Tasks

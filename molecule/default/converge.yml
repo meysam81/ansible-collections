@@ -19,3 +19,5 @@
       tags: promtail
       vars:
         promtail_remote_write_url: "{{ lookup('env', 'PROMTAIL_REMOTE_WRITE_URL') | default('http://localhost:3100/loki/api/v1/push') }}"
+    - role: pushgateway
+      tags: pushgateway

@@ -17,6 +17,7 @@ Install vmagent from GitHub release
   - [vmagent_mongo_exporter_enabled](#vmagent_mongo_exporter_enabled)
   - [vmagent_node_exporter_enabled](#vmagent_node_exporter_enabled)
   - [vmagent_os](#vmagent_os)
+  - [vmagent_pushgateway_enabled](#vmagent_pushgateway_enabled)
   - [vmagent_redis_exporter_enabled](#vmagent_redis_exporter_enabled)
   - [vmagent_remote_write_force_vm_proto](#vmagent_remote_write_force_vm_proto)
   - [vmagent_remote_write_password](#vmagent_remote_write_password)
@@ -125,6 +126,14 @@ vmagent_node_exporter_enabled: false
 
 ```YAML
 vmagent_os: linux
+```
+
+### vmagent_pushgateway_enabled
+
+#### Default value
+
+```YAML
+vmagent_pushgateway_enabled: false
 ```
 
 ### vmagent_redis_exporter_enabled

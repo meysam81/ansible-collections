@@ -1,0 +1,56 @@
+---
+- name: Create group {{ pushgateway_group }}
+  ansible.builtin.group:
+    name: "{{ pushgateway_group }}"
+    state: present
+    system: true
+  when: pushgateway_create_group
+- name: Create user {{ pushgateway_user }}
+  ansible.builtin.user:
+    name: "{{ pushgateway_user }}"
+    group: "{{ pushgateway_group }}"
+    state: present
+  when: pushgateway_create_user
+- name: Download and read sha256sum file
+  ansible.builtin.set_fact:
+    sha256sum_file_content: "{{ lookup('ansible.builtin.url', pushgateway_sha256sum_url, wantlist=True) }}"
+  when: pushgateway_version and pushgateway_sha256sum_url
+- name: Extract SHA256 checksums for {{ pushgateway_download_url | basename }}
+  ansible.builtin.set_fact:
+    sha256sum: "{{ sha256sum_file_content | select('search', pushgateway_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+  when: pushgateway_version and pushgateway_sha256sum_url
+- name: Download pushgateway
+  ansible.builtin.get_url:
+    url: "{{ pushgateway_download_url }}"
+    dest: /tmp/{{ pushgateway_download_url | basename }}
+    mode: "0644"
+    checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
+    owner: "{{ pushgateway_user }}"
+    group: "{{ pushgateway_group }}"
+  register: pushgateway_download
+- name: Extract the binary to bin folder
+  ansible.builtin.unarchive:
+    src: "{{ pushgateway_download.dest }}"
+    dest: /usr/local/bin/
+    remote_src: true
+    owner: root
+    group: root
+    extra_opts:
+      - --strip-components=1
+      - --wildcards
+      - "*/pushgateway"
+  notify: Restart pushgateway
+- name: Copy systemd service
+  ansible.builtin.template:
+    src: pushgateway.service.j2
+    dest: /etc/systemd/system/pushgateway.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart pushgateway
+- name: Start pushgateway systemd service
+  ansible.builtin.systemd:
+    name: pushgateway
+    state: started
+    enabled: true
+    daemon_reload: true

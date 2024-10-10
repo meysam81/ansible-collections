@@ -1,0 +1,33 @@
+[Unit]
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pushgateway \
+  --web.listen-address={{ pushgateway_web_listen_address }} \
+{% if pushgateway_web_external_url %}
+  --web.external-url={{ pushgateway_web_external_url }} \
+{% endif %}
+{% if pushgateway_web_enable_lifecycle %}
+  --web.enable-lifecycle \
+{% else %}
+  --no-web.enable-lifecycle \
+{% endif %}
+{% if pushgateway_web_enable_admin_api %}
+  --web.enable-admin-api \
+{% else %}
+  --no-web.enable-admin-api \
+{% endif %}
+{% if pushgateway_persistence_file %}
+  --persistence.file={{ pushgateway_persistence_file }} \
+{% endif %}
+  --log.level={{ pushgateway_log_level }} \
+  --log.format={{ pushgateway_log_format }}
+Restart=on-failure
+User={{ pushgateway_user }}
+Group={{ pushgateway_group }}
+
+[Install]
+WantedBy=multi-user.target
+After=network-online.target

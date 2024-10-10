@@ -1,0 +1,18 @@
+---
+pushgateway_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
+pushgateway_create_user: true
+pushgateway_create_group: true
+pushgateway_download_url: https://github.com/prometheus/pushgateway/releases/download/v{{ pushgateway_version | regex_replace('^v', '') }}/pushgateway-{{ pushgateway_version | regex_replace('^v', '') }}.{{ pushgateway_os }}-{{ pushgateway_arch }}.tar.gz # yamllint disable-line rule:line-length
+pushgateway_group: pushgateway
+pushgateway_healthcheck_enabled: true
+pushgateway_log_format: logfmt
+pushgateway_log_level: info
+pushgateway_os: linux
+pushgateway_user: pushgateway
+pushgateway_persistence_file: ""
+pushgateway_sha256sum_url: https://github.com/prometheus/pushgateway/releases/download/v{{ pushgateway_version | regex_replace('^v', '') }}/sha256sums.txt
+pushgateway_version: 1.10.0
+pushgateway_web_enable_admin_api: true
+pushgateway_web_enable_lifecycle: true
+pushgateway_web_external_url: ""
+pushgateway_web_listen_address: 127.0.0.1:9091
