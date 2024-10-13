@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### ⚙️ Miscellaneous Tasks
 
+- Add ansible doctor to pre-commit hooks
+- Add changelog generator to pre-commit
+
+## [1.5.0] - 2024-10-10
+
+### 🚀 Features
+
+- Create pushgateway role
+
+### ⚙️ Miscellaneous Tasks
+
 - *(CI)* Add sonar analysis
 - Add sonar properties
 

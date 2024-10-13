@@ -84,5 +84,3 @@ repos:
         name: update-changelog
         entry: scripts/generate-changelog.sh
         language: script
-        stages:
-          - commit-msg
