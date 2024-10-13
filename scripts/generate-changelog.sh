@@ -2,4 +2,4 @@
 
 set -eu
 
-git-cliff --verbose --config cliff.toml | tee CHANGELOG.md
+git-cliff --config cliff.toml > CHANGELOG.md

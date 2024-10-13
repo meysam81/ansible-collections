@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Add ansible doctor to pre-commit hooks
 - Add changelog generator to pre-commit
+- Add changelog generator to pre-commit
 
 ## [1.5.0] - 2024-10-10
 
