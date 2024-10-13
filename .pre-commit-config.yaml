@@ -78,3 +78,11 @@ repos:
         args:
           - -rf
           - ./roles
+  - repo: local
+    hooks:
+      - id: update-changelog
+        name: update-changelog
+        entry: scripts/generate-changelog.sh
+        language: script
+        stages:
+          - commit-msg
