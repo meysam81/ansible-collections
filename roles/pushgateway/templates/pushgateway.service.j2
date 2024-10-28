@@ -24,10 +24,10 @@ ExecStart=/usr/local/bin/pushgateway \
 {% endif %}
   --log.level={{ pushgateway_log_level }} \
   --log.format={{ pushgateway_log_format }}
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 User={{ pushgateway_user }}
 Group={{ pushgateway_group }}
 
 [Install]
 WantedBy=multi-user.target
-After=network-online.target

@@ -11,6 +11,7 @@
 
 - [Ansible Collections](#ansible-collections)
   - [Usage](#usage)
+  - [Release Instructions](#release-instructions)
   - [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -30,6 +31,14 @@ collections:
   - name: meysam81.general
     # latest version: https://github.com/meysam81/ansible-collections/releases
     version: x.x.x
+```
+
+## Release Instructions
+
+```shell
+version=vx.x.x
+git tag -s $version -m $version
+git push origin --tags
 ```
 
 ## License

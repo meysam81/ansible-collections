@@ -64,7 +64,7 @@
     dest: /etc/vmagent/vmagent.yml
     owner: "{{ vmagent_user }}"
     group: "{{ vmagent_group }}"
-    mode: "0440"
+    mode: "0644"
   notify: Reload vmagent service
 - name: Start vmagent service
   ansible.builtin.systemd:
