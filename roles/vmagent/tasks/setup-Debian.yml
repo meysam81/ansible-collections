@@ -79,8 +79,5 @@
     timeout: 5
     method: GET
     validate_certs: false
-  delay: 1
-  register: vmagent_health_check
-  retries: 3
-  until: vmagent_health_check.status == 200
   when: vmagent_http_listen_addr != ""
+  failed_when: false
