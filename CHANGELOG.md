@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - Add changelog generator to pre-commit
 - Remove changelog from stdout
 - *(pushgateway)* Remove reload from systemd definition
+- *(vmagent)* Do not retry healthcheck and do not fail
 
 ## [1.5.0] - 2024-10-10
 

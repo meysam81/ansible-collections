@@ -50,6 +50,7 @@ jobs:
           scan-ref: .
           scan-type: ${{ matrix.scan-type }}
           severity: CRITICAL,HIGH
+          token-setup-trivy: ${{ secrets.GH_PAT }}
           trivy-config: trivy.yaml
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
