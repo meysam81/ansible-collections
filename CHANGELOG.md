@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(vmagent)* Make remote write url mandatory
+
 ### ⚙️ Miscellaneous Tasks
 
 - Add ansible doctor to pre-commit hooks
