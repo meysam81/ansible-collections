@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Remove changelog from stdout
 - *(pushgateway)* Remove reload from systemd definition
 - *(vmagent)* Do not retry healthcheck and do not fail
+- *(CI)* Provide PAT for trivy-db
 
 ## [1.5.0] - 2024-10-10
 
