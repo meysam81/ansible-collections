@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [1.5.1] - 2024-10-28
 
 ### 🐛 Bug Fixes
 
@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - *(pushgateway)* Remove reload from systemd definition
 - *(vmagent)* Do not retry healthcheck and do not fail
 - *(CI)* Provide PAT for trivy-db
+- *(CI)* Do not fail on changelog
 
 ## [1.5.0] - 2024-10-10
 

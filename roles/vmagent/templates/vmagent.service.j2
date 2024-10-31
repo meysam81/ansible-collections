@@ -23,6 +23,9 @@ ExecStart={{ vmagent_bin }} \
 {% if vmagent_instance_label %}
   -remoteWrite.label=instance={{ vmagent_instance_label }} \
 {% endif %}
+{% for key, value in vmagent_extra_labels.items() %}
+  -remoteWrite.label={{ key }}={{ value }} \
+{% endfor %}
   -httpListenAddr={{ vmagent_http_listen_addr }} \
   -influxListenAddr=""
 ExecReload=/bin/kill -SIGHUP $MAINPID
