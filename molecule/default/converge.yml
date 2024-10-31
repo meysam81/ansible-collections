@@ -6,6 +6,30 @@
   tasks:
     - name: Ping
       ansible.builtin.ping:
+    - name: Copy relabling config
+      ansible.builtin.copy:
+        content: |
+          - source_labels:
+              - exported_job
+            action: replace
+            target_label: job
+            regex: (.+)
+          - source_labels:
+              - exported_instance
+            action: replace
+            target_label: instance
+            regex: (.+)
+        dest: /etc/vmagent/relablings.yml
+        owner: vmagent
+        group: vmagent
+        mode: "0644"
+      notify: Restart vmagent service
+      tags: vmagent
+    - name: Ensure vmagent.service is running
+      command: systemctl status vmagent
+      register: vmagent_service_status
+      changed_when: false
+      tags: vmagent
   roles:
     - role: haproxy
       tags: haproxy
@@ -14,10 +38,12 @@
     - role: vmagent
       tags: vmagent
       vars:
-        vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write') }}"
+        vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write', true) }}"
+        vmagent_extra_cli_flags:
+          - -remoteWrite.urlRelabelConfig=/etc/vmagent/relablings.yml
     - role: promtail
       tags: promtail
       vars:
-        promtail_remote_write_url: "{{ lookup('env', 'PROMTAIL_REMOTE_WRITE_URL') | default('http://localhost:3100/loki/api/v1/push') }}"
+        promtail_remote_write_url: "{{ lookup('env', 'PROMTAIL_REMOTE_WRITE_URL') | default('http://localhost:3100/loki/api/v1/push', true) }}"
     - role: pushgateway
       tags: pushgateway

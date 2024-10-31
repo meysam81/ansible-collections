@@ -9,6 +9,7 @@ Install vmagent from GitHub release
   - [vmagent_arch](#vmagent_arch)
   - [vmagent_bin](#vmagent_bin)
   - [vmagent_docker_enabled](#vmagent_docker_enabled)
+  - [vmagent_extra_cli_flags](#vmagent_extra_cli_flags)
   - [vmagent_extra_labels](#vmagent_extra_labels)
   - [vmagent_fail2ban_enabled](#vmagent_fail2ban_enabled)
   - [vmagent_group](#vmagent_group)
@@ -63,6 +64,14 @@ vmagent_bin: /usr/local/bin/vmagent-prod
 
 ```YAML
 vmagent_docker_enabled: false
+```
+
+### vmagent_extra_cli_flags
+
+#### Default value
+
+```YAML
+vmagent_extra_cli_flags: []
 ```
 
 ### vmagent_extra_labels

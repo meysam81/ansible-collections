@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2] - 2024-10-31
+
+### ⚙️ Miscellaneous Tasks
+
+- *(vmagent)* Add optional labels
+
 ## [1.5.1] - 2024-10-28
 
 ### 🐛 Bug Fixes
