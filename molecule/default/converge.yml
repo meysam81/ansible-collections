@@ -26,7 +26,7 @@
       notify: Restart vmagent service
       tags: vmagent
     - name: Ensure vmagent.service is running
-      command: systemctl status vmagent
+      ansible.builtin.command: systemctl status vmagent
       register: vmagent_service_status
       changed_when: false
       tags: vmagent
