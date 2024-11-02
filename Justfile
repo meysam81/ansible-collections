@@ -14,9 +14,6 @@ install:
   cd roles && \
     ansible-galaxy role init {{rolename}}
 
-changelog:
-  git-cliff --verbose --config cliff.toml > CHANGELOG.md
-
 ansible-doctor:
   ansible-doctor -rf ./roles
 
