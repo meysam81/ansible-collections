@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.5](https://github.com/meysam81/ansible-collections/compare/v1.5.4...v1.5.5) (2024-11-07)
+
+
+### Miscellaneous Chores
+
+* **vmagent:** upgrade to v1.106.0 ([51e564d](https://github.com/meysam81/ansible-collections/commit/51e564db055108dc938774f84f01e2a128dd5c3b))
+
 ## [1.5.4](https://github.com/meysam81/ansible-collections/compare/v1.5.4...v1.5.4) (2024-11-02)
 
 
