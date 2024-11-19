@@ -68,7 +68,7 @@ jobs:
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.2.1
+        image: grafana/loki:3.3.0
         ports:
           - 3100:3100
     strategy:
