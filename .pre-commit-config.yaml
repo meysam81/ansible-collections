@@ -55,7 +55,7 @@ repos:
         stages: [commit-msg]
         additional_dependencies: ["@commitlint/config-conventional"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.2
+    rev: v0.8.0
     hooks:
       - id: ruff
         types_or:
@@ -71,7 +71,7 @@ repos:
           - pyi
           - jupyter
   - repo: https://github.com/thegeeklab/ansible-doctor
-    rev: v6.0.2
+    rev: v7.0.0
     hooks:
       - id: ansible-doctor
         name: ansible-doctor
