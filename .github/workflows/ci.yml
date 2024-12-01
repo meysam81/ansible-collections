@@ -41,6 +41,8 @@ jobs:
             ~/.cache/trivy
             ~/work/temp
           key: ${{ runner.os }}-trivy-db-${{ hashFiles('**/trivy.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-trivy-db-
       - name: Run Trivy vulnerability scanner in fs mode
         uses: aquasecurity/trivy-action@master
         with:
@@ -94,6 +96,8 @@ jobs:
             ~/.ansible/collections
             ~/.ansible/plugins
           key: ${{ runner.os }}-ansible-${{ hashFiles('**/requirements.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-ansible-
       - name: Prepare localhost inventory
         run: |
           cat << 'EOF' > localhost.yml

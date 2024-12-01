@@ -1,0 +1,15 @@
+[Unit]
+Description=https://github.com/meysam81/ansible-collections
+
+[Service]
+EnvironmentFile=/etc/default/k8s-oidc-github-pages
+ExecStart=/usr/local/bin/k8s-oidc-github-pages
+ReadOnlyPaths=/
+ReadWritePaths=/run/k8s-oidc-github-pages
+Restart=on-failure
+RuntimeDirectory=k8s-oidc-github-pages
+Type=oneshot
+WorkingDirectory=/run/k8s-oidc-github-pages
+
+[Install]
+WantedBy=multi-user.target

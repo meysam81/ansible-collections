@@ -1,0 +1,8 @@
+[Unit]
+Description=https://github.com/meysam81/ansible-collections
+
+[Timer]
+OnCalendar={{ k8s_oidc_github_pages_timer_calendar }}
+
+[Install]
+WantedBy=multi-user.target

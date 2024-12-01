@@ -1,0 +1,88 @@
+---
+- name: Assert required vars are defined
+  ansible.builtin.assert:
+    that:
+      - k8s_oidc_github_pages_repository_name | default('', true) | length > 0
+      - k8s_oidc_github_pages_repository_owner | default('', true) | length > 0
+      - k8s_oidc_github_pages_github_deploy_key | default('', true) | length > 0
+- name: Ensure /root/.ssh exists
+  ansible.builtin.file:
+    group: root
+    mode: "0700"
+    owner: root
+    path: /root/.ssh
+    state: directory
+- name: Ensure /root/.gnupg exists
+  ansible.builtin.file:
+    group: root
+    mode: "0700"
+    owner: root
+    path: /root/.gnupg
+    state: directory
+- name: Copy GitHub Deploy key
+  ansible.builtin.copy:
+    content: "{{ k8s_oidc_github_pages_github_deploy_key }}"
+    dest: /root/{{ k8s_oidc_github_pages_ssh_private_key_path }}
+    group: root
+    mode: "0600"
+    owner: root
+  no_log: true
+- name: Add GitHub Known hosts entry
+  ansible.builtin.blockinfile:
+    path: "/root/{{ k8s_oidc_github_pages_github_known_hosts_path }}"
+    create: true
+    mode: "0644"
+    block: "{{ lookup('file', 'github-known-hosts') }}"
+    marker: "# {mark} GITHUB KNOWN HOSTS"
+    state: present
+- name: Create SSH config block for GitHub Pages
+  ansible.builtin.blockinfile:
+    path: "/root/{{ k8s_oidc_github_pages_ssh_config_path }}"
+    create: true
+    mode: "0600"
+    block: "{{ lookup('template', 'ssh-config.j2') }}"
+    marker: "# {mark} K8S OIDC GITHUB PAGES SSH CONFIG"
+    state: present
+- name: Copy Sign GPG private key
+  ansible.builtin.copy:
+    content: "{{ k8s_oidc_github_pages_sign_gpg_private_key }}"
+    dest: /root/{{ k8s_oidc_github_pages_gpg_private_key_path }}
+    group: root
+    mode: "0600"
+    owner: root
+  no_log: true
+  when: k8s_oidc_github_pages_sign_gpg_private_key | default('', true) | length > 0
+- name: Copy the K8s OIDC GitHub Pages shell script
+  ansible.builtin.template:
+    src: k8s-oidc-github-pages.sh.j2
+    dest: /usr/local/bin/k8s-oidc-github-pages
+    owner: root
+    group: root
+    mode: "0755"
+- name: Copy environment variable file
+  ansible.builtin.copy:
+    content: "{{ k8s_oidc_github_pages_environments }}"
+    dest: /etc/default/k8s-oidc-github-pages
+    owner: root
+    group: root
+    mode: "0640"
+- name: Copy k8s oidc github pages service file
+  ansible.builtin.template:
+    src: k8s-oidc-github-pages.service.j2
+    dest: /etc/systemd/system/k8s-oidc-github-pages.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: Copy k8s oidc github pages timer file
+  ansible.builtin.template:
+    src: k8s-oidc-github-pages.timer.j2
+    dest: /etc/systemd/system/k8s-oidc-github-pages.timer
+    owner: root
+    group: root
+    mode: "0644"
+- name: Start the k8s oidc github pages systemd timer
+  ansible.builtin.systemd:
+    name: k8s-oidc-github-pages.timer
+    enabled: true
+    daemon_reload: true
+    state: started

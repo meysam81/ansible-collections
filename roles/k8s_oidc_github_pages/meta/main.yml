@@ -1,0 +1,49 @@
+galaxy_info:
+  author: Meysam Azad
+  description: |
+    Fetch Kubernetes OpenID Configuration and JWKs keys and push and deploy them to GitHub Pages as static files.
+
+
+    Grab the OIDC configuration file from K8s API server and push it into a
+    GitHub repository with Pages enabled.
+
+
+    This will ultimately result in serving static files from a public URL with TLS
+    enabled.
+
+
+    As a result, the administrator can set up trust relationship with other
+    service providers, such as AWS, to allow pods inside the Kubernetes cluster
+    access to third-party cloud services.
+
+
+    Although this is tailored for K3d Kubernetes cluster, there is nothing stopping
+    it from being used on other Kubernetes clusters.
+  company: Self employed
+
+  issue_tracker_url: http://github.com/meysam81/ansible-collections/issues
+  license: Apache-2.0
+
+  min_ansible_version: "2.17"
+
+  galaxy_tags:
+    - kubernetes
+    - oidc
+    - github
+    - pages
+    - openid
+    - jwks
+    - security
+    - authentication
+    - authorization
+    - identity
+    - federation
+    - sso
+    - saml
+    - oauth
+    - jwt
+    - jwe
+    - jws
+    - jwk
+
+dependencies: []
