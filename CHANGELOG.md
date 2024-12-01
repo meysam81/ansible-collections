@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/meysam81/ansible-collections/compare/v1.5.5...v1.6.0) (2024-12-01)
+
+
+### Features
+
+* **k8s-oidc:** add bare-metal k8s oidc github pages ([a18a830](https://github.com/meysam81/ansible-collections/commit/a18a830dd194612e03afcb17ae15cd40073f8f4f))
+
 ## [1.5.5](https://github.com/meysam81/ansible-collections/compare/v1.5.4...v1.5.5) (2024-11-07)
 
 
