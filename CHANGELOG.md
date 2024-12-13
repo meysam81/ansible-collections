@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/meysam81/ansible-collections/compare/v1.6.0...v1.7.0) (2024-12-13)
+
+
+### Features
+
+* add kratos role ([819a4b1](https://github.com/meysam81/ansible-collections/commit/819a4b10ba502f38cca692d165d182261a0ea238))
+
 ## [1.6.0](https://github.com/meysam81/ansible-collections/compare/v1.5.5...v1.6.0) (2024-12-01)
 
 
