@@ -1,0 +1,21 @@
+---
+oathkeeper_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '64bit') | replace('aarch64', 'arm64') }}"
+oathkeeper_checksum_url: https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v', '') }}/checksums.txt
+oathkeeper_configuration: |
+  access_rules:
+    matching_strategy: regexp
+  authenticators:
+    anonymous:
+      config:
+        subject: guest
+      enabled: true
+oathkeeper_download_url: >-
+  https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v', '') }}/oathkeeper_{{ oathkeeper_version | regex_replace('^v', '') }}-{{ oathkeeper_os }}{{ oathkeeper_sqlite | ternary('_sqlite', '') }}{{ oathkeeper_libmusl | ternary('_libmusl', '') }}_{{ oathkeeper_arch }}.tar.gz
+oathkeeper_envs: {}
+oathkeeper_exec_cmd: /usr/local/bin/oathkeeper serve
+oathkeeper_group: oathkeeper
+oathkeeper_libmusl: false
+oathkeeper_os: linux
+oathkeeper_sqlite: true
+oathkeeper_user: oathkeeper
+oathkeeper_version: 0.40.7

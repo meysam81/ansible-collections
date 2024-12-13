@@ -1,0 +1,80 @@
+---
+- name: Assert the oathkeeper configuration var is set
+  ansible.builtin.assert:
+    that:
+      - oathkeeper_configuration is defined
+- name: Create oathkeeper group
+  ansible.builtin.group:
+    name: "{{ oathkeeper_group }}"
+    state: present
+- name: Create oathkeeper system user
+  ansible.builtin.user:
+    name: "{{ oathkeeper_user }}"
+    group: "{{ oathkeeper_group }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+    system: true
+    state: present
+- name: Download oathkeeper checksum
+  ansible.builtin.set_fact:
+    oathkeeper_checksum: >-
+      {{ (lookup('ansible.builtin.url', oathkeeper_checksum_url, split_lines=true, wantlist=true) |
+      select('search', oathkeeper_download_url | basename) | list | first).split(' ')[0] }}
+- name: Download oathkeeper {{ oathkeeper_version }}
+  ansible.builtin.get_url:
+    url: "{{ oathkeeper_download_url }}"
+    dest: /tmp/{{ oathkeeper_download_url | basename }}
+    mode: "0644"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    checksum: "sha256:{{ oathkeeper_checksum }}"
+  register: oathkeeper_download
+- name: Extract oathkeeper binary to /usr/local/bin
+  ansible.builtin.unarchive:
+    src: "{{ oathkeeper_download.dest }}"
+    dest: /usr/local/bin
+    remote_src: true
+    extra_opts:
+      - oathkeeper
+    mode: "0755"
+    owner: root
+    group: root
+  notify: Restart oathkeeper
+- name: Copy oathkeeper systemd service
+  ansible.builtin.template:
+    src: oathkeeper.service.j2
+    dest: /etc/systemd/system/oathkeeper.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart oathkeeper
+- name: Create oathkeeper configuration directory
+  ansible.builtin.file:
+    path: /etc/oathkeeper
+    state: directory
+    mode: "0755"
+    owner: "{{ oathkeeper_user }}"
+    group: "{{ oathkeeper_group }}"
+- name: Copy oathkeeper configuration
+  ansible.builtin.copy:
+    content: "{{ oathkeeper_configuration }}"
+    dest: /etc/oathkeeper/config.yml
+    mode: "0440"
+    owner: "{{ oathkeeper_user }}"
+    group: "{{ oathkeeper_group }}"
+  no_log: true
+  notify: Restart oathkeeper
+- name: Copy environment file
+  ansible.builtin.template:
+    src: oathkeeper.envs.j2
+    dest: /etc/oathkeeper/oathkeeper.env
+    mode: "0440"
+    owner: "{{ oathkeeper_user }}"
+    group: "{{ oathkeeper_group }}"
+  notify: Restart oathkeeper
+- name: Start oathkeeper service
+  ansible.builtin.systemd:
+    name: oathkeeper
+    state: started
+    enabled: true
+  notify: Restart oathkeeper

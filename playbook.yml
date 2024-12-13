@@ -26,3 +26,5 @@
       tags: k8s_oidc_github_pages
     - role: kratos
       tags: kratos
+    - role: oathkeeper
+      tags: oathkeeper
