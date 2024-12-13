@@ -1,4 +1,4 @@
-# vmagent
+# VMAgent
 
 Install vmagent from GitHub release
 

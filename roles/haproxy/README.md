@@ -1,4 +1,4 @@
-# haproxy
+# HAProxy
 
 Install HAProxy with apt
 

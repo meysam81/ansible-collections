@@ -1,4 +1,4 @@
-# pushgateway
+# PushGateway
 
 Install pushgateway from GitHub release
 

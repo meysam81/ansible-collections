@@ -1,4 +1,4 @@
-# node_exporter
+# Node Exporter
 
 Install node-exporter from GitHub release
 

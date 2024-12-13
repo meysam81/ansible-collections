@@ -1,4 +1,4 @@
-# k8s_oidc_github_pages
+# Kubernetes OpenID Connect GitHub Pages
 
 Fetch Kubernetes OpenID Configuration and JWKs keys and push and deploy them to GitHub Pages as static files.
 

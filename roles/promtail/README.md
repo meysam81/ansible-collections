@@ -1,4 +1,4 @@
-# promtail
+# Promtail
 
 Install promtail from GitHub release
 
