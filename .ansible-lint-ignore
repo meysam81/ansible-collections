@@ -1,3 +1,4 @@
 roles/kratos/defaults/main.yml yaml[line-length]
+roles/oathkeeper/defaults/main.yml yaml[line-length]
 roles/promtail/defaults/main.yml yaml[line-length]
 roles/vmagent/defaults/main.yml yaml[line-length]
