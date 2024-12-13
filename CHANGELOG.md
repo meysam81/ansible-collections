@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/meysam81/ansible-collections/compare/v1.7.0...v1.8.0) (2024-12-13)
+
+
+### Features
+
+* add oathkeeper ([94dbcac](https://github.com/meysam81/ansible-collections/commit/94dbcac6c98d5b121a5cbea70ed8e800c166a473))
+
 ## [1.7.0](https://github.com/meysam81/ansible-collections/compare/v1.6.0...v1.7.0) (2024-12-13)
 
 
