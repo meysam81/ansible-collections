@@ -10,5 +10,4 @@
 .vagrant
 .secrets
 
-host_vars
 vars.yml

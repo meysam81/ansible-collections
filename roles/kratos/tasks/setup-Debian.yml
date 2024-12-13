@@ -1,0 +1,80 @@
+---
+- name: Assert the kratos configuration var is set
+  ansible.builtin.assert:
+    that:
+      - kratos_configuration is defined
+- name: Create kratos group
+  ansible.builtin.group:
+    name: "{{ kratos_group }}"
+    state: present
+- name: Create kratos system user
+  ansible.builtin.user:
+    name: "{{ kratos_user }}"
+    group: "{{ kratos_group }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+    system: true
+    state: present
+- name: Download kratos checksum
+  ansible.builtin.set_fact:
+    kratos_checksum: >-
+      {{ (lookup('ansible.builtin.url', kratos_checksum_url, split_lines=true, wantlist=true) |
+      select('search', kratos_download_url | basename) | list | first).split(' ')[0] }}
+- name: Download kratos {{ kratos_version }}
+  ansible.builtin.get_url:
+    url: "{{ kratos_download_url }}"
+    dest: /tmp/{{ kratos_download_url | basename }}
+    mode: "0644"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    checksum: "sha256:{{ kratos_checksum }}"
+  register: kratos_download
+- name: Extract kratos binary to /usr/local/bin
+  ansible.builtin.unarchive:
+    src: "{{ kratos_download.dest }}"
+    dest: /usr/local/bin
+    remote_src: true
+    extra_opts:
+      - kratos
+    mode: "0755"
+    owner: root
+    group: root
+  notify: Restart kratos
+- name: Copy kratos systemd service
+  ansible.builtin.template:
+    src: kratos.service.j2
+    dest: /etc/systemd/system/kratos.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart kratos
+- name: Create kratos configuration directory
+  ansible.builtin.file:
+    path: /etc/kratos
+    state: directory
+    mode: "0755"
+    owner: "{{ kratos_user }}"
+    group: "{{ kratos_group }}"
+- name: Copy Kratos configuration
+  ansible.builtin.copy:
+    content: "{{ kratos_configuration }}"
+    dest: /etc/kratos/config.yml
+    mode: "0440"
+    owner: "{{ kratos_user }}"
+    group: "{{ kratos_group }}"
+  no_log: true
+  notify: Restart kratos
+- name: Copy environment file
+  ansible.builtin.template:
+    src: kratos.envs.j2
+    dest: /etc/kratos/kratos.env
+    mode: "0440"
+    owner: "{{ kratos_user }}"
+    group: "{{ kratos_group }}"
+  notify: Restart kratos
+- name: Start kratos service
+  ansible.builtin.systemd:
+    name: kratos
+    state: started
+    enabled: true
+  notify: Restart kratos

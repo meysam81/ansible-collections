@@ -1,0 +1,51 @@
+[Unit]
+Description=Ory Kratos Identity Server
+Documentation=https://www.ory.sh/kratos/docs/
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+# Hardening: Run as non-root user
+User={{ kratos_user }}
+Group={{ kratos_group }}
+
+# Hardening: Limit system resources
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# Migration step
+ExecStartPre=/usr/local/bin/kratos migrate sql --yes --read-from-env --config /etc/kratos/config.yml
+
+# Environment file
+EnvironmentFile=/etc/kratos/kratos.env
+
+# Executable and configuration
+Environment="KRATOS_ARGS=--config /etc/kratos/config.yml"
+ExecStart={{ kratos_exec_cmd }} $KRATOS_ARGS
+
+# Restart configuration
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=0
+
+# Hardening: Limit access to system resources
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+# Sandboxing
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

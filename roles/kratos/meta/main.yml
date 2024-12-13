@@ -1,0 +1,42 @@
+---
+galaxy_info:
+  # Ansible Galaxy role metadata
+  role_name: kratos
+  namespace: general
+  author: Meysam Azad
+  description: Ansible role for deploying Ory Kratos Identity Server
+
+  # Licensing information
+  license: Apache-2.0
+
+  # Minimum Ansible version
+  min_ansible_version: "2.17"
+
+  # Platform compatibility
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+
+  # Role categorization
+  galaxy_tags:
+    - security
+    - identity
+    - authentication
+    - iam
+    - kratos
+    - ory
+    - identitymanagement
+    - usermanagement
+    - accesscontrol
+
+  # Role-specific metadata
+  standalone: true
+
+# Dependencies management
+dependencies: []

@@ -1,0 +1,6 @@
+---
+- name: Restart kratos
+  ansible.builtin.systemd:
+    name: kratos
+    state: restarted
+    enabled: true
