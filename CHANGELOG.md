@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/meysam81/ansible-collections/compare/v1.8.0...v1.8.1) (2024-12-17)
+
+
+### Bug Fixes
+
+* **kratos:** spin up the courier next to the server ([41d3463](https://github.com/meysam81/ansible-collections/commit/41d346382aa134d53dd49324f02e4652f86b8132))
+
 ## [1.8.0](https://github.com/meysam81/ansible-collections/compare/v1.7.0...v1.8.0) (2024-12-13)
 
 
