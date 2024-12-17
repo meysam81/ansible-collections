@@ -20,7 +20,7 @@ ExecStartPre=/usr/local/bin/kratos migrate sql --yes --read-from-env --config /e
 EnvironmentFile=/etc/kratos/kratos.env
 
 # Executable and configuration
-Environment="KRATOS_ARGS=--config /etc/kratos/config.yml"
+Environment="KRATOS_ARGS=--watch-courier --config /etc/kratos/config.yml"
 ExecStart={{ kratos_exec_cmd }} $KRATOS_ARGS
 
 # Restart configuration
