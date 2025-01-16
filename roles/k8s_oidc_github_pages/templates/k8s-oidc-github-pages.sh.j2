@@ -15,11 +15,6 @@ echo "Sleeping for $sleep_time seconds"
 sleep "$sleep_time"
 {% endif -%}
 
-{% if k8s_oidc_github_pages_sign_gpg_private_key | default('', true) | length > 0 %}
-gpg_import_output=$(gpg --import /root/{{ k8s_oidc_github_pages_gpg_private_key_path }} 2>&1)
-GPG_KEY_ID=$(echo "$gpg_import_output" | grep 'key' | grep 'imported' | awk '{print $3}')
-{% endif -%}
-
 timestamp=$(date +%s)
 repo_name={{ k8s_oidc_github_pages_repository_name }}-$timestamp
 
@@ -41,11 +36,6 @@ git add .
 
 git config user.name "{{ k8s_oidc_github_pages_commit_name }}"
 git config user.email "{{ k8s_oidc_github_pages_commit_email }}"
-
-{% if k8s_oidc_github_pages_sign_gpg_private_key | default('', true) | length > 0 -%}
-git config commit.gpgSign true
-git config user.signingKey "$GPG_KEY_ID"
-{% endif -%}
 
 date_isoformat=$(date -Iseconds)
 git commit -m "Update K8s OIDC at $date_isoformat"

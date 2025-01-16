@@ -6,12 +6,10 @@ k8s_oidc_github_pages_environments: |
   KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 k8s_oidc_github_pages_github_deploy_key: null
 k8s_oidc_github_pages_github_known_hosts_path: .ssh/known_hosts
-k8s_oidc_github_pages_gpg_private_key_path: .gnupg/github-signing-key.asc
 k8s_oidc_github_pages_random_sleep_enabled: false
 k8s_oidc_github_pages_repository_name: null
 k8s_oidc_github_pages_repository_owner: null
 k8s_oidc_github_pages_repository_ssh_url: git@github.com:{{ k8s_oidc_github_pages_repository_owner }}/{{ k8s_oidc_github_pages_repository_name }}.git
-k8s_oidc_github_pages_sign_gpg_private_key: null
 k8s_oidc_github_pages_ssh_config_host: k8s-oidc-github-pages
 k8s_oidc_github_pages_ssh_config_path: .ssh/config
 k8s_oidc_github_pages_ssh_private_key_path: .ssh/github-deploy-key

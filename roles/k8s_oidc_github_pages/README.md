@@ -26,12 +26,10 @@ it from being used on other Kubernetes clusters.
   - [k8s_oidc_github_pages_environments](#k8s_oidc_github_pages_environments)
   - [k8s_oidc_github_pages_github_deploy_key](#k8s_oidc_github_pages_github_deploy_key)
   - [k8s_oidc_github_pages_github_known_hosts_path](#k8s_oidc_github_pages_github_known_hosts_path)
-  - [k8s_oidc_github_pages_gpg_private_key_path](#k8s_oidc_github_pages_gpg_private_key_path)
   - [k8s_oidc_github_pages_random_sleep_enabled](#k8s_oidc_github_pages_random_sleep_enabled)
   - [k8s_oidc_github_pages_repository_name](#k8s_oidc_github_pages_repository_name)
   - [k8s_oidc_github_pages_repository_owner](#k8s_oidc_github_pages_repository_owner)
   - [k8s_oidc_github_pages_repository_ssh_url](#k8s_oidc_github_pages_repository_ssh_url)
-  - [k8s_oidc_github_pages_sign_gpg_private_key](#k8s_oidc_github_pages_sign_gpg_private_key)
   - [k8s_oidc_github_pages_ssh_config_host](#k8s_oidc_github_pages_ssh_config_host)
   - [k8s_oidc_github_pages_ssh_config_path](#k8s_oidc_github_pages_ssh_config_path)
   - [k8s_oidc_github_pages_ssh_private_key_path](#k8s_oidc_github_pages_ssh_private_key_path)
@@ -97,14 +95,6 @@ k8s_oidc_github_pages_github_deploy_key:
 k8s_oidc_github_pages_github_known_hosts_path: .ssh/known_hosts
 ```
 
-### k8s_oidc_github_pages_gpg_private_key_path
-
-#### Default value
-
-```YAML
-k8s_oidc_github_pages_gpg_private_key_path: .gnupg/github-signing-key.asc
-```
-
 ### k8s_oidc_github_pages_random_sleep_enabled
 
 #### Default value
@@ -136,14 +126,6 @@ k8s_oidc_github_pages_repository_owner:
 ```YAML
 k8s_oidc_github_pages_repository_ssh_url: git@github.com:{{ k8s_oidc_github_pages_repository_owner
   }}/{{ k8s_oidc_github_pages_repository_name }}.git
-```
-
-### k8s_oidc_github_pages_sign_gpg_private_key
-
-#### Default value
-
-```YAML
-k8s_oidc_github_pages_sign_gpg_private_key:
 ```
 
 ### k8s_oidc_github_pages_ssh_config_host
