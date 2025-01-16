@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+set -eux
+
+curl -s "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience={{ vm_identity_gcp_token_audience }}" -HMetadata-Flavor:Google -o {{ vm_identity_gcp_token_file_path }}

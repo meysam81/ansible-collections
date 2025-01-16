@@ -1,0 +1,42 @@
+---
+- name: Copy the environment file
+  ansible.builtin.template:
+    src: configs.env.j2
+    dest: "{{ vm_identity_gcp_env_file_path }}"
+    owner: root
+    group: root
+    mode: "0640"
+- name: Ensure token dir exists
+  ansible.builtin.file:
+    path: "{{ vm_identity_gcp_token_file_path | dirname }}"
+    owner: root
+    group: root
+    state: directory
+    mode: "0755"
+- name: Copy the vm-identity-gcp.timer systemd unit file
+  ansible.builtin.copy:
+    src: vm-identity-gcp.timer
+    dest: /etc/systemd/system/vm-identity-gcp.timer
+    owner: root
+    group: root
+    mode: "0644"
+- name: Copy the vm-identity-gcp.service systemd unit file
+  ansible.builtin.template:
+    src: vm-identity-gcp.service.j2
+    dest: /etc/systemd/system/vm-identity-gcp.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: Copy the vm-identity-gcp shell script
+  ansible.builtin.template:
+    src: vm-identity-gcp.sh.j2
+    dest: "{{ vm_identity_gcp_executable_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+- name: Start and enable the vm-identity-gcp.timer systemd unit
+  ansible.builtin.systemd:
+    name: vm-identity-gcp.timer
+    enabled: true
+    daemon_reload: true
+    state: started

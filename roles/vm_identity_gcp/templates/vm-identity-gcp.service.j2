@@ -1,0 +1,17 @@
+[Unit]
+Description=GCP VM Identity Token Retrieval Service
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart={{ vm_identity_gcp_executable_path }}
+EnvironmentFile={{ vm_identity_gcp_env_file_path }}
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=true
+ReadOnlyPaths=/
+ReadWritePaths={{ vm_identity_gcp_token_file_path | dirname }}
+
+[Install]
+WantedBy=multi-user.target
