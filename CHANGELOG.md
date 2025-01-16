@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/meysam81/ansible-collections/compare/v1.8.1...v1.9.0) (2025-01-16)
+
+
+### Features
+
+* add VM identity GCP role ([e21d71a](https://github.com/meysam81/ansible-collections/commit/e21d71a5eca347fcaa8f88f32c6fbb23a21951af))
+
 ## [1.8.1](https://github.com/meysam81/ansible-collections/compare/v1.8.0...v1.8.1) (2024-12-17)
 
 
