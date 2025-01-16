@@ -30,5 +30,9 @@
       tags: oathkeeper
     - role: k8s_oidc_github_pages
       tags: k8s_oidc_github_pages
+      vars:
+        k8s_oidc_github_pages_repository_name: ansible-collections
+        k8s_oidc_github_pages_repository_owner: meysam81
+        k8s_oidc_github_pages_github_deploy_key: dummy
     - role: vm_identity_gcp
       tags: vm_identity_gcp
