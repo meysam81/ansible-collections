@@ -28,3 +28,7 @@
       tags: kratos
     - role: oathkeeper
       tags: oathkeeper
+    - role: k8s_oidc_github_pages
+      tags: k8s_oidc_github_pages
+    - role: vm_identity_gcp
+      tags: vm_identity_gcp

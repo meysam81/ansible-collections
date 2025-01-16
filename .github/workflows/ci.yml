@@ -78,12 +78,14 @@ jobs:
       matrix:
         role:
           - haproxy
+          - k8s_oidc_github_pages
           - kratos
           - node_exporter
           - oathkeeper
           - promtail
           - pushgateway
           - vmagent
+          - vm_identity_gcp
     env:
       VMAGENT_REMOTE_WRITE_URL: http://localhost:9090/api/v1/write
     steps:
