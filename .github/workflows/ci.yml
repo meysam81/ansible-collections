@@ -66,11 +66,11 @@ jobs:
       contents: read
     services:
       prometheus:
-        image: prom/prometheus:v3.1.0
+        image: prom/prometheus:v3.2.1
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.3.2
+        image: grafana/loki:3.4.2
         ports:
           - 3100:3100
     strategy:
