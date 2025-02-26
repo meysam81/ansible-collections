@@ -1,5 +1,5 @@
 ansible<12
 ansible-doctor<8
 ansible-lint<25
-molecule<25
+molecule<26
 molecule-plugins[docker]<24
