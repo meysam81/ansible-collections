@@ -1,3 +1,5 @@
+## [1.10.5](https://github.com/meysam81/ansible-collections/compare/v1.10.4...v1.10.5) (2025-03-15)
+
 ## [1.10.4](https://github.com/meysam81/ansible-collections/compare/v1.10.3...v1.10.4) (2025-03-15)
 
 
