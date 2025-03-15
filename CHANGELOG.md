@@ -1,3 +1,15 @@
+# [1.10.0](https://github.com/meysam81/ansible-collections/compare/v1.9.0...v1.10.0) (2025-03-15)
+
+
+### Bug Fixes
+
+* **CI:** install deps first ([be2ef3d](https://github.com/meysam81/ansible-collections/commit/be2ef3dac901e4e1875c2d8b699aca366a3832bb))
+
+
+### Features
+
+* add reload to promtail ([e0b1782](https://github.com/meysam81/ansible-collections/commit/e0b17826b5a8a0c14d013bc595210670ea8883c0))
+
 # Changelog
 
 ## [1.9.0](https://github.com/meysam81/ansible-collections/compare/v1.8.1...v1.9.0) (2025-01-16)
