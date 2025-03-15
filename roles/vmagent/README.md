@@ -215,7 +215,7 @@ vmagent_user: vmagent
 #### Default value
 
 ```YAML
-vmagent_version: 1.106.0
+vmagent_version: 1.113.0
 ```
 
 ### vmagent_vmutils_url
