@@ -1,3 +1,10 @@
+## [1.10.2](https://github.com/meysam81/ansible-collections/compare/v1.10.1...v1.10.2) (2025-03-15)
+
+
+### Bug Fixes
+
+* **CI:** use double quotation instead ([a749618](https://github.com/meysam81/ansible-collections/commit/a749618248c7bc2192e808e842faf80ba6029aa4))
+
 ## [1.10.1](https://github.com/meysam81/ansible-collections/compare/v1.10.0...v1.10.1) (2025-03-15)
 
 
