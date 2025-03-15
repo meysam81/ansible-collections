@@ -1,3 +1,10 @@
+## [1.10.3](https://github.com/meysam81/ansible-collections/compare/v1.10.2...v1.10.3) (2025-03-15)
+
+
+### Bug Fixes
+
+* **CI:** modify the galaxy version in publishCmd ([e13ed97](https://github.com/meysam81/ansible-collections/commit/e13ed97418a91bc59c1d31edb79ed07f589b0e36))
+
 ## [1.10.2](https://github.com/meysam81/ansible-collections/compare/v1.10.1...v1.10.2) (2025-03-15)
 
 
