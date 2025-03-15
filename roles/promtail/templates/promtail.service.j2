@@ -4,6 +4,7 @@ Documentation=https://github.com/grafana/loki
 
 [Service]
 ExecStart=/usr/local/bin/promtail -config.file /etc/promtail/promtail.yml
+ExecReload=/bin/kill -SIGHUP $MAINPID
 Restart=always
 RestartSec=5
 User={{ promtail_user }}
