@@ -11,3 +11,4 @@
 .secrets
 
 vars.yml
+node_modules/

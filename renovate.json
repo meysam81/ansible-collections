@@ -15,20 +15,24 @@
     }
   ],
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticPrefixFixDepsChoreOthers",
+    ":ignoreModulesAndTests",
+    "group:monorepos",
+    "group:recommended",
+    "replacements:all",
+    "workarounds:all"
   ],
   "packageRules": [
     {
-      "groupName": "GitHub Actions",
-      "matchManagers": [
-        "github-actions"
-      ]
-    },
-    {
       "automerge": true,
+      "automergeStrategy": "rebase",
       "matchUpdateTypes": [
-        "minor",
-        "patch"
+        "patch",
+        "pin",
+        "lockFileMaintenance",
+        "digest"
       ]
     }
   ]

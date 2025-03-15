@@ -52,7 +52,6 @@ jobs:
           scan-ref: .
           scan-type: ${{ matrix.scan-type }}
           severity: CRITICAL,HIGH
-          token-setup-trivy: ${{ secrets.GH_PAT }}
           trivy-config: trivy.yaml
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -66,11 +65,11 @@ jobs:
       contents: read
     services:
       prometheus:
-        image: prom/prometheus:v3.1.0
+        image: prom/prometheus:v3.2.1
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.3.2
+        image: grafana/loki:3.4.2
         ports:
           - 3100:3100
     strategy:
@@ -117,27 +116,40 @@ jobs:
       - name: Ansible playbook
         run: ansible-playbook playbook.yml -i localhost.yml -t ${{ matrix.role }}
 
-  release-please:
+  semantic-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
-      releases_created: ${{ steps.release-please.outputs.releases_created }}
-      tag_name: ${{ steps.release-please.outputs.tag_name }}
+      version: ${{ steps.semantic-release.outputs.version }}
     permissions:
       contents: write
+      packages: write
+      issues: write
       pull-requests: write
+      id-token: write
     steps:
-      - id: release-please
-        name: Release please
-        uses: googleapis/release-please-action@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          release-type: simple
+          fetch-depth: 0
+          ssh-key: ${{ secrets.GH_DEPLOY_KEY }}
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install bun deps
+        run: bun install
+      - id: semantic-release
+        name: Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bunx semantic-release@v24
 
   publish-galaxy:
     needs:
       - test
-      - release-please
-    if: needs.release-please.outputs.releases_created == 'true'
+      - semantic-release
+    if: needs.semantic-release.outputs.version != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -151,20 +163,21 @@ jobs:
       - id: publish
         name: Publish to Ansible Galaxy
         run: |
-          namespace=$(yq -r .namespace galaxy.yml)
-          name=$(yq -r .name galaxy.yml)
-          version=$(yq -r .version galaxy.yml)
+          namespace="$(yq -r .namespace galaxy.yml)"
+          name="$(yq -r .name galaxy.yml)"
+          version="$(yq -r .version galaxy.yml)"
 
-          if [ v"$version" != "${{ needs.release-please.outputs.tag_name }}" ]; then
-            echo "Version in galaxy.yml ($version) does not match git tag (${{ needs.release-please.outputs.tag_name }})"
+          # shellcheck disable=SC2193
+          if [ v"$version" != "${{ needs.semantic-release.outputs.version }}" ]; then
+            echo "Version in galaxy.yml ($version) does not match git tag (${{ needs.semantic-release.outputs.version }})"
             exit 1
           fi
 
           ansible-galaxy collection publish \
-            $namespace-$name-$version.tar.gz \
-            --token ${{ secrets.ANSIBLE_GALAXY_TOKEN }}
+            "$namespace-$name-$version.tar.gz" \
+            --token "${{ secrets.ANSIBLE_GALAXY_TOKEN }}"
 
-          echo "asset=$namespace-$name-$version.tar.gz" >> $GITHUB_OUTPUT
+          echo "asset=$namespace-$name-$version.tar.gz" >> "$GITHUB_OUTPUT"
 
   ansible-lint:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
