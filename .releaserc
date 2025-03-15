@@ -8,11 +8,10 @@ plugins:
         - type: chore
           release: patch
   - "@semantic-release/release-notes-generator"
-  - - "@semantic-release/exec"
-    - successCmd: |
-        yq -i ".version = \"${nextRelease.version}\"" galaxy.yml
   - "@semantic-release/changelog"
   - "@semantic-release/git"
   - "@semantic-release/github"
   - - "@semantic-release/exec"
     - successCmd: echo version=v${nextRelease.version} >> $GITHUB_OUTPUT
+      publishCmd: |
+        yq -i ".version = \"${nextRelease.version}\"" galaxy.yml
