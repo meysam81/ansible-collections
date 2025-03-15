@@ -1,11 +1,9 @@
-#SPDX-License-Identifier: MIT-0
 galaxy_info:
   author: Meysam Azad
   description: >-
     Retrive GCP VM identity token and store it in a file. Best for using in
     OpenID Connect authentication.
   company: Self employed
-
   license: Apache-2.0
 
   min_ansible_version: "2.17"
@@ -17,10 +15,12 @@ galaxy_info:
     - gcp
     - vm
     - identity
-    - service-account
+    - serviceaccount
     - metadata
+    - authentication
+    - oidc
+    - openidconnect
+    - oauth2
+    - oauth
 
-dependencies:
-  []
-  # List your role dependencies here, one per line. Be sure to remove the '[]' above,
-  # if you add dependencies to this list.
+dependencies: []
