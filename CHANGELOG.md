@@ -1,3 +1,10 @@
+## [1.10.4](https://github.com/meysam81/ansible-collections/compare/v1.10.3...v1.10.4) (2025-03-15)
+
+
+### Bug Fixes
+
+* **CI:** modify the galaxy version in prepareCmd ([c0c9b36](https://github.com/meysam81/ansible-collections/commit/c0c9b36cd6237d06ef61f55656063e692ad2101b))
+
 ## [1.10.3](https://github.com/meysam81/ansible-collections/compare/v1.10.2...v1.10.3) (2025-03-15)
 
 
