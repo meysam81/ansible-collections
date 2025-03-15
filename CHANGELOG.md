@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/meysam81/ansible-collections/compare/v1.10.0...v1.10.1) (2025-03-15)
+
+
+### Bug Fixes
+
+* **CI:** modify variable interpolation syntax ([0449c15](https://github.com/meysam81/ansible-collections/commit/0449c15c1fe54444728af3ee44735dd277ed5ef9))
+
 # [1.10.0](https://github.com/meysam81/ansible-collections/compare/v1.9.0...v1.10.0) (2025-03-15)
 
 
