@@ -12,7 +12,6 @@ plugins:
     - successCmd: echo version=v${nextRelease.version} >> $GITHUB_OUTPUT
       prepareCmd: |
         yq -i ".version = \"${nextRelease.version}\"" galaxy.yml
-  - "@semantic-release/changelog"
   - - "@semantic-release/git"
     - assets:
         - galaxy.yml
