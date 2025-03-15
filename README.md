@@ -1,6 +1,7 @@
 # Ansible Collections
 
 [![GitHub Release](https://img.shields.io/github/v/release/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/releases/latest)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://developer.mend.io/github/meysam81/ansible-collections)
 [![GitHub last commit](https://img.shields.io/github/last-commit/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/commits/main)
 [![License](https://img.shields.io/github/license/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/meysam81/ansible-collections)](https://github.com/meysam81/ansible-collections/issues)
