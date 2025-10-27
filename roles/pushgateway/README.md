@@ -65,9 +65,11 @@ pushgateway_create_user: true
 #### Default value
 
 ```YAML
-pushgateway_download_url: https://github.com/prometheus/pushgateway/releases/download/v{{
-  pushgateway_version | regex_replace('^v', '') }}/pushgateway-{{ pushgateway_version
-  | regex_replace('^v', '') }}.{{ pushgateway_os }}-{{ pushgateway_arch }}.tar.gz
+pushgateway_download_url: 
+  https://github.com/prometheus/pushgateway/releases/download/v{{ 
+  pushgateway_version | regex_replace('^v', '') }}/pushgateway-{{ 
+  pushgateway_version | regex_replace('^v', '') }}.{{ pushgateway_os }}-{{ 
+  pushgateway_arch }}.tar.gz
 ```
 
 ### pushgateway_group
@@ -123,7 +125,8 @@ pushgateway_persistence_file: ''
 #### Default value
 
 ```YAML
-pushgateway_sha256sum_url: https://github.com/prometheus/pushgateway/releases/download/v{{
+pushgateway_sha256sum_url: 
+  https://github.com/prometheus/pushgateway/releases/download/v{{ 
   pushgateway_version | regex_replace('^v', '') }}/sha256sums.txt
 ```
 
@@ -174,8 +177,6 @@ pushgateway_web_external_url: ''
 ```YAML
 pushgateway_web_listen_address: 127.0.0.1:9091
 ```
-
-
 
 ## Dependencies
 

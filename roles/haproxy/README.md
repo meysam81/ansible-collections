@@ -36,8 +36,6 @@ haproxy_cache_valid_time: 86400
 haproxy_version: 3.0
 ```
 
-
-
 ## Dependencies
 
 None.

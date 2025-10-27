@@ -90,8 +90,8 @@ oathkeeper_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64
 #### Default value
 
 ```YAML
-oathkeeper_checksum_url: https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version
-  | regex_replace('^v', '') }}/checksums.txt
+oathkeeper_checksum_url: https://github.com/ory/oathkeeper/releases/download/v{{
+  oathkeeper_version | regex_replace('^v', '') }}/checksums.txt
 ```
 
 ### oathkeeper_configuration
@@ -184,8 +184,6 @@ oathkeeper_user: oathkeeper
 ```YAML
 oathkeeper_version: 0.40.7
 ```
-
-
 
 ## Dependencies
 
