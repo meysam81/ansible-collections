@@ -21,5 +21,5 @@ vmagent_remote_write_username: ""
 vmagent_scrape_interval: 30s
 vmagent_user: vmagent
 # renovate: github=VictoriaMetrics/VictoriaMetrics
-vmagent_version: 1.113.0
+vmagent_version: 1.114.0
 vmagent_vmutils_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ vmagent_arch }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz

@@ -29,7 +29,7 @@ jobs:
           - config
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Cache trivy db
         uses: actions/cache@v4
         with:
@@ -50,7 +50,7 @@ jobs:
           severity: CRITICAL,HIGH
           trivy-config: trivy.yaml
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-results.sarif"
 
@@ -61,11 +61,11 @@ jobs:
       contents: read
     services:
       prometheus:
-        image: prom/prometheus:v3.2.1
+        image: prom/prometheus:v3.7.3
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.4.3
+        image: grafana/loki:3.5.7
         ports:
           - 3100:3100
     strategy:
@@ -85,7 +85,7 @@ jobs:
       VMAGENT_REMOTE_WRITE_URL: http://localhost:9090/api/v1/write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Check ansible
         run: ansible --version
       - name: Cache Ansible collections
@@ -125,7 +125,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.GH_DEPLOY_KEY }}
@@ -151,7 +151,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ needs.semantic-release.outputs.version }}
@@ -181,7 +181,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Run ansible-lint
         uses: ansible/ansible-lint@main
         with:
@@ -193,7 +193,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: SonarCloud Scan
