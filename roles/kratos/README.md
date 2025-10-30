@@ -105,8 +105,8 @@ kratos_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '
 #### Default value
 
 ```YAML
-kratos_checksum_url: https://github.com/ory/kratos/releases/download/v{{ kratos_version
-  | regex_replace('^v', '') }}/checksums.txt
+kratos_checksum_url: https://github.com/ory/kratos/releases/download/v{{ 
+  kratos_version | regex_replace('^v', '') }}/checksums.txt
 ```
 
 ### kratos_configuration
@@ -206,8 +206,6 @@ kratos_user: kratos
 ```YAML
 kratos_version: 1.3.1
 ```
-
-
 
 ## Dependencies
 

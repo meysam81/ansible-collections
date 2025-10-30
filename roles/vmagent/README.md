@@ -223,12 +223,11 @@ vmagent_version: 1.113.0
 #### Default value
 
 ```YAML
-vmagent_vmutils_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{
-  vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ vmagent_arch
-  }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz
+vmagent_vmutils_url: 
+  https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ 
+  vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ 
+  vmagent_arch }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz
 ```
-
-
 
 ## Dependencies
 

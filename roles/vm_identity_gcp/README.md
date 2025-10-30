@@ -92,8 +92,6 @@ vm_identity_gcp_token_audience: https://accounts.google.com
 vm_identity_gcp_token_file_path: /var/lib/vm-identity/token
 ```
 
-
-
 ## Dependencies
 
 None.
