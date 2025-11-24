@@ -29,7 +29,7 @@ jobs:
           - config
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Cache trivy db
         uses: actions/cache@v4
         with:
@@ -85,7 +85,7 @@ jobs:
       VMAGENT_REMOTE_WRITE_URL: http://localhost:9090/api/v1/write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Check ansible
         run: ansible --version
       - name: Cache Ansible collections
@@ -125,7 +125,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.GH_DEPLOY_KEY }}
@@ -151,7 +151,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ needs.semantic-release.outputs.version }}
@@ -181,7 +181,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run ansible-lint
         uses: ansible/ansible-lint@main
         with:
@@ -193,7 +193,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: SonarCloud Scan
