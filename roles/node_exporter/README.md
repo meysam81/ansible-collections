@@ -2,7 +2,7 @@
 
 Install node-exporter from GitHub release
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -49,9 +49,11 @@ node_exporter_create_user: true
 #### Default value
 
 ```YAML
-node_exporter_download_url: https://github.com/prometheus/node_exporter/releases/download/v{{
-  node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ node_exporter_version
-  | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ node_exporter_arch }}.tar.gz
+node_exporter_download_url: 
+  https://github.com/prometheus/node_exporter/releases/download/v{{ 
+  node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ 
+  node_exporter_version | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ 
+  node_exporter_arch }}.tar.gz
 ```
 
 ### node_exporter_group
@@ -91,7 +93,8 @@ node_exporter_owner: node-exporter
 #### Default value
 
 ```YAML
-node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{
+node_exporter_sha256sum_url: 
+  https://github.com/prometheus/node_exporter/releases/download/v{{ 
   node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
 ```
 
@@ -102,8 +105,6 @@ node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/release
 ```YAML
 node_exporter_version: 1.8.2
 ```
-
-
 
 ## Dependencies
 

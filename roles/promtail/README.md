@@ -2,7 +2,7 @@
 
 Install promtail from GitHub release
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -11,6 +11,7 @@ Install promtail from GitHub release
   - [promtail_group](#promtail_group)
   - [promtail_os](#promtail_os)
   - [promtail_remote_write_password](#promtail_remote_write_password)
+  - [promtail_remote_write_url](#promtail_remote_write_url)
   - [promtail_remote_write_username](#promtail_remote_write_username)
   - [promtail_sha256sum_url](#promtail_sha256sum_url)
   - [promtail_url](#promtail_url)
@@ -69,6 +70,14 @@ promtail_os: linux
 promtail_remote_write_password: ''
 ```
 
+### promtail_remote_write_url
+
+#### Default value
+
+```YAML
+promtail_remote_write_url:
+```
+
 ### promtail_remote_write_username
 
 #### Default value
@@ -82,8 +91,8 @@ promtail_remote_write_username: ''
 #### Default value
 
 ```YAML
-promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version
-  | regex_replace('^v', '') }}/SHA256SUMS
+promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ 
+  promtail_version | regex_replace('^v', '') }}/SHA256SUMS
 ```
 
 ### promtail_url
@@ -91,8 +100,9 @@ promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ pr
 #### Default value
 
 ```YAML
-promtail_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version
-  | regex_replace('^v', '') }}/promtail-{{ promtail_os }}-{{ promtail_arch }}.zip
+promtail_url: https://github.com/grafana/loki/releases/download/v{{ 
+  promtail_version | regex_replace('^v', '') }}/promtail-{{ promtail_os }}-{{ 
+  promtail_arch }}.zip
 ```
 
 ### promtail_user
@@ -110,8 +120,6 @@ promtail_user: promtail
 ```YAML
 promtail_version: 3.2.0
 ```
-
-
 
 ## Dependencies
 

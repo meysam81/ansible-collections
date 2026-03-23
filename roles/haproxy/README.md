@@ -2,7 +2,7 @@
 
 Install HAProxy with apt
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -35,8 +35,6 @@ haproxy_cache_valid_time: 86400
 ```YAML
 haproxy_version: 3.0
 ```
-
-
 
 ## Dependencies
 
