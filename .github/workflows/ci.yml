@@ -54,8 +54,29 @@ jobs:
         with:
           sarif_file: "trivy-results.sarif"
 
+  discover-roles:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      roles: ${{ steps.roles.outputs.roles }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - id: roles
+        name: Discover testable roles
+        env:
+          EXCLUDE: cloudflare_ips coraza crowdsec golang haproxy_build lego tls_certificate
+        run: |
+          roles=$(find roles/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort \
+            | while read -r role; do
+                echo "$EXCLUDE" | tr ' ' '\n' | grep -qx "$role" || echo "$role"
+              done \
+            | jq -Rsc 'split("\n") | map(select(. != ""))')
+          echo "roles=$roles" >> "$GITHUB_OUTPUT"
+
   test:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: discover-roles
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -71,16 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        role:
-          - haproxy
-          - k8s_oidc_github_pages
-          - kratos
-          - node_exporter
-          - oathkeeper
-          - promtail
-          - pushgateway
-          - vmagent
-          - vm_identity_gcp
+        role: ${{ fromJson(needs.discover-roles.outputs.roles) }}
     env:
       VMAGENT_REMOTE_WRITE_URL: http://localhost:9090/api/v1/write
     steps:
