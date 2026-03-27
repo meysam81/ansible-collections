@@ -7,11 +7,16 @@ global
     nbthread {{ haproxy_threads }}
     cpu-map auto:1/1-{{ haproxy_threads }} 0-{{ haproxy_threads - 1 }}
 
+{% if not haproxy_tls_allow_dhe %}
+{% set _ciphers = haproxy_tls_ciphers.split(':') | reject('match', '^DHE-') | join(':') %}
+{% else %}
+{% set _ciphers = haproxy_tls_ciphers %}
+{% endif %}
     ssl-default-bind-ciphersuites {{ haproxy_tls_ciphersuites }}
-    ssl-default-bind-ciphers {{ haproxy_tls_ciphers }}
+    ssl-default-bind-ciphers {{ _ciphers }}
     ssl-default-bind-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
     ssl-default-server-ciphersuites {{ haproxy_tls_ciphersuites }}
-    ssl-default-server-ciphers {{ haproxy_tls_ciphers }}
+    ssl-default-server-ciphers {{ _ciphers }}
     ssl-default-server-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
 
     ca-base /etc/ssl/certs
@@ -41,7 +46,7 @@ defaults
     timeout tunnel {{ haproxy_timeout_tunnel }}
 
     compression algo gzip
-    compression type text/html text/plain text/css text/javascript application/javascript application/json application/xml
+    compression type {{ haproxy_compression_types | join(' ') }}
 
     log    global
     option httplog
@@ -129,15 +134,19 @@ frontend web
     http-request sc-inc-gpc0(0) if { path_beg /api/ }
     http-request return status 429 if { sc_gpc0_rate(0) gt {{ rate_limit_api_count }} } { path_beg /api/ }
 
-    http-request return status 403 if { path_reg -i \.(php|asp|aspx|jsp)$ }
-    http-request return status 403 if { hdr(user-agent) -i -m sub (nmap|nikto|sqlmap|dirb|masscan) }
+{% if haproxy_blocked_extensions %}
+    http-request return status 403 if { path_reg -i \.({{ haproxy_blocked_extensions | join('|') }})$ }
+{% endif %}
+{% if haproxy_blocked_user_agents %}
+    http-request return status 403 if { hdr(user-agent) -i -m sub ({{ haproxy_blocked_user_agents | join('|') }}) }
+{% endif %}
 
-    http-request set-var(txn.req_body_param_name) req.body_param(name)
-    http-request set-var(txn.req_body_param_company) req.body_param(company)
-    http-request set-var(txn.req_body_param_website) req.body_param(website)
-    http-request return status 400 if { var(txn.req_body_param_name) -m len gt 0 }
-    http-request return status 400 if { var(txn.req_body_param_company) -m len gt 0 }
-    http-request return status 400 if { var(txn.req_body_param_website) -m len gt 0 }
+{% if haproxy_honeypot_enabled and haproxy_honeypot_fields %}
+{% for field in haproxy_honeypot_fields %}
+    http-request set-var(txn.req_body_param_{{ field }}) req.body_param({{ field }})
+    http-request return status 400 if { var(txn.req_body_param_{{ field }}) -m len gt 0 }
+{% endfor %}
+{% endif %}
 
     filter compression
 {% if coraza_enabled %}
@@ -168,31 +177,49 @@ frontend web
 
     redirect scheme https code 301 if !{ ssl_fc }
 
+    http-request set-var(txn.path) path
+
+    # --- Cache-Control (differentiated by content type) ---
+    acl is_static_asset var(txn.path) -m end {{ haproxy_static_extensions | map('regex_replace', '^', '.') | join(' ') }}
+    acl is_hashed_asset var(txn.path) -m reg -i {{ haproxy_hashed_asset_regex }}
+    acl has_cache_control res.hdr(Cache-Control) -m found
+
+    http-response set-header Cache-Control "{{ haproxy_cache_control_hashed }}" if is_hashed_asset
+    http-response set-header Cache-Control "{{ haproxy_cache_control_static }}" if is_static_asset !is_hashed_asset
+    http-response set-header Cache-Control "{{ haproxy_cache_control_default }}" if !is_static_asset !has_cache_control
+
+    # --- Security headers (configurable, backend-respecting) ---
+{% if haproxy_alt_svc_enabled %}
     http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
-    http-response set-header Cache-Control "{{ haproxy_cache_control }}"
+{% endif %}
     http-response set-header Content-Security-Policy "{{ haproxy_csp }}" unless { res.hdr(Content-Security-Policy) -m found }
-    http-response set-header Cross-Origin-Embedder-Policy "{{ haproxy_coep }}"
-    http-response set-header Cross-Origin-Opener-Policy "same-origin"
-    http-response set-header Cross-Origin-Resource-Policy "cross-origin"
-    http-response set-header Expires "0"
-    http-response set-header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()"
-    http-response set-header Pragma "no-cache"
-    http-response set-header Referrer-Policy "strict-origin-when-cross-origin"
-    http-response set-header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    http-response set-header Cross-Origin-Embedder-Policy "{{ haproxy_coep }}" unless { res.hdr(Cross-Origin-Embedder-Policy) -m found }
+    http-response set-header Cross-Origin-Opener-Policy "{{ haproxy_coop }}" unless { res.hdr(Cross-Origin-Opener-Policy) -m found }
+    http-response set-header Cross-Origin-Resource-Policy "{{ haproxy_corp }}" unless { res.hdr(Cross-Origin-Resource-Policy) -m found }
+    http-response set-header Permissions-Policy "{{ haproxy_permissions_policy }}" unless { res.hdr(Permissions-Policy) -m found }
+    http-response set-header Referrer-Policy "{{ haproxy_referrer_policy }}" unless { res.hdr(Referrer-Policy) -m found }
+    http-response set-header Strict-Transport-Security "max-age={{ haproxy_hsts_max_age }}{% if haproxy_hsts_include_subdomains %}; includeSubDomains{% endif %}{% if haproxy_hsts_preload %}; preload{% endif %}" unless { res.hdr(Strict-Transport-Security) -m found }
+    http-response set-header X-Frame-Options "{{ haproxy_x_frame_options }}" unless { res.hdr(X-Frame-Options) -m found }
+    http-response set-header X-XSS-Protection "{{ haproxy_x_xss_protection }}" unless { res.hdr(X-XSS-Protection) -m found }
+
+    # --- Hardcoded headers (universally safe) ---
     http-response set-header X-Content-Type-Options nosniff
-    http-response set-header X-Download-Options "noopen"
-    http-response set-header X-Frame-Options SAMEORIGIN
-    http-response set-header X-Permitted-Cross-Domain-Policies "none"
-    http-response set-header X-XSS-Protection "{{ haproxy_x_xss_protection }}"
+    http-response set-header X-DNS-Prefetch-Control off
+    http-response set-header X-Download-Options noopen
+    http-response set-header X-Permitted-Cross-Domain-Policies none
     http-response del-header Server
     http-response del-header X-Powered-By
 
-    http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
-    http-response set-header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
-    http-response set-header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
-    http-response set-header Access-Control-Expose-Headers "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
-    http-response set-header Access-Control-Allow-Credentials "true" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
-    http-response set-header Access-Control-Max-Age "3600" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+    # --- CORS (only if backend doesn't set its own) ---
+    acl has_cors_origin res.hdr(Access-Control-Allow-Origin) -m found
+    http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found } !has_cors_origin
+    http-response set-header Access-Control-Allow-Methods "{{ haproxy_cors_allowed_methods }}" if { var(txn.origin) -m found } !has_cors_origin
+    http-response set-header Access-Control-Allow-Headers "{{ haproxy_cors_allowed_headers }}" if { var(txn.origin) -m found } !has_cors_origin
+    http-response set-header Access-Control-Expose-Headers "{{ haproxy_cors_expose_headers }}" if { var(txn.origin) -m found } !has_cors_origin
+{% if haproxy_cors_allow_credentials %}
+    http-response set-header Access-Control-Allow-Credentials "true" if { var(txn.origin) -m found } !has_cors_origin
+{% endif %}
+    http-response set-header Access-Control-Max-Age "{{ haproxy_cors_max_age }}" if { var(txn.origin) -m found } !has_cors_origin
 {% if cors_allowed_domains or cors_subdomain_patterns %}
     http-response set-header Vary "Origin"
 {% endif %}
@@ -222,7 +249,7 @@ listen apiserver
 {% endif %}
 
 backend k8s
-    option httpchk GET /healthz
+    option httpchk GET {{ haproxy_health_check_path }}
     server sv0 {{ k8s_backend_addr }}:{{ k8s_backend_port }}  check inter 3000 rise 1 fall 3
 
 backend not_found

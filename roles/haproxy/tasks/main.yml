@@ -5,6 +5,13 @@
       - served_domains | length > 0
     fail_msg: "served_domains must be a non-empty list"
 
+- name: Assert served_domains contain valid domain names
+  ansible.builtin.assert:
+    that:
+      - item is regex('^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
+    fail_msg: "Invalid domain name: {{ item }}"
+  loop: "{{ served_domains }}"
+
 - name: Create haproxy user
   ansible.builtin.user:
     name: haproxy

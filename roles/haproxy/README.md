@@ -14,20 +14,43 @@ HAProxy with full config management, TLS, and security headers
   - [coraza_spoa_port](#coraza_spoa_port)
   - [cors_allowed_domains](#cors_allowed_domains)
   - [cors_subdomain_patterns](#cors_subdomain_patterns)
+  - [haproxy_alt_svc_enabled](#haproxy_alt_svc_enabled)
   - [haproxy_bin_path](#haproxy_bin_path)
+  - [haproxy_blocked_extensions](#haproxy_blocked_extensions)
+  - [haproxy_blocked_user_agents](#haproxy_blocked_user_agents)
   - [haproxy_bufsize](#haproxy_bufsize)
-  - [haproxy_cache_control](#haproxy_cache_control)
+  - [haproxy_cache_control_default](#haproxy_cache_control_default)
+  - [haproxy_cache_control_hashed](#haproxy_cache_control_hashed)
+  - [haproxy_cache_control_static](#haproxy_cache_control_static)
   - [haproxy_cert_dir](#haproxy_cert_dir)
   - [haproxy_coep](#haproxy_coep)
+  - [haproxy_compression_types](#haproxy_compression_types)
   - [haproxy_config_dir](#haproxy_config_dir)
+  - [haproxy_coop](#haproxy_coop)
+  - [haproxy_corp](#haproxy_corp)
+  - [haproxy_cors_allow_credentials](#haproxy_cors_allow_credentials)
+  - [haproxy_cors_allowed_headers](#haproxy_cors_allowed_headers)
+  - [haproxy_cors_allowed_methods](#haproxy_cors_allowed_methods)
+  - [haproxy_cors_expose_headers](#haproxy_cors_expose_headers)
+  - [haproxy_cors_max_age](#haproxy_cors_max_age)
   - [haproxy_csp](#haproxy_csp)
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_errors_dir](#haproxy_errors_dir)
+  - [haproxy_hashed_asset_regex](#haproxy_hashed_asset_regex)
+  - [haproxy_health_check_path](#haproxy_health_check_path)
+  - [haproxy_honeypot_enabled](#haproxy_honeypot_enabled)
+  - [haproxy_honeypot_fields](#haproxy_honeypot_fields)
+  - [haproxy_hsts_include_subdomains](#haproxy_hsts_include_subdomains)
+  - [haproxy_hsts_max_age](#haproxy_hsts_max_age)
+  - [haproxy_hsts_preload](#haproxy_hsts_preload)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_option_forwardfor](#haproxy_option_forwardfor)
+  - [haproxy_permissions_policy](#haproxy_permissions_policy)
+  - [haproxy_referrer_policy](#haproxy_referrer_policy)
   - [haproxy_ssl_cachesize](#haproxy_ssl_cachesize)
   - [haproxy_ssl_maxrecord](#haproxy_ssl_maxrecord)
+  - [haproxy_static_extensions](#haproxy_static_extensions)
   - [haproxy_stats_auth_password](#haproxy_stats_auth_password)
   - [haproxy_stats_auth_user](#haproxy_stats_auth_user)
   - [haproxy_stats_port](#haproxy_stats_port)
@@ -39,11 +62,13 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_timeout_queue](#haproxy_timeout_queue)
   - [haproxy_timeout_server](#haproxy_timeout_server)
   - [haproxy_timeout_tunnel](#haproxy_timeout_tunnel)
+  - [haproxy_tls_allow_dhe](#haproxy_tls_allow_dhe)
   - [haproxy_tls_ciphers](#haproxy_tls_ciphers)
   - [haproxy_tls_ciphersuites](#haproxy_tls_ciphersuites)
   - [haproxy_tls_min_version](#haproxy_tls_min_version)
   - [haproxy_tls_options](#haproxy_tls_options)
   - [haproxy_version](#haproxy_version)
+  - [haproxy_x_frame_options](#haproxy_x_frame_options)
   - [haproxy_x_xss_protection](#haproxy_x_xss_protection)
   - [k8s_apiserver_addr](#k8s_apiserver_addr)
   - [k8s_apiserver_listen_port](#k8s_apiserver_listen_port)
@@ -134,12 +159,45 @@ cors_allowed_domains: []
 cors_subdomain_patterns: []
 ```
 
+### haproxy_alt_svc_enabled
+
+#### Default value
+
+```YAML
+haproxy_alt_svc_enabled: true
+```
+
 ### haproxy_bin_path
 
 #### Default value
 
 ```YAML
 haproxy_bin_path: /usr/local/sbin/haproxy
+```
+
+### haproxy_blocked_extensions
+
+#### Default value
+
+```YAML
+haproxy_blocked_extensions:
+  - php
+  - asp
+  - aspx
+  - jsp
+```
+
+### haproxy_blocked_user_agents
+
+#### Default value
+
+```YAML
+haproxy_blocked_user_agents:
+  - nmap
+  - nikto
+  - sqlmap
+  - dirb
+  - masscan
 ```
 
 ### haproxy_bufsize
@@ -150,12 +208,28 @@ haproxy_bin_path: /usr/local/sbin/haproxy
 haproxy_bufsize: 32768
 ```
 
-### haproxy_cache_control
+### haproxy_cache_control_default
 
 #### Default value
 
 ```YAML
-haproxy_cache_control: no-cache, no-store, must-revalidate, private
+haproxy_cache_control_default: no-cache
+```
+
+### haproxy_cache_control_hashed
+
+#### Default value
+
+```YAML
+haproxy_cache_control_hashed: public, max-age=31536000, immutable
+```
+
+### haproxy_cache_control_static
+
+#### Default value
+
+```YAML
+haproxy_cache_control_static: public, max-age=86400, must-revalidate
 ```
 
 ### haproxy_cert_dir
@@ -171,7 +245,25 @@ haproxy_cert_dir: /etc/haproxy/certs
 #### Default value
 
 ```YAML
-haproxy_coep: require-corp
+haproxy_coep: unsafe-none
+```
+
+### haproxy_compression_types
+
+#### Default value
+
+```YAML
+haproxy_compression_types:
+  - text/html
+  - text/plain
+  - text/css
+  - text/javascript
+  - application/javascript
+  - application/json
+  - application/xml
+  - image/svg+xml
+  - application/wasm
+  - application/manifest+json
 ```
 
 ### haproxy_config_dir
@@ -180,6 +272,64 @@ haproxy_coep: require-corp
 
 ```YAML
 haproxy_config_dir: /etc/haproxy
+```
+
+### haproxy_coop
+
+#### Default value
+
+```YAML
+haproxy_coop: same-origin
+```
+
+### haproxy_corp
+
+#### Default value
+
+```YAML
+haproxy_corp: same-site
+```
+
+### haproxy_cors_allow_credentials
+
+#### Default value
+
+```YAML
+haproxy_cors_allow_credentials: true
+```
+
+### haproxy_cors_allowed_headers
+
+#### Default value
+
+```YAML
+haproxy_cors_allowed_headers: Content-Type, Authorization, X-Requested-With, Accept,
+  Origin, X-CSRF-Token, X-Unique-ID
+```
+
+### haproxy_cors_allowed_methods
+
+#### Default value
+
+```YAML
+haproxy_cors_allowed_methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+```
+
+### haproxy_cors_expose_headers
+
+#### Default value
+
+```YAML
+haproxy_cors_expose_headers: X-Unique-ID, X-Request-ID, Content-Length, Content-Type,
+  Date
+```
+
+### haproxy_cors_max_age
+
+#### Default value
+
+```YAML
+haproxy_cors_max_age: '3600'
 ```
 
 ### haproxy_csp
@@ -208,6 +358,65 @@ haproxy_dh_param_bits: 4096
 haproxy_errors_dir: /etc/haproxy/errors
 ```
 
+### haproxy_hashed_asset_regex
+
+#### Default value
+
+```YAML
+haproxy_hashed_asset_regex: \\.[a-f0-9]{8,}\\.(js|css|woff2?|ttf|png|jpg|svg|webp|avif)$
+```
+
+### haproxy_health_check_path
+
+#### Default value
+
+```YAML
+haproxy_health_check_path: /healthz
+```
+
+### haproxy_honeypot_enabled
+
+#### Default value
+
+```YAML
+haproxy_honeypot_enabled: true
+```
+
+### haproxy_honeypot_fields
+
+#### Default value
+
+```YAML
+haproxy_honeypot_fields:
+  - name
+  - company
+  - website
+```
+
+### haproxy_hsts_include_subdomains
+
+#### Default value
+
+```YAML
+haproxy_hsts_include_subdomains: true
+```
+
+### haproxy_hsts_max_age
+
+#### Default value
+
+```YAML
+haproxy_hsts_max_age: 63072000
+```
+
+### haproxy_hsts_preload
+
+#### Default value
+
+```YAML
+haproxy_hsts_preload: true
+```
+
 ### haproxy_maxconn
 
 #### Default value
@@ -232,6 +441,23 @@ haproxy_maxrewrite: 8192
 haproxy_option_forwardfor: true
 ```
 
+### haproxy_permissions_policy
+
+#### Default value
+
+```YAML
+haproxy_permissions_policy: geolocation=(), microphone=(), camera=(), payment=(),
+  usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()
+```
+
+### haproxy_referrer_policy
+
+#### Default value
+
+```YAML
+haproxy_referrer_policy: strict-origin-when-cross-origin
+```
+
 ### haproxy_ssl_cachesize
 
 #### Default value
@@ -246,6 +472,28 @@ haproxy_ssl_cachesize: 100000
 
 ```YAML
 haproxy_ssl_maxrecord: 1460
+```
+
+### haproxy_static_extensions
+
+#### Default value
+
+```YAML
+haproxy_static_extensions:
+  - js
+  - css
+  - woff
+  - woff2
+  - ttf
+  - eot
+  - svg
+  - png
+  - jpg
+  - jpeg
+  - gif
+  - ico
+  - webp
+  - avif
 ```
 
 ### haproxy_stats_auth_password
@@ -336,6 +584,14 @@ haproxy_timeout_server: 50s
 haproxy_timeout_tunnel: 3600s
 ```
 
+### haproxy_tls_allow_dhe
+
+#### Default value
+
+```YAML
+haproxy_tls_allow_dhe: true
+```
+
 ### haproxy_tls_ciphers
 
 #### Default value
@@ -375,6 +631,14 @@ haproxy_tls_options: no-tls-tickets
 
 ```YAML
 haproxy_version: 3.2.3
+```
+
+### haproxy_x_frame_options
+
+#### Default value
+
+```YAML
+haproxy_x_frame_options: SAMEORIGIN
 ```
 
 ### haproxy_x_xss_protection

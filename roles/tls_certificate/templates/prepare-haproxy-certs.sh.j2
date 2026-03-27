@@ -2,6 +2,7 @@
 # {{ ansible_managed }}
 # Renews certs via lego, combines for HAProxy, reloads only if changed.
 set -euo pipefail
+umask 0077
 
 CERT_DIR="{{ haproxy_cert_dir }}"
 LEGO_DIR="{{ lego_cert_dir }}"

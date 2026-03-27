@@ -24,6 +24,7 @@ haproxy_tls_min_version: "TLSv1.2"
 haproxy_tls_ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 haproxy_tls_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
 haproxy_tls_options: "no-tls-tickets"
+haproxy_tls_allow_dhe: true
 
 # SSL tuning
 haproxy_dh_param_bits: 4096
@@ -67,6 +68,79 @@ coraza_spoa_port: 9000
 
 # Security headers
 haproxy_csp: "default-src 'self' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; object-src 'none'; upgrade-insecure-requests"
+haproxy_x_xss_protection: "0"
+haproxy_coep: "unsafe-none"
+haproxy_coop: "same-origin"
+haproxy_corp: "same-site"
+haproxy_x_frame_options: "SAMEORIGIN"
+haproxy_referrer_policy: "strict-origin-when-cross-origin"
+haproxy_permissions_policy: "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()"
+haproxy_hsts_max_age: 63072000
+haproxy_hsts_include_subdomains: true
+haproxy_hsts_preload: true
+
+# Cache-Control (differentiated by content type)
+haproxy_cache_control_default: "no-cache"
+haproxy_cache_control_hashed: "public, max-age=31536000, immutable"
+haproxy_cache_control_static: "public, max-age=86400, must-revalidate"
+haproxy_static_extensions:
+  - js
+  - css
+  - woff
+  - woff2
+  - ttf
+  - eot
+  - svg
+  - png
+  - jpg
+  - jpeg
+  - gif
+  - ico
+  - webp
+  - avif
+haproxy_hashed_asset_regex: '\\.[a-f0-9]{8,}\\.(js|css|woff2?|ttf|png|jpg|svg|webp|avif)$'
+
+# CORS response values (only set if backend doesn't provide its own)
+haproxy_cors_allowed_methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+haproxy_cors_allowed_headers: "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID"
+haproxy_cors_expose_headers: "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date"
+haproxy_cors_max_age: "3600"
+haproxy_cors_allow_credentials: true
+
+# Request filtering
+haproxy_blocked_extensions:
+  - php
+  - asp
+  - aspx
+  - jsp
+haproxy_blocked_user_agents:
+  - nmap
+  - nikto
+  - sqlmap
+  - dirb
+  - masscan
+haproxy_honeypot_enabled: true
+haproxy_honeypot_fields:
+  - name
+  - company
+  - website
+
+# Compression
+haproxy_compression_types:
+  - text/html
+  - text/plain
+  - text/css
+  - text/javascript
+  - application/javascript
+  - application/json
+  - application/xml
+  - image/svg+xml
+  - application/wasm
+  - application/manifest+json
+
+# Misc
+haproxy_alt_svc_enabled: true
+haproxy_health_check_path: "/healthz"
 
 # Stats authentication (leave empty to disable)
 haproxy_stats_auth_user: ""
@@ -75,8 +149,4 @@ haproxy_stats_auth_password: ""
 # Binary path
 haproxy_bin_path: "/usr/local/sbin/haproxy"
 
-# Response headers
-haproxy_x_xss_protection: "0"
-haproxy_coep: "require-corp"
-haproxy_cache_control: "no-cache, no-store, must-revalidate, private"
 haproxy_option_forwardfor: true
