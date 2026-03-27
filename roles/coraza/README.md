@@ -5,11 +5,11 @@
 - [Default Variables](#default-variables)
   - [coraza_config_dir](#coraza_config_dir)
   - [coraza_config_version](#coraza_config_version)
-  - [coraza_go_version](#coraza_go_version)
   - [coraza_spoa_addr](#coraza_spoa_addr)
   - [coraza_spoa_port](#coraza_spoa_port)
   - [coraza_spoa_version](#coraza_spoa_version)
   - [coreruleset_version](#coreruleset_version)
+  - [go_install_dir](#go_install_dir)
   - [haproxy_config_dir](#haproxy_config_dir)
 - [Dependencies](#dependencies)
 - [License](#license)
@@ -37,14 +37,6 @@ coraza_config_dir: /etc/coraza-spoa
 
 ```YAML
 coraza_config_version: 3.3.3
-```
-
-### coraza_go_version
-
-#### Default value
-
-```YAML
-coraza_go_version: '1.23'
 ```
 
 ### coraza_spoa_addr
@@ -79,6 +71,14 @@ coraza_spoa_version: 0.3.0
 coreruleset_version: 4.17.1
 ```
 
+### go_install_dir
+
+#### Default value
+
+```YAML
+go_install_dir: /usr/local
+```
+
 ### haproxy_config_dir
 
 #### Default value
@@ -91,4 +91,5 @@ haproxy_config_dir: /etc/haproxy
 
 ## Dependencies
 
+- golang
 - haproxy

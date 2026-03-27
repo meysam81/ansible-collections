@@ -3,7 +3,6 @@
   ansible.builtin.apt:
     name:
       - git
-      - "golang-{{ coraza_go_version }}"
     state: present
     update_cache: true
 
@@ -99,11 +98,11 @@
 
 - name: Build coraza-spoa
   ansible.builtin.command:
-    cmd: /usr/lib/go-{{ coraza_go_version }}/bin/go run mage.go build
+    cmd: "{{ go_install_dir }}/go/bin/go run mage.go build"
     chdir: /tmp/coraza-spoa
     creates: /tmp/coraza-spoa/build/coraza-spoa
   environment:
-    PATH: "/usr/lib/go-{{ coraza_go_version }}/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_install_dir }}/go/bin:{{ ansible_env.PATH }}"
 
 - name: Copy coraza-spoa binary
   ansible.builtin.copy:

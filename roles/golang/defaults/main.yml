@@ -1,0 +1,7 @@
+---
+go_version: "1.26.0"
+go_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+go_os: "linux"
+go_install_dir: "/usr/local"
+go_download_url: "https://go.dev/dl/go{{ go_version }}.{{ go_os }}-{{ go_arch }}.tar.gz"
+go_checksum_url: "{{ go_download_url }}.sha256"

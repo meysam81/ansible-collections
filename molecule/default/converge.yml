@@ -31,6 +31,8 @@
       changed_when: false
       tags: vmagent
   roles:
+    - role: golang
+      tags: golang
     - role: haproxy
       tags: haproxy
     - role: tls_certificate
