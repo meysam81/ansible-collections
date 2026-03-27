@@ -112,69 +112,48 @@ jobs:
       - name: Ansible playbook
         run: ansible-playbook playbook.yml -i localhost.yml -t ${{ matrix.role }}
 
-  semantic-release:
+  release-please:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.semantic-release.outputs.version }}
+      releases_created: ${{ steps.release-please.outputs.releases_created }}
+      tag_name: ${{ steps.release-please.outputs.tag_name }}
     permissions:
       contents: write
-      packages: write
       issues: write
       pull-requests: write
-      id-token: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ssh-key: ${{ secrets.GH_DEPLOY_KEY }}
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Install bun deps
-        run: bun install
-      - id: semantic-release
-        name: Release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: bunx semantic-release@v24
+      - id: release-please
+        name: Release please
+        uses: googleapis/release-please-action@v4
 
   publish-galaxy:
     needs:
       - test
-      - semantic-release
-    if: needs.semantic-release.outputs.version != ''
+      - release-please
+    if: needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: ${{ needs.semantic-release.outputs.version }}
+          ref: ${{ needs.release-please.outputs.tag_name }}
       - name: Build collection
         run: ansible-galaxy collection build
       - id: publish
         name: Publish to Ansible Galaxy
+        env:
+          ANSIBLE_GALAXY_TOKEN: ${{ secrets.ANSIBLE_GALAXY_TOKEN }}
         run: |
           namespace="$(yq -r .namespace galaxy.yml)"
           name="$(yq -r .name galaxy.yml)"
           version="$(yq -r .version galaxy.yml)"
 
-          # shellcheck disable=SC2193
-          if [ v"$version" != "${{ needs.semantic-release.outputs.version }}" ]; then
-            echo "Version in galaxy.yml ($version) does not match git tag (${{ needs.semantic-release.outputs.version }})"
-            exit 1
-          fi
-
           ansible-galaxy collection publish \
             "$namespace-$name-$version.tar.gz" \
-            --token "${{ secrets.ANSIBLE_GALAXY_TOKEN }}"
-
-          echo "asset=$namespace-$name-$version.tar.gz" >> "$GITHUB_OUTPUT"
+            --token "$ANSIBLE_GALAXY_TOKEN"
 
   ansible-lint:
     if: github.event_name == 'push' || github.event_name == 'pull_request'

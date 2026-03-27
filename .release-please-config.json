@@ -1,0 +1,14 @@
+{
+  "packages": {
+    ".": {
+      "extra-files": [
+        {
+          "jsonpath": "$.version",
+          "path": "galaxy.yml",
+          "type": "yaml"
+        }
+      ],
+      "release-type": "simple"
+    }
+  }
+}
