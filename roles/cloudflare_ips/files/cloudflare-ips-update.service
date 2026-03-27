@@ -1,0 +1,14 @@
+[Unit]
+Description=Update Cloudflare IP ranges for HAProxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/update-cloudflare-ips.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cloudflare-ips
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true

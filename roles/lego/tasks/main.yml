@@ -1,0 +1,30 @@
+---
+- name: Download lego checksums
+  ansible.builtin.get_url:
+    url: "{{ lego_checksums_url }}"
+    dest: "/tmp/lego_{{ lego_version }}_checksums.txt"
+    mode: "0644"
+
+- name: Extract lego SHA256 checksum
+  ansible.builtin.shell:
+    cmd: >
+      grep "lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+      /tmp/lego_{{ lego_version }}_checksums.txt | awk '{print $1}'
+  register: lego_sha256
+  changed_when: false
+
+- name: Download lego binary
+  ansible.builtin.get_url:
+    url: "{{ lego_download_url }}"
+    dest: "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+    checksum: "sha256:{{ lego_sha256.stdout }}"
+    mode: "0644"
+
+- name: Extract lego binary
+  ansible.builtin.unarchive:
+    src: "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+    dest: "{{ lego_bin_dir }}"
+    remote_src: true
+    extra_opts:
+      - lego
+    mode: "0755"

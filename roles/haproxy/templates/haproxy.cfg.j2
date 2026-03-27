@@ -1,0 +1,228 @@
+{# roles/haproxy/templates/haproxy.cfg.j2 #}
+global
+    daemon
+    user haproxy
+    group haproxy
+    maxconn {{ haproxy_maxconn }}
+    nbthread {{ haproxy_threads }}
+    cpu-map auto:1/1-{{ haproxy_threads }} 0-{{ haproxy_threads - 1 }}
+
+    ssl-default-bind-ciphersuites {{ haproxy_tls_ciphersuites }}
+    ssl-default-bind-ciphers {{ haproxy_tls_ciphers }}
+    ssl-default-bind-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
+    ssl-default-server-ciphersuites {{ haproxy_tls_ciphersuites }}
+    ssl-default-server-ciphers {{ haproxy_tls_ciphers }}
+    ssl-default-server-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
+
+    ca-base /etc/ssl/certs
+    crt-base /etc/ssl/private
+
+    log stdout format raw local0 info
+    log stdout format raw local1 notice
+    log-send-hostname
+
+    stats socket /run/haproxy.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+
+    tune.ssl.default-dh-param {{ haproxy_dh_param_bits }}
+    tune.bufsize {{ haproxy_bufsize }}
+    tune.maxrewrite {{ haproxy_maxrewrite }}
+    tune.ssl.maxrecord {{ haproxy_ssl_maxrecord }}
+    tune.ssl.cachesize {{ haproxy_ssl_cachesize }}
+
+defaults
+    mode http
+    timeout connect {{ haproxy_timeout_connect }}
+    timeout client {{ haproxy_timeout_client }}
+    timeout server {{ haproxy_timeout_server }}
+    timeout http-request {{ haproxy_timeout_http_request }}
+    timeout http-keep-alive {{ haproxy_timeout_http_keep_alive }}
+    timeout queue {{ haproxy_timeout_queue }}
+    timeout tunnel {{ haproxy_timeout_tunnel }}
+
+    compression algo gzip
+    compression type text/html text/plain text/css text/javascript application/javascript application/json application/xml
+
+    log    global
+    option httplog
+    option log-health-checks
+    option dontlognull
+
+    option http-server-close
+    option redispatch
+    option splice-auto
+    retries 3
+
+    default-server check inter 10s fall 3 rise 2
+
+    errorfile 400 {{ haproxy_errors_dir }}/400.http
+    errorfile 403 {{ haproxy_errors_dir }}/403.http
+    errorfile 404 {{ haproxy_errors_dir }}/404.http
+    errorfile 408 {{ haproxy_errors_dir }}/408.http
+    errorfile 429 {{ haproxy_errors_dir }}/429.http
+    errorfile 500 {{ haproxy_errors_dir }}/500.http
+    errorfile 502 {{ haproxy_errors_dir }}/502.http
+    errorfile 503 {{ haproxy_errors_dir }}/503.http
+    errorfile 504 {{ haproxy_errors_dir }}/504.http
+
+frontend stats
+    bind 127.0.0.1:{{ haproxy_stats_port }}
+    stats enable
+    stats uri /stats
+    stats refresh 30s
+    stats admin if TRUE
+    http-request use-service prometheus-exporter if { path /metrics }
+
+frontend https
+    bind *:80
+    bind *:443 ssl crt {{ haproxy_cert_dir }}/ alpn h2,http/1.1
+
+    http-request set-var(txn.req_hdrs) req.hdrs
+{% if coraza_enabled %}
+    log-format "${HAPROXY_HTTP_LOG_FMT} spoa-error:\ %[var(txn.coraza.error)]\ waf-hit:\ %[var(txn.coraza.fail)] req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+{% else %}
+    log-format "${HAPROXY_HTTP_LOG_FMT} req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+{% endif %}
+
+    acl is_cloudflare src -f {{ cloudflare_ips_file }}
+    acl has_cf_ray hdr(CF-Ray) -m found
+    acl has_cf_visitor hdr(CF-Visitor) -m found
+    acl has_cf_connecting_ip hdr(CF-Connecting-IP) -m found
+{% if cloudflare_bypass_hosts %}
+{% for host in cloudflare_bypass_hosts %}
+    acl checkout hdr(host) -i {{ host }}
+{% endfor %}
+    http-request capture src len 40 if !is_cloudflare
+    http-request silent-drop unless checkout || is_cloudflare has_cf_ray has_cf_visitor has_cf_connecting_ip
+{% else %}
+    http-request capture src len 40 if !is_cloudflare
+    http-request silent-drop unless is_cloudflare has_cf_ray has_cf_visitor has_cf_connecting_ip
+{% endif %}
+    http-request set-src req.hdr(CF-Connecting-IP) if has_cf_connecting_ip
+
+{% if cors_allowed_domains %}
+    acl allowed_origin_exact hdr(origin) -i -m str -f {{ haproxy_config_dir }}/allowed_domains.txt
+{% endif %}
+{% if cors_subdomain_patterns %}
+    acl allowed_origin_subdomain hdr(origin) -i -m reg ^https?://[^/]*\.({{ cors_subdomain_patterns | map('regex_escape') | join('|') }})$
+{% endif %}
+{% if cors_allowed_domains or cors_subdomain_patterns %}
+    acl has_valid_origin hdr(origin) -m found
+    http-request set-var(txn.origin) hdr(origin) if has_valid_origin{% if cors_allowed_domains %} allowed_origin_exact{% endif %}{% if cors_subdomain_patterns %} or has_valid_origin allowed_origin_subdomain{% endif %}
+
+{% endif %}
+
+    unique-id-format %[uuid()]
+    unique-id-header X-Unique-ID
+
+    stick-table type ip size 100k expire 30s store http_req_rate({{ rate_limit_http_req_period }}s),http_err_rate({{ rate_limit_http_req_period }}s),conn_rate({{ rate_limit_conn_period }}s),conn_cur,gpc0,gpc0_rate({{ rate_limit_api_period }}s)
+    http-request track-sc0 src
+    http-request return status 429 if { sc_http_req_rate(0) gt {{ rate_limit_http_req_count }} }
+    http-request return status 429 if { sc_conn_rate(0) gt {{ rate_limit_conn_count }} }
+    http-request return status 429 if { sc_conn_cur(0) gt {{ rate_limit_concurrent }} }
+    http-request sc-inc-gpc0(0) if { path_beg /api/ }
+    http-request return status 429 if { sc_gpc0_rate(0) gt {{ rate_limit_api_count }} } { path_beg /api/ }
+
+    http-request return status 403 if { path_reg -i \.(php|asp|aspx|jsp)$ }
+    http-request return status 403 if { hdr(user-agent) -i -m sub (nmap|nikto|sqlmap|dirb|masscan) }
+
+    http-request set-var(txn.req_body_param_name) req.body_param(name)
+    http-request set-var(txn.req_body_param_company) req.body_param(company)
+    http-request set-var(txn.req_body_param_website) req.body_param(website)
+    http-request return status 400 if { var(txn.req_body_param_name) -m len gt 0 }
+    http-request return status 400 if { var(txn.req_body_param_company) -m len gt 0 }
+    http-request return status 400 if { var(txn.req_body_param_website) -m len gt 0 }
+
+    filter compression
+{% if coraza_enabled %}
+    filter spoe engine coraza config {{ haproxy_config_dir }}/coraza.cfg
+{% endif %}
+
+{% if coraza_enabled %}
+    http-request set-var(txn.coraza.app) str(app)
+
+    http-request return status 403 if { var(txn.coraza.fail) -m int eq 1 }
+    http-response return status 403 if { var(txn.coraza.fail) -m int eq 1 }
+
+    http-request return status 503 if { var(txn.coraza.error) -m int gt 0 }
+    http-response return status 503 if { var(txn.coraza.error) -m int gt 0 }
+{% endif %}
+
+{% if cdn_domains %}
+{% for domain in cdn_domains %}
+    acl cdn hdr(host) -i {{ domain }}
+{% endfor %}
+{% endif %}
+    acl is_options method OPTIONS
+{% if cdn_domains %}
+    http-request return status 204 if is_options { var(txn.origin) -m found } or is_options cdn
+{% else %}
+    http-request return status 204 if is_options { var(txn.origin) -m found }
+{% endif %}
+
+    redirect scheme https code 301 if !{ ssl_fc }
+
+    http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
+    http-response set-header Cache-Control "no-cache, no-store, must-revalidate, private"
+    http-response set-header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; connect-src 'self' https: blob:; font-src 'self' data: https:; object-src 'none'; child-src 'self' blob:; frame-ancestors 'self' https:; upgrade-insecure-requests; block-all-mixed-content"
+    http-response set-header Cross-Origin-Embedder-Policy "require-corp"
+    http-response set-header Cross-Origin-Opener-Policy "same-origin"
+    http-response set-header Cross-Origin-Resource-Policy "cross-origin"
+    http-response set-header Expires "0"
+    http-response set-header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()"
+    http-response set-header Pragma "no-cache"
+    http-response set-header Referrer-Policy "strict-origin-when-cross-origin"
+    http-response set-header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    http-response set-header X-Content-Type-Options nosniff
+    http-response set-header X-Download-Options "noopen"
+    http-response set-header X-Frame-Options SAMEORIGIN
+    http-response set-header X-Permitted-Cross-Domain-Policies "none"
+    http-response set-header X-XSS-Protection "1; mode=block"
+    http-response del-header Server
+    http-response del-header X-Powered-By
+
+    http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found }
+    http-response set-header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" if { var(txn.origin) -m found }
+    http-response set-header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID" if { var(txn.origin) -m found }
+    http-response set-header Access-Control-Expose-Headers "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date" if { var(txn.origin) -m found }
+    http-response set-header Access-Control-Allow-Credentials "true" if { var(txn.origin) -m found }
+    http-response set-header Access-Control-Max-Age "3600" if { var(txn.origin) -m found }
+    http-response set-header Vary "Origin"
+
+{% for domain in served_domains %}
+    acl {{ domain | replace('.', '_') | replace('-', '_') }} hdr(host) -i -m end .{{ domain }}
+{% endfor %}
+    use_backend k8s if {{ served_domains | map('replace', '.', '_') | map('replace', '-', '_') | join(' || ') }}
+
+    default_backend not_found
+
+{% if k8s_apiserver_listen_port %}
+listen apiserver
+  bind :{{ k8s_apiserver_listen_port }}
+  mode tcp
+  option tcplog
+  option log-health-checks
+
+  stick-table type ip size 10k expire 30s store conn_rate(10s),conn_cur,gpc0,gpc0_rate(60s)
+  tcp-request connection track-sc0 src
+  tcp-request connection reject if { sc_conn_rate(0) gt 10 }
+  tcp-request connection reject if { sc_conn_cur(0) gt 5 }
+  tcp-request connection sc-inc-gpc0(0)
+  tcp-request connection reject if { sc_gpc0_rate(0) gt 100 }
+
+  server k8s {{ k8s_apiserver_addr }}:{{ k8s_apiserver_port }} check inter 3000 rise 1 fall 3
+{% endif %}
+
+backend k8s
+    option tcp-check
+    tcp-check connect
+    server sv0 {{ k8s_backend_addr }}:{{ k8s_backend_port }}  check inter 3000 rise 1 fall 3
+
+backend not_found
+    http-request return status 404
+
+{% if coraza_enabled %}
+backend coraza-spoa
+    mode tcp
+    server s1 {{ coraza_spoa_addr }}:{{ coraza_spoa_port }} check inter 3000 rise 1 fall 3
+{% endif %}

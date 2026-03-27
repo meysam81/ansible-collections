@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly TLS certificate renewal and HAProxy cert preparation
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

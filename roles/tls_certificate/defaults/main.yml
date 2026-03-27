@@ -1,0 +1,6 @@
+---
+tls_cert_email: ""
+haproxy_cert_dir: "/etc/haproxy/certs"
+lego_cert_dir: "/etc/lego/certificates"
+served_domains: []
+# cloudflare_dns_api_token must be provided at runtime (no_log protected)

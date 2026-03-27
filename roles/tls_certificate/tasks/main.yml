@@ -1,0 +1,66 @@
+---
+- name: Create lego certificate directory
+  ansible.builtin.file:
+    path: "{{ lego_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Issue wildcard TLS certificates via lego
+  ansible.builtin.shell:
+    cmd: >
+      lego
+      --accept-tos
+      --email {{ tls_cert_email }}
+      --dns cloudflare
+      --path /etc/lego
+      -d '*.{{ item }}'
+      run
+    creates: "{{ lego_cert_dir }}/_.{{ item }}.crt"
+  environment:
+    CLOUDFLARE_DNS_API_TOKEN: "{{ cloudflare_dns_api_token }}"
+  loop: "{{ served_domains }}"
+  no_log: true
+
+- name: Create HAProxy compatible TLS certs
+  ansible.builtin.shell:
+    cmd: |
+      cat "{{ lego_cert_dir }}/_.{{ item }}.crt" \
+          "{{ lego_cert_dir }}/_.{{ item }}.key" > \
+          "{{ haproxy_cert_dir }}/{{ item }}"
+      chmod 600 "{{ haproxy_cert_dir }}/{{ item }}"
+    creates: "{{ haproxy_cert_dir }}/{{ item }}"
+  loop: "{{ served_domains }}"
+  when: served_domains | length > 0
+
+- name: Deploy cert renewal script
+  ansible.builtin.template:
+    src: prepare-haproxy-certs.sh.j2
+    dest: /usr/local/bin/prepare-haproxy-certs.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy cert renewal systemd service
+  ansible.builtin.copy:
+    src: haproxy-certs-renew.service
+    dest: /etc/systemd/system/haproxy-certs-renew.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy cert renewal systemd timer
+  ansible.builtin.copy:
+    src: haproxy-certs-renew.timer
+    dest: /etc/systemd/system/haproxy-certs-renew.timer
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start cert renewal timer
+  ansible.builtin.systemd:
+    name: haproxy-certs-renew.timer
+    state: started
+    enabled: true
+    daemon_reload: true

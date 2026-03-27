@@ -1,0 +1,24 @@
+[Unit]
+Description=Coraza WAF SPOA Daemon https://github.com/corazawaf/coraza-spoa
+Documentation=https://www.coraza.io
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+ExecStartPre=/usr/local/bin/coraza-spoa -config=/etc/coraza-spoa/config.yml -validate
+ExecStart=/usr/local/bin/coraza-spoa -config=/etc/coraza-spoa/config.yml -autoreload -metrics-addr 127.0.0.1:3245
+WorkingDirectory=/etc/coraza-spoa
+Restart=always
+RestartSec=5
+Type=exec
+User=coraza-spoa
+Group=coraza-spoa
+
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

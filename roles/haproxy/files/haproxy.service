@@ -1,0 +1,27 @@
+[Unit]
+Description=HAProxy Load Balancer
+Documentation=man:haproxy(1)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStartPre=/usr/local/sbin/haproxy -f /etc/haproxy/haproxy.cfg -c -q
+ExecStart=/usr/local/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
+ExecReload=/bin/kill -USR2 $MAINPID
+ExecStop=/bin/kill -USR1 $MAINPID
+KillMode=mixed
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

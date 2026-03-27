@@ -1,0 +1,7 @@
+---
+- name: Restart crowdsec-bouncer service
+  ansible.builtin.systemd:
+    name: crowdsec-haproxy-bouncer.service
+    state: restarted
+    enabled: true
+    daemon_reload: true

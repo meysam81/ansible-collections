@@ -1,0 +1,14 @@
+[Unit]
+Description=Renew TLS certificates and prepare HAProxy combined PEM files
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/prepare-haproxy-certs.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=haproxy-certs
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true

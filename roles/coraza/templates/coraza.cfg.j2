@@ -1,0 +1,33 @@
+{# roles/coraza/templates/coraza.cfg.j2 #}
+# https://github.com/haproxy/haproxy/blob/master/doc/SPOE.txt
+# /usr/local/etc/haproxy/coraza.cfg
+[coraza]
+spoe-agent coraza-agent
+    # Process HTTP requests only (the responses are not evaluated)
+    messages    coraza-req
+    # Comment the previous line and add coraza-res, to process responses also.
+    #messages   coraza-req     coraza-res
+    groups      coraza-req      coraza-res
+    option      var-prefix      coraza
+    option      set-on-error    error
+    timeout     hello           2s
+    timeout     idle            2m
+    timeout     processing      500ms
+    use-backend coraza-spoa
+    log         global
+
+spoe-message coraza-req
+    # Arguments are required to be in this order
+    args app=var(txn.coraza.app) id=unique-id src-ip=src src-port=src_port dst-ip=dst dst-port=dst_port method=method path=path query=query version=req.ver headers=req.hdrs body=req.body
+    event on-frontend-http-request
+
+spoe-message coraza-res
+    # Arguments are required to be in this order
+    args app=var(txn.coraza.app) id=var(txn.coraza.id) version=res.ver status=status headers=res.hdrs body=res.body
+    event on-http-response
+
+spoe-group coraza-req
+    messages coraza-req
+
+spoe-group coraza-res
+    messages coraza-res

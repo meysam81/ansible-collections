@@ -1,0 +1,62 @@
+---
+- name: Install build dependencies
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - libasound2-dev
+      - liblua5.4-dev
+      - libopentracing-c-wrapper-dev
+      - libopentracing-c-wrapper0
+      - libpcre2-dev
+      - libssl-dev
+      - pkg-config
+    state: present
+    update_cache: true
+
+- name: Download HAProxy source
+  ansible.builtin.get_url:
+    url: "https://www.haproxy.org/download/{{ haproxy_version | regex_replace('\\.[0-9]+$', '') }}/src/haproxy-{{ haproxy_version }}.tar.gz"
+    dest: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}.tar.gz"
+    owner: root
+    group: root
+    mode: "0644"
+  register: haproxy_download
+
+- name: Extract HAProxy source
+  ansible.builtin.unarchive:
+    src: "{{ haproxy_download.dest }}"
+    dest: "{{ ansible_user_dir }}"
+    remote_src: true
+
+- name: Clean previous HAProxy build
+  community.general.make:
+    chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}"
+    target: clean
+
+- name: Compile HAProxy
+  community.general.make:
+    chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}"
+    jobs: "{{ ansible_processor_vcpus }}"
+    params:
+      TARGET: linux-glibc
+      USE_ENGINE: 1
+      USE_GETADDRINFO: 1
+      USE_LINUX_CAP: 1
+      USE_LUA: 1
+      USE_MEMORY_PROFILING: 1
+      USE_NS: 1
+      USE_OPENSSL: 1
+      USE_OT: 1
+      USE_PCRE2_JIT: 1
+      USE_PCRE2: 1
+      USE_PROMEX: 1
+      USE_QUIC_OPENSSL_COMPAT: 1
+      USE_QUIC: 1
+      USE_STATIC_PCRE2: 1
+      USE_TFO: 1
+      USE_THREAD: 1
+
+- name: Install HAProxy
+  community.general.make:
+    chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}"
+    target: install

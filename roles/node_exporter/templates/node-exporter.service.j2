@@ -1,0 +1,29 @@
+[Unit]
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/node_exporter \
+  --web.listen-address=127.0.0.1:9110 \
+{% for collector in node_exporter_extra_collectors %}
+  --collector.{{ collector }} \
+{% endfor %}
+{% if node_exporter_supervisord_enabled %}
+  --collector.supervisord \
+  --collector.supervisord.url="{{ node_exporter_supervisord_url }}" \
+{% endif %}
+  --web.disable-exporter-metrics
+Restart=on-failure
+RestartSec=5
+User=node-exporter
+Group=node-exporter
+
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

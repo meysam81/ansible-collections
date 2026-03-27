@@ -1,0 +1,23 @@
+{# roles/coraza/templates/coraza-server-config.yml.j2 #}
+bind: {{ coraza_spoa_addr }}:{{ coraza_spoa_port }}
+
+log_level: info
+log_file: /dev/stdout
+log_format: console
+
+default_application: app
+
+applications:
+  - name: app
+    directives: |
+      Include {{ coraza_config_dir }}/coraza.conf
+      Include {{ coraza_config_dir }}/crs-setup.conf
+      Include {{ coraza_config_dir }}/rules/*.conf
+
+    response_check: false
+
+    transaction_ttl_ms: 60000
+
+    log_level: info
+    log_file: /dev/stdout
+    log_format: console

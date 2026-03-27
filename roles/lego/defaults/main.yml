@@ -1,0 +1,7 @@
+---
+lego_version: "4.33.0"
+lego_os: linux
+lego_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+lego_download_url: "https://github.com/go-acme/lego/releases/download/v{{ lego_version }}/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+lego_checksums_url: "https://github.com/go-acme/lego/releases/download/v{{ lego_version }}/lego_{{ lego_version }}_checksums.txt"
+lego_bin_dir: "/usr/local/bin"

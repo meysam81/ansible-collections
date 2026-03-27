@@ -1,0 +1,114 @@
+---
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - git
+      - golang-1.23
+    state: present
+    update_cache: true
+
+- name: Clone coraza-spoa
+  ansible.builtin.git:
+    repo: https://github.com/corazawaf/coraza-spoa.git
+    version: "v{{ coraza_spoa_version }}"
+    dest: coraza-spoa
+
+- name: Deploy coraza SPOE config
+  ansible.builtin.template:
+    src: coraza.cfg.j2
+    dest: "{{ haproxy_config_dir }}/coraza.cfg"
+    owner: haproxy
+    group: haproxy
+    mode: "0644"
+  notify: Restart coraza-spoa service
+
+- name: Create coraza-spoa user
+  ansible.builtin.user:
+    name: coraza-spoa
+    system: true
+    shell: /bin/false
+    create_home: false
+
+- name: Create coraza-spoa directories
+  ansible.builtin.file:
+    path: "{{ coraza_config_dir }}"
+    state: directory
+    owner: coraza-spoa
+    group: coraza-spoa
+    mode: "0755"
+
+- name: Deploy coraza server config
+  ansible.builtin.template:
+    src: coraza-server-config.yml.j2
+    dest: "{{ coraza_config_dir }}/config.yml"
+    owner: coraza-spoa
+    group: coraza-spoa
+    mode: "0644"
+  notify: Restart coraza-spoa service
+
+- name: Download coraza recommended config
+  ansible.builtin.get_url:
+    url: "https://github.com/corazawaf/coraza/raw/refs/tags/v{{ coraza_config_version }}/coraza.conf-recommended"
+    dest: "{{ coraza_config_dir }}/coraza.conf"
+    owner: coraza-spoa
+    group: coraza-spoa
+    mode: "0644"
+
+- name: Clone CRS rules
+  ansible.builtin.git:
+    repo: https://github.com/coreruleset/coreruleset
+    version: "v{{ coreruleset_version }}"
+    dest: coreruleset
+
+- name: Copy CRS setup config
+  ansible.builtin.copy:
+    src: coreruleset/crs-setup.conf.example
+    dest: "{{ coraza_config_dir }}/crs-setup.conf"
+    owner: coraza-spoa
+    group: coraza-spoa
+    mode: "0644"
+    remote_src: true
+
+- name: Copy CRS rules
+  ansible.builtin.copy:
+    src: coreruleset/rules/
+    dest: "{{ coraza_config_dir }}/rules/"
+    owner: coraza-spoa
+    group: coraza-spoa
+    mode: "0755"
+    remote_src: true
+
+- name: Copy CRS plugins
+  ansible.builtin.copy:
+    src: coreruleset/plugins/
+    dest: "{{ coraza_config_dir }}/plugins/"
+    owner: coraza-spoa
+    group: coraza-spoa
+    mode: "0755"
+    remote_src: true
+
+- name: Copy coraza systemd service
+  ansible.builtin.copy:
+    src: coraza-spoa.service
+    dest: /etc/systemd/system/coraza-spoa.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Build coraza-spoa
+  ansible.builtin.command:
+    cmd: /usr/lib/go-1.23/bin/go run mage.go build
+    chdir: coraza-spoa
+    creates: coraza-spoa/build/coraza-spoa
+  environment:
+    PATH: "/usr/lib/go-1.23/bin:{{ ansible_env.PATH }}"
+
+- name: Copy coraza-spoa binary
+  ansible.builtin.copy:
+    src: coraza-spoa/build/coraza-spoa
+    dest: /usr/local/bin/coraza-spoa
+    owner: root
+    group: root
+    mode: "0755"
+    remote_src: true
+  notify: Start coraza-spoa service

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Renews certs via lego, combines for HAProxy, reloads only if changed.
+set -euo pipefail
+
+CERT_DIR="{{ haproxy_cert_dir }}"
+LEGO_DIR="{{ lego_cert_dir }}"
+RELOAD_NEEDED=false
+
+{% for domain in served_domains %}
+# Renew *.{{ domain }}
+CLOUDFLARE_DNS_API_TOKEN="{{ cloudflare_dns_api_token }}" \
+  lego --accept-tos --email {{ tls_cert_email }} --dns cloudflare \
+  --path /etc/lego -d '*.{{ domain }}' renew --days 30 \
+  || logger -t haproxy-certs "lego renewal returned non-zero for {{ domain }}"
+{% endfor %}
+
+for crt_file in "$LEGO_DIR"/_.*\.crt; do
+  [ -f "$crt_file" ] || continue
+  base=$(basename "$crt_file" .crt)
+  key_file="$LEGO_DIR/${base}.key"
+  [ -f "$key_file" ] || continue
+
+  # Strip leading _. to get domain name
+  domain="${base#_.}"
+  combined="$CERT_DIR/$domain"
+  temp_cert=$(mktemp)
+  trap 'rm -f "$temp_cert"' EXIT
+
+  cat "$crt_file" "$key_file" > "$temp_cert"
+
+  if ! openssl x509 -in "$temp_cert" -noout 2>/dev/null; then
+    logger -t haproxy-certs "Invalid certificate for $domain, skipping"
+    rm -f "$temp_cert"
+    continue
+  fi
+
+  if [ ! -f "$combined" ] || ! cmp -s "$temp_cert" "$combined"; then
+    mv "$temp_cert" "$combined"
+    chmod 600 "$combined"
+    RELOAD_NEEDED=true
+    echo "Certificate updated for $domain"
+  else
+    rm -f "$temp_cert"
+    echo "Certificate unchanged for $domain"
+  fi
+done
+
+if [ "$RELOAD_NEEDED" = true ]; then
+  systemctl reload haproxy
+  echo "HAProxy reloaded"
+fi
