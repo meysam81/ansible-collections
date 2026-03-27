@@ -1,6 +1,8 @@
 [Unit]
 Description=Victoria Metrics - VMAgent
 Documentation=https://docs.victoriametrics.com/vmagent/
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
 ExecStartPre={{ vmagent_bin }} \
@@ -39,6 +41,11 @@ Group=vmagent
 ReadOnlyPaths=/
 ReadWritePaths=/var/lib/vmagent
 ReadWritePaths=/var/log/vmagent
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+LimitNPROC=4096
 
 [Install]
 WantedBy=multi-user.target

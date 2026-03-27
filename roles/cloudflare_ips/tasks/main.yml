@@ -14,6 +14,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Reload systemd daemon
 
 - name: Deploy Cloudflare IP update systemd timer
   ansible.builtin.copy:
@@ -22,6 +23,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Reload systemd daemon
 
 - name: Enable and start Cloudflare IP update timer
   ansible.builtin.systemd:
@@ -29,3 +31,8 @@
     state: started
     enabled: true
     daemon_reload: true
+
+- name: Run initial Cloudflare IP update
+  ansible.builtin.command:
+    cmd: /usr/local/bin/update-cloudflare-ips.sh
+    creates: "{{ cloudflare_ips_file }}"

@@ -148,7 +148,7 @@ pushgateway_version: 1.10.0
 #### Default value
 
 ```YAML
-pushgateway_web_enable_admin_api: true
+pushgateway_web_enable_admin_api: false
 ```
 
 ### pushgateway_web_enable_lifecycle
@@ -156,7 +156,7 @@ pushgateway_web_enable_admin_api: true
 #### Default value
 
 ```YAML
-pushgateway_web_enable_lifecycle: true
+pushgateway_web_enable_lifecycle: false
 ```
 
 ### pushgateway_web_external_url

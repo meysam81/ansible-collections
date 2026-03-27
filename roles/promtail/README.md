@@ -12,6 +12,7 @@ Install promtail from GitHub release
   - [promtail_os](#promtail_os)
   - [promtail_remote_write_password](#promtail_remote_write_password)
   - [promtail_remote_write_username](#promtail_remote_write_username)
+  - [promtail_scrape_paths](#promtail_scrape_paths)
   - [promtail_sha256sum_url](#promtail_sha256sum_url)
   - [promtail_url](#promtail_url)
   - [promtail_user](#promtail_user)
@@ -75,6 +76,17 @@ promtail_remote_write_password: ''
 
 ```YAML
 promtail_remote_write_username: ''
+```
+
+### promtail_scrape_paths
+
+#### Default value
+
+```YAML
+promtail_scrape_paths:
+  - /var/log/*.log
+  - /var/log/syslog
+  - /var/log/auth.log
 ```
 
 ### promtail_sha256sum_url

@@ -1,9 +1,21 @@
 ---
+- name: Check installed lego version
+  ansible.builtin.command:
+    cmd: "{{ lego_bin_dir }}/lego --version"
+  register: lego_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Set lego install needed flag
+  ansible.builtin.set_fact:
+    lego_needs_install: "{{ lego_installed_version.rc != 0 or lego_version not in (lego_installed_version.stdout | default('')) }}"
+
 - name: Download lego checksums
   ansible.builtin.get_url:
     url: "{{ lego_checksums_url }}"
     dest: "/tmp/lego_{{ lego_version }}_checksums.txt"
     mode: "0644"
+  when: lego_needs_install
 
 - name: Extract lego SHA256 checksum
   ansible.builtin.shell:
@@ -12,6 +24,7 @@
       /tmp/lego_{{ lego_version }}_checksums.txt | awk '{print $1}'
   register: lego_sha256
   changed_when: false
+  when: lego_needs_install
 
 - name: Download lego binary
   ansible.builtin.get_url:
@@ -19,6 +32,7 @@
     dest: "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
     checksum: "sha256:{{ lego_sha256.stdout }}"
     mode: "0644"
+  when: lego_needs_install
 
 - name: Extract lego binary
   ansible.builtin.unarchive:
@@ -28,3 +42,13 @@
     extra_opts:
       - lego
     mode: "0755"
+  when: lego_needs_install
+
+- name: Clean up lego temp files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/lego_{{ lego_version }}_checksums.txt"
+    - "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+  when: lego_needs_install

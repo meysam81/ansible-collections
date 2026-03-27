@@ -61,7 +61,6 @@ local runtime = {}
 local function init()
     BAN_TEMPLATE_PATH = os.getenv("CROWDSEC_BAN_TEMPLATE_PATH")
     CAPTCHA_TEMPLATE_PATH = os.getenv("CROWDSEC_CAPTCHA_TEMPLATE_PATH")
-    CROWDSEC_LOG_LEVEL = os.getenv("CROWDSEC_LOG_LEVEL")
     runtime.logger = NewLogger("[crowdsec] ")
     runtime.logger.info("initialising lua modules")
 

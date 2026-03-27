@@ -3,7 +3,7 @@
   ansible.builtin.apt:
     name:
       - git
-      - golang-1.23
+      - "golang-{{ coraza_go_version }}"
     state: present
     update_cache: true
 
@@ -11,7 +11,7 @@
   ansible.builtin.git:
     repo: https://github.com/corazawaf/coraza-spoa.git
     version: "v{{ coraza_spoa_version }}"
-    dest: coraza-spoa
+    dest: /tmp/coraza-spoa
 
 - name: Deploy coraza SPOE config
   ansible.builtin.template:
@@ -58,54 +58,56 @@
   ansible.builtin.git:
     repo: https://github.com/coreruleset/coreruleset
     version: "v{{ coreruleset_version }}"
-    dest: coreruleset
+    dest: /tmp/coreruleset
 
 - name: Copy CRS setup config
   ansible.builtin.copy:
-    src: coreruleset/crs-setup.conf.example
+    src: /tmp/coreruleset/crs-setup.conf.example
     dest: "{{ coraza_config_dir }}/crs-setup.conf"
     owner: coraza-spoa
     group: coraza-spoa
     mode: "0644"
     remote_src: true
+    force: false
 
 - name: Copy CRS rules
   ansible.builtin.copy:
-    src: coreruleset/rules/
+    src: /tmp/coreruleset/rules/
     dest: "{{ coraza_config_dir }}/rules/"
     owner: coraza-spoa
     group: coraza-spoa
-    mode: "0755"
+    mode: "0644"
     remote_src: true
 
 - name: Copy CRS plugins
   ansible.builtin.copy:
-    src: coreruleset/plugins/
+    src: /tmp/coreruleset/plugins/
     dest: "{{ coraza_config_dir }}/plugins/"
     owner: coraza-spoa
     group: coraza-spoa
-    mode: "0755"
+    mode: "0644"
     remote_src: true
 
-- name: Copy coraza systemd service
-  ansible.builtin.copy:
-    src: coraza-spoa.service
+- name: Deploy coraza systemd service
+  ansible.builtin.template:
+    src: coraza-spoa.service.j2
     dest: /etc/systemd/system/coraza-spoa.service
     owner: root
     group: root
     mode: "0644"
+  notify: Restart coraza-spoa service
 
 - name: Build coraza-spoa
   ansible.builtin.command:
-    cmd: /usr/lib/go-1.23/bin/go run mage.go build
-    chdir: coraza-spoa
-    creates: coraza-spoa/build/coraza-spoa
+    cmd: /usr/lib/go-{{ coraza_go_version }}/bin/go run mage.go build
+    chdir: /tmp/coraza-spoa
+    creates: /tmp/coraza-spoa/build/coraza-spoa
   environment:
-    PATH: "/usr/lib/go-1.23/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/lib/go-{{ coraza_go_version }}/bin:{{ ansible_env.PATH }}"
 
 - name: Copy coraza-spoa binary
   ansible.builtin.copy:
-    src: coraza-spoa/build/coraza-spoa
+    src: /tmp/coraza-spoa/build/coraza-spoa
     dest: /usr/local/bin/coraza-spoa
     owner: root
     group: root

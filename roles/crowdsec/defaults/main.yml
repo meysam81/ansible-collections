@@ -20,7 +20,7 @@
 #          mode tcp
 #          server s1 {{ crowdsec_spoa_addr }}:{{ crowdsec_spoa_port }}
 #
-crowdsec_enabled: false
+crowdsec_enabled: true
 crowdsec_spoa_addr: "127.0.0.1"
 crowdsec_spoa_port: 9001
 crowdsec_lua_dir: "/usr/lib/crowdsec-haproxy-spoa-bouncer/lua"

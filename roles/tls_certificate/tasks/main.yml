@@ -1,4 +1,21 @@
 ---
+- name: Assert required TLS certificate variables
+  ansible.builtin.assert:
+    that:
+      - tls_cert_email | length > 0
+      - cloudflare_dns_api_token is defined
+      - cloudflare_dns_api_token | length > 0
+      - served_domains | length > 0
+    fail_msg: "tls_cert_email, cloudflare_dns_api_token, and served_domains are required"
+
+- name: Create HAProxy certificate directory
+  ansible.builtin.file:
+    path: "{{ haproxy_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
 - name: Create lego certificate directory
   ansible.builtin.file:
     path: "{{ lego_cert_dir }}"
@@ -12,7 +29,7 @@
     cmd: >
       lego
       --accept-tos
-      --email {{ tls_cert_email }}
+      --email "{{ tls_cert_email }}"
       --dns cloudflare
       --path /etc/lego
       -d '*.{{ item }}'
@@ -32,7 +49,15 @@
       chmod 600 "{{ haproxy_cert_dir }}/{{ item }}"
     creates: "{{ haproxy_cert_dir }}/{{ item }}"
   loop: "{{ served_domains }}"
-  when: served_domains | length > 0
+
+- name: Deploy Cloudflare API token environment file
+  ansible.builtin.copy:
+    content: "CLOUDFLARE_DNS_API_TOKEN={{ cloudflare_dns_api_token }}\n"
+    dest: "{{ haproxy_cert_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
 
 - name: Deploy cert renewal script
   ansible.builtin.template:
@@ -43,12 +68,13 @@
     mode: "0755"
 
 - name: Deploy cert renewal systemd service
-  ansible.builtin.copy:
-    src: haproxy-certs-renew.service
+  ansible.builtin.template:
+    src: haproxy-certs-renew.service.j2
     dest: /etc/systemd/system/haproxy-certs-renew.service
     owner: root
     group: root
     mode: "0644"
+  notify: Reload systemd daemon
 
 - name: Deploy cert renewal systemd timer
   ansible.builtin.copy:
@@ -57,6 +83,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Reload systemd daemon
 
 - name: Enable and start cert renewal timer
   ansible.builtin.systemd:

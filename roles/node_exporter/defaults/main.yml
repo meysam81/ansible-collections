@@ -8,3 +8,12 @@ node_exporter_os: linux
 node_exporter_owner: node-exporter
 node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
 node_exporter_version: 1.8.2
+node_exporter_supervisord_enabled: false
+node_exporter_supervisord_url: "http://localhost:9001/RPC2"
+node_exporter_extra_collectors:
+  - tcpstat
+  - systemd
+  - sysctl
+  - network_route
+  - mountstats
+  - cgroups

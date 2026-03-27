@@ -12,9 +12,9 @@ touch "$IP_FILE"
 ip_addresses=$(mktemp)
 trap 'rm -f "$ip_addresses"' EXIT
 
-curl -f -s --retry 3 --retry-delay 5 "$CF_IPV4_URL" >> "$ip_addresses"
+curl -f -s --proto =https --retry 3 --retry-delay 5 "$CF_IPV4_URL" > "$ip_addresses"
 echo >> "$ip_addresses"
-curl -f -s --retry 3 --retry-delay 5 "$CF_IPV6_URL" >> "$ip_addresses"
+curl -f -s --proto =https --retry 3 --retry-delay 5 "$CF_IPV6_URL" >> "$ip_addresses"
 echo >> "$ip_addresses"
 
 chown haproxy:haproxy "$ip_addresses"
@@ -23,7 +23,7 @@ chmod 644 "$ip_addresses"
 if ! cmp -s "$ip_addresses" "$IP_FILE"; then
     cp "$IP_FILE" "${IP_FILE}.bak"
 
-    mv "$ip_addresses" "$IP_FILE"
+    install -m 644 -o haproxy -g haproxy "$ip_addresses" "$IP_FILE"
 
     if haproxy -c -f "$HAPROXY_CFG"; then
         systemctl reload haproxy

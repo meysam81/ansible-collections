@@ -12,7 +12,7 @@ pushgateway_user: pushgateway
 pushgateway_persistence_file: ""
 pushgateway_sha256sum_url: https://github.com/prometheus/pushgateway/releases/download/v{{ pushgateway_version | regex_replace('^v', '') }}/sha256sums.txt
 pushgateway_version: 1.10.0
-pushgateway_web_enable_admin_api: true
-pushgateway_web_enable_lifecycle: true
+pushgateway_web_enable_admin_api: false
+pushgateway_web_enable_lifecycle: false
 pushgateway_web_external_url: ""
 pushgateway_web_listen_address: 127.0.0.1:9091

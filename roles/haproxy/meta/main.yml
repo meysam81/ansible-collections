@@ -1,6 +1,6 @@
 galaxy_info:
   author: Meysam Azad
-  description: Install HAProxy with apt
+  description: HAProxy with full config management, TLS, and security headers
   company: Self employed
 
   license: Apache-2.0
@@ -29,4 +29,5 @@ galaxy_info:
     - webserver
     - web
 
-dependencies: []
+dependencies:
+  - role: haproxy_build

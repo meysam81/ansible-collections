@@ -12,3 +12,8 @@ promtail_remote_write_username: ""
 promtail_remote_write_password: ""
 
 promtail_bearer_token_file: ""
+
+promtail_scrape_paths:
+  - /var/log/*.log
+  - /var/log/syslog
+  - /var/log/auth.log

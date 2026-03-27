@@ -1,6 +1,6 @@
 {# roles/coraza/templates/coraza.cfg.j2 #}
 # https://github.com/haproxy/haproxy/blob/master/doc/SPOE.txt
-# /usr/local/etc/haproxy/coraza.cfg
+# {{ haproxy_config_dir }}/coraza.cfg
 [coraza]
 spoe-agent coraza-agent
     # Process HTTP requests only (the responses are not evaluated)

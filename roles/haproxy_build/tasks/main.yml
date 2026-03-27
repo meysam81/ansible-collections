@@ -3,7 +3,6 @@
   ansible.builtin.apt:
     name:
       - build-essential
-      - libasound2-dev
       - liblua5.4-dev
       - libopentracing-c-wrapper-dev
       - libopentracing-c-wrapper0
@@ -13,25 +12,40 @@
     state: present
     update_cache: true
 
+- name: Check installed HAProxy version
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/haproxy -v
+  register: haproxy_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Set build needed flag
+  ansible.builtin.set_fact:
+    haproxy_needs_build: "{{ haproxy_installed_version.rc != 0 or haproxy_version not in (haproxy_installed_version.stdout | default('')) }}"
+
 - name: Download HAProxy source
   ansible.builtin.get_url:
     url: "https://www.haproxy.org/download/{{ haproxy_version | regex_replace('\\.[0-9]+$', '') }}/src/haproxy-{{ haproxy_version }}.tar.gz"
     dest: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}.tar.gz"
+    checksum: "{{ haproxy_source_checksum | default(omit, true) }}"
     owner: root
     group: root
     mode: "0644"
   register: haproxy_download
+  when: haproxy_needs_build
 
 - name: Extract HAProxy source
   ansible.builtin.unarchive:
     src: "{{ haproxy_download.dest }}"
     dest: "{{ ansible_user_dir }}"
     remote_src: true
+  when: haproxy_needs_build
 
 - name: Clean previous HAProxy build
   community.general.make:
     chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}"
     target: clean
+  when: haproxy_needs_build
 
 - name: Compile HAProxy
   community.general.make:
@@ -55,8 +69,18 @@
       USE_STATIC_PCRE2: 1
       USE_TFO: 1
       USE_THREAD: 1
+  when: haproxy_needs_build
 
 - name: Install HAProxy
   community.general.make:
     chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}"
     target: install
+  when: haproxy_needs_build
+
+- name: Clean up build artifacts
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ ansible_user_dir }}/haproxy-{{ haproxy_version }}.tar.gz"
+  when: haproxy_needs_build

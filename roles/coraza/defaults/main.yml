@@ -5,4 +5,5 @@ coreruleset_version: "4.17.1"
 coraza_spoa_addr: "127.0.0.1"
 coraza_spoa_port: 9000
 coraza_config_dir: "/etc/coraza-spoa"
+coraza_go_version: "1.23"
 haproxy_config_dir: "/etc/haproxy"

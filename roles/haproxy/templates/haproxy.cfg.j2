@@ -21,7 +21,7 @@ global
     log stdout format raw local1 notice
     log-send-hostname
 
-    stats socket /run/haproxy.sock mode 660 level admin expose-fd listeners
+    stats socket /run/haproxy.sock mode 660 group haproxy level operator expose-fd listeners
     stats timeout 30s
 
     tune.ssl.default-dh-param {{ haproxy_dh_param_bits }}
@@ -51,6 +51,9 @@ defaults
     option http-server-close
     option redispatch
     option splice-auto
+{% if haproxy_option_forwardfor %}
+    option forwardfor
+{% endif %}
     retries 3
 
     default-server check inter 10s fall 3 rise 2
@@ -70,10 +73,13 @@ frontend stats
     stats enable
     stats uri /stats
     stats refresh 30s
+{% if haproxy_stats_auth_password %}
+    stats auth {{ haproxy_stats_auth_user }}:{{ haproxy_stats_auth_password }}
     stats admin if TRUE
+{% endif %}
     http-request use-service prometheus-exporter if { path /metrics }
 
-frontend https
+frontend web
     bind *:80
     bind *:443 ssl crt {{ haproxy_cert_dir }}/ alpn h2,http/1.1
 
@@ -163,9 +169,9 @@ frontend https
     redirect scheme https code 301 if !{ ssl_fc }
 
     http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
-    http-response set-header Cache-Control "no-cache, no-store, must-revalidate, private"
-    http-response set-header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; connect-src 'self' https: blob:; font-src 'self' data: https:; object-src 'none'; child-src 'self' blob:; frame-ancestors 'self' https:; upgrade-insecure-requests; block-all-mixed-content"
-    http-response set-header Cross-Origin-Embedder-Policy "require-corp"
+    http-response set-header Cache-Control "{{ haproxy_cache_control }}"
+    http-response set-header Content-Security-Policy "{{ haproxy_csp }}" unless { res.hdr(Content-Security-Policy) -m found }
+    http-response set-header Cross-Origin-Embedder-Policy "{{ haproxy_coep }}"
     http-response set-header Cross-Origin-Opener-Policy "same-origin"
     http-response set-header Cross-Origin-Resource-Policy "cross-origin"
     http-response set-header Expires "0"
@@ -177,17 +183,19 @@ frontend https
     http-response set-header X-Download-Options "noopen"
     http-response set-header X-Frame-Options SAMEORIGIN
     http-response set-header X-Permitted-Cross-Domain-Policies "none"
-    http-response set-header X-XSS-Protection "1; mode=block"
+    http-response set-header X-XSS-Protection "{{ haproxy_x_xss_protection }}"
     http-response del-header Server
     http-response del-header X-Powered-By
 
-    http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found }
-    http-response set-header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" if { var(txn.origin) -m found }
-    http-response set-header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID" if { var(txn.origin) -m found }
-    http-response set-header Access-Control-Expose-Headers "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date" if { var(txn.origin) -m found }
-    http-response set-header Access-Control-Allow-Credentials "true" if { var(txn.origin) -m found }
-    http-response set-header Access-Control-Max-Age "3600" if { var(txn.origin) -m found }
+    http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+    http-response set-header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+    http-response set-header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+    http-response set-header Access-Control-Expose-Headers "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+    http-response set-header Access-Control-Allow-Credentials "true" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+    http-response set-header Access-Control-Max-Age "3600" if { var(txn.origin) -m found } !{ res.hdr(Access-Control-Allow-Origin) -m found }
+{% if cors_allowed_domains or cors_subdomain_patterns %}
     http-response set-header Vary "Origin"
+{% endif %}
 
 {% for domain in served_domains %}
     acl {{ domain | replace('.', '_') | replace('-', '_') }} hdr(host) -i -m end .{{ domain }}
@@ -214,8 +222,7 @@ listen apiserver
 {% endif %}
 
 backend k8s
-    option tcp-check
-    tcp-check connect
+    option httpchk GET /healthz
     server sv0 {{ k8s_backend_addr }}:{{ k8s_backend_port }}  check inter 3000 rise 1 fall 3
 
 backend not_found

@@ -67,7 +67,7 @@ k8s_oidc_github_pages_commit_name: K8s OIDC GitHub Pages
 #### Default value
 
 ```YAML
-k8s_oidc_github_pages_debug: true
+k8s_oidc_github_pages_debug: false
 ```
 
 ### k8s_oidc_github_pages_environments

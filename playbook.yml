@@ -10,6 +10,17 @@
   roles:
     - role: haproxy
       tags: haproxy
+    - role: tls_certificate
+      tags: tls_certificate
+      vars:
+        tls_cert_email: "{{ lookup('env', 'TLS_CERT_EMAIL') }}"
+        cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') }}"
+    - role: cloudflare_ips
+      tags: cloudflare_ips
+    - role: coraza
+      tags: coraza
+    - role: crowdsec
+      tags: crowdsec
     - role: node_exporter
       tags: node_exporter
     - role: vmagent

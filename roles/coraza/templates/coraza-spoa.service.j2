@@ -5,9 +5,9 @@ StartLimitIntervalSec=500
 StartLimitBurst=5
 
 [Service]
-ExecStartPre=/usr/local/bin/coraza-spoa -config=/etc/coraza-spoa/config.yml -validate
-ExecStart=/usr/local/bin/coraza-spoa -config=/etc/coraza-spoa/config.yml -autoreload -metrics-addr 127.0.0.1:3245
-WorkingDirectory=/etc/coraza-spoa
+ExecStartPre=/usr/local/bin/coraza-spoa -config={{ coraza_config_dir }}/config.yml -validate
+ExecStart=/usr/local/bin/coraza-spoa -config={{ coraza_config_dir }}/config.yml -autoreload -metrics-addr 127.0.0.1:3245
+WorkingDirectory={{ coraza_config_dir }}
 Restart=always
 RestartSec=5
 Type=exec

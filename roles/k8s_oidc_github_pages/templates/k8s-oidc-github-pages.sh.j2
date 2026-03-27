@@ -18,6 +18,12 @@ sleep "$sleep_time"
 timestamp=$(date +%s)
 repo_name={{ k8s_oidc_github_pages_repository_name }}-$timestamp
 
+cleanup() {
+  cd /
+  rm -rf "$repo_name"
+}
+trap cleanup EXIT
+
 git clone --depth=1 "{{ k8s_oidc_github_pages_repository_ssh_url }}" "$repo_name"
 
 cd "$repo_name"

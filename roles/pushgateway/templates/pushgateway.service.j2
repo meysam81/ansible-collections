@@ -1,6 +1,8 @@
 [Unit]
 Wants=network-online.target
 After=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -25,8 +27,14 @@ ExecStart=/usr/local/bin/pushgateway \
   --log.level={{ pushgateway_log_level }} \
   --log.format={{ pushgateway_log_format }}
 Restart=on-failure
+RestartSec=5
 User={{ pushgateway_user }}
 Group={{ pushgateway_group }}
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+LimitNPROC=4096
 
 [Install]
 WantedBy=multi-user.target

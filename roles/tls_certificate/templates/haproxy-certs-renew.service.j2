@@ -5,10 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+EnvironmentFile={{ haproxy_cert_dir }}/.env
 ExecStart=/usr/local/bin/prepare-haproxy-certs.sh
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=haproxy-certs
-ProtectSystem=full
+ProtectSystem=strict
+ReadWritePaths={{ haproxy_cert_dir }} {{ lego_cert_dir }}
 PrivateTmp=true
 NoNewPrivileges=true

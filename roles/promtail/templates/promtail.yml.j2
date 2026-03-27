@@ -10,7 +10,7 @@ clients:
     {% if promtail_bearer_token_file is defined -%}
     bearer_token_file: "{{ promtail_bearer_token_file }}"
     {% endif %}
-    {% if promtail_remote_write_username is defined and promtail_remote_write_password is defined -%}
+    {% if promtail_remote_write_username is defined and promtail_remote_write_username and promtail_remote_write_password is defined and promtail_remote_write_password -%}
     basic_auth:
       username: {{ promtail_remote_write_username }}
       password_file: /var/lib/promtail/remote-password-file
@@ -23,4 +23,4 @@ scrape_configs:
           - localhost
         labels:
           job: {{ ansible_hostname }}
-          __path__: /var/log/*.log
+          __path__: "{{'{'}}{{ promtail_scrape_paths | join(',') }}{{'}'}}"

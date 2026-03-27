@@ -2,7 +2,7 @@
 - name: Converge
   hosts: all
   gather_facts: true
-  become: false
+  become: true
   tasks:
     - name: Ping
       ansible.builtin.ping:
@@ -33,6 +33,17 @@
   roles:
     - role: haproxy
       tags: haproxy
+    - role: tls_certificate
+      tags: tls_certificate
+      vars:
+        tls_cert_email: "{{ lookup('env', 'TLS_CERT_EMAIL') | default('admin@example.com', true) }}"
+        cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') | default('dummy', true) }}"
+    - role: cloudflare_ips
+      tags: cloudflare_ips
+    - role: coraza
+      tags: coraza
+    - role: crowdsec
+      tags: crowdsec
     - role: node_exporter
       tags: node_exporter
     - role: vmagent

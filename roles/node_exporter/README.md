@@ -9,11 +9,14 @@ Install node-exporter from GitHub release
   - [node_exporter_arch](#node_exporter_arch)
   - [node_exporter_create_user](#node_exporter_create_user)
   - [node_exporter_download_url](#node_exporter_download_url)
+  - [node_exporter_extra_collectors](#node_exporter_extra_collectors)
   - [node_exporter_group](#node_exporter_group)
   - [node_exporter_healthcheck_enabled](#node_exporter_healthcheck_enabled)
   - [node_exporter_os](#node_exporter_os)
   - [node_exporter_owner](#node_exporter_owner)
   - [node_exporter_sha256sum_url](#node_exporter_sha256sum_url)
+  - [node_exporter_supervisord_enabled](#node_exporter_supervisord_enabled)
+  - [node_exporter_supervisord_url](#node_exporter_supervisord_url)
   - [node_exporter_version](#node_exporter_version)
 - [Dependencies](#dependencies)
 - [License](#license)
@@ -52,6 +55,20 @@ node_exporter_create_user: true
 node_exporter_download_url: https://github.com/prometheus/node_exporter/releases/download/v{{
   node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ node_exporter_version
   | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ node_exporter_arch }}.tar.gz
+```
+
+### node_exporter_extra_collectors
+
+#### Default value
+
+```YAML
+node_exporter_extra_collectors:
+  - tcpstat
+  - systemd
+  - sysctl
+  - network_route
+  - mountstats
+  - cgroups
 ```
 
 ### node_exporter_group
@@ -93,6 +110,22 @@ node_exporter_owner: node-exporter
 ```YAML
 node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{
   node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
+```
+
+### node_exporter_supervisord_enabled
+
+#### Default value
+
+```YAML
+node_exporter_supervisord_enabled: false
+```
+
+### node_exporter_supervisord_url
+
+#### Default value
+
+```YAML
+node_exporter_supervisord_url: http://localhost:9001/RPC2
 ```
 
 ### node_exporter_version

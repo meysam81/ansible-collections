@@ -1,59 +1,62 @@
 ---
 # NOTE: This role installs CrowdSec bouncer components but does NOT wire them
 # into haproxy.cfg. See defaults/main.yml for enablement instructions.
-- name: Install CrowdSec HAProxy bouncer
-  ansible.builtin.apt:
-    name:
-      - crowdsec
-      - crowdsec-haproxy-bouncer
-    state: present
-    update_cache: true
+- name: Install and configure CrowdSec HAProxy bouncer
+  when: crowdsec_enabled
+  block:
+    - name: Install CrowdSec HAProxy bouncer
+      ansible.builtin.apt:
+        name:
+          - crowdsec
+          - crowdsec-haproxy-bouncer
+        state: present
+        update_cache: true
 
-- name: Create Lua script directory
-  ansible.builtin.file:
-    path: "{{ crowdsec_lua_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
+    - name: Create Lua script directory
+      ansible.builtin.file:
+        path: "{{ crowdsec_lua_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
 
-- name: Deploy CrowdSec Lua scripts
-  ansible.builtin.copy:
-    src: "lua/"
-    dest: "{{ crowdsec_lua_dir }}/"
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Restart crowdsec-bouncer service
+    - name: Deploy CrowdSec Lua scripts
+      ansible.builtin.copy:
+        src: "lua/"
+        dest: "{{ crowdsec_lua_dir }}/"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart crowdsec-bouncer service
 
-- name: Create HTML template directory
-  ansible.builtin.file:
-    path: "{{ crowdsec_html_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
+    - name: Create HTML template directory
+      ansible.builtin.file:
+        path: "{{ crowdsec_html_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
 
-- name: Deploy CrowdSec HTML templates
-  ansible.builtin.copy:
-    src: "html/"
-    dest: "{{ crowdsec_html_dir }}/"
-    owner: root
-    group: root
-    mode: "0644"
+    - name: Deploy CrowdSec HTML templates
+      ansible.builtin.copy:
+        src: "html/"
+        dest: "{{ crowdsec_html_dir }}/"
+        owner: root
+        group: root
+        mode: "0644"
 
-- name: Deploy CrowdSec SPOE config
-  ansible.builtin.template:
-    src: crowdsec.cfg.j2
-    dest: "{{ haproxy_config_dir }}/crowdsec.cfg"
-    owner: haproxy
-    group: haproxy
-    mode: "0644"
-  notify: Restart crowdsec-bouncer service
+    - name: Deploy CrowdSec SPOE config
+      ansible.builtin.template:
+        src: crowdsec.cfg.j2
+        dest: "{{ haproxy_config_dir }}/crowdsec.cfg"
+        owner: haproxy
+        group: haproxy
+        mode: "0644"
+      notify: Restart crowdsec-bouncer service
 
-- name: Enable CrowdSec HAProxy bouncer service
-  ansible.builtin.systemd:
-    name: crowdsec-haproxy-bouncer.service
-    state: started
-    enabled: true
-    daemon_reload: true
+    - name: Enable CrowdSec HAProxy bouncer service
+      ansible.builtin.systemd:
+        name: crowdsec-haproxy-bouncer.service
+        state: started
+        enabled: true
+        daemon_reload: true

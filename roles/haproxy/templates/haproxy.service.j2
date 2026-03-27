@@ -8,10 +8,11 @@ StartLimitBurst=5
 
 [Service]
 Type=notify
-ExecStartPre=/usr/local/sbin/haproxy -f /etc/haproxy/haproxy.cfg -c -q
-ExecStart=/usr/local/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
+ExecStartPre={{ haproxy_bin_path }} -f {{ haproxy_config_dir }}/haproxy.cfg -c -q
+ExecStart={{ haproxy_bin_path }} -Ws -f {{ haproxy_config_dir }}/haproxy.cfg -p /run/haproxy.pid
 ExecReload=/bin/kill -USR2 $MAINPID
-ExecStop=/bin/kill -USR1 $MAINPID
+ExecStop=/bin/kill -SIGTERM $MAINPID
+TimeoutStopSec=30
 KillMode=mixed
 Restart=always
 RestartSec=5
