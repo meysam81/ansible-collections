@@ -20,10 +20,54 @@
     oathkeeper_checksum: >-
       {{ (lookup('ansible.builtin.url', oathkeeper_checksum_url, split_lines=true, wantlist=true) |
       select('search', oathkeeper_download_url | basename) | list | first).split(' ')[0] }}
+- name: Create secure temp directory for GPG verification
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: oathkeeper_gpg_
+  register: oathkeeper_gpg_dir
+  when: oathkeeper_gpg_verify
+- name: Download Ory GPG public key
+  ansible.builtin.get_url:
+    url: "{{ oathkeeper_gpg_key_url }}"
+    dest: "{{ oathkeeper_gpg_dir.path }}/ory.asc"
+    mode: "0644"
+  when: oathkeeper_gpg_verify
+- name: Download oathkeeper checksums file
+  ansible.builtin.get_url:
+    url: "{{ oathkeeper_checksum_url }}"
+    dest: "{{ oathkeeper_gpg_dir.path }}/checksums.txt"
+    mode: "0644"
+  when: oathkeeper_gpg_verify
+- name: Download oathkeeper checksums signature
+  ansible.builtin.get_url:
+    url: "{{ oathkeeper_checksum_sig_url }}"
+    dest: "{{ oathkeeper_gpg_dir.path }}/checksums.txt.sig"
+    mode: "0644"
+  when: oathkeeper_gpg_verify
+- name: Verify oathkeeper checksums GPG signature
+  ansible.builtin.shell:
+    cmd: >
+      gpg --no-default-keyring --keyring {{ oathkeeper_gpg_dir.path }}/ory.gpg
+      --import {{ oathkeeper_gpg_dir.path }}/ory.asc &&
+      gpg --no-default-keyring --keyring {{ oathkeeper_gpg_dir.path }}/ory.gpg
+      --verify {{ oathkeeper_gpg_dir.path }}/checksums.txt.sig
+      {{ oathkeeper_gpg_dir.path }}/checksums.txt
+  changed_when: false
+  when: oathkeeper_gpg_verify
+- name: Clean up GPG verification files
+  ansible.builtin.file:
+    path: "{{ oathkeeper_gpg_dir.path }}"
+    state: absent
+  when: oathkeeper_gpg_verify
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: oathkeeper_
+  register: oathkeeper_tmp_dir
 - name: Download oathkeeper {{ oathkeeper_version }}
   ansible.builtin.get_url:
     url: "{{ oathkeeper_download_url }}"
-    dest: /tmp/{{ oathkeeper_download_url | basename }}
+    dest: "{{ oathkeeper_tmp_dir.path }}/{{ oathkeeper_download_url | basename }}"
     mode: "0644"
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_id }}"
@@ -40,6 +84,10 @@
     owner: root
     group: root
   notify: Restart oathkeeper
+- name: Clean up oathkeeper temp files
+  ansible.builtin.file:
+    path: "{{ oathkeeper_tmp_dir.path }}"
+    state: absent
 - name: Copy oathkeeper systemd service
   ansible.builtin.template:
     src: oathkeeper.service.j2
@@ -71,6 +119,7 @@
     mode: "0440"
     owner: "{{ oathkeeper_user }}"
     group: "{{ oathkeeper_group }}"
+  no_log: true
   notify: Restart oathkeeper
 - name: Start oathkeeper service
   ansible.builtin.systemd:

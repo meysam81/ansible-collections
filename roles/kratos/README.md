@@ -68,11 +68,14 @@ Ansible role for deploying Ory Kratos Identity Server
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [kratos_arch](#kratos_arch)
+  - [kratos_checksum_sig_url](#kratos_checksum_sig_url)
   - [kratos_checksum_url](#kratos_checksum_url)
   - [kratos_configuration](#kratos_configuration)
   - [kratos_download_url](#kratos_download_url)
   - [kratos_envs](#kratos_envs)
   - [kratos_exec_cmd](#kratos_exec_cmd)
+  - [kratos_gpg_key_url](#kratos_gpg_key_url)
+  - [kratos_gpg_verify](#kratos_gpg_verify)
   - [kratos_group](#kratos_group)
   - [kratos_libmusl](#kratos_libmusl)
   - [kratos_os](#kratos_os)
@@ -98,6 +101,15 @@ Ansible role for deploying Ory Kratos Identity Server
 ```YAML
 kratos_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '64bit')
   | replace('aarch64', 'arm64') }}"
+```
+
+### kratos_checksum_sig_url
+
+#### Default value
+
+```YAML
+kratos_checksum_sig_url: https://github.com/ory/kratos/releases/download/v{{ kratos_version
+  | regex_replace('^v', '') }}/checksums.txt.sig
 ```
 
 ### kratos_checksum_url
@@ -157,6 +169,22 @@ kratos_envs: {}
 
 ```YAML
 kratos_exec_cmd: /usr/local/bin/kratos serve
+```
+
+### kratos_gpg_key_url
+
+#### Default value
+
+```YAML
+kratos_gpg_key_url: https://keybase.io/ory/pgp_keys.asc
+```
+
+### kratos_gpg_verify
+
+#### Default value
+
+```YAML
+kratos_gpg_verify: false
 ```
 
 ### kratos_group

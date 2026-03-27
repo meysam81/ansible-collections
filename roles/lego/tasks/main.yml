@@ -10,18 +10,25 @@
   ansible.builtin.set_fact:
     lego_needs_install: "{{ lego_installed_version.rc != 0 or lego_version not in (lego_installed_version.stdout | default('')) }}"
 
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: lego_
+  register: lego_tmp_dir
+  when: lego_needs_install
+
 - name: Download lego checksums
   ansible.builtin.get_url:
     url: "{{ lego_checksums_url }}"
-    dest: "/tmp/lego_{{ lego_version }}_checksums.txt"
+    dest: "{{ lego_tmp_dir.path }}/lego_{{ lego_version }}_checksums.txt"
     mode: "0644"
   when: lego_needs_install
 
 - name: Extract lego SHA256 checksum
   ansible.builtin.shell:
     cmd: >
-      grep "lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
-      /tmp/lego_{{ lego_version }}_checksums.txt | awk '{print $1}'
+      grep -F "lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+      {{ lego_tmp_dir.path }}/lego_{{ lego_version }}_checksums.txt | awk '{print $1}'
   register: lego_sha256
   changed_when: false
   when: lego_needs_install
@@ -29,14 +36,14 @@
 - name: Download lego binary
   ansible.builtin.get_url:
     url: "{{ lego_download_url }}"
-    dest: "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+    dest: "{{ lego_tmp_dir.path }}/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
     checksum: "sha256:{{ lego_sha256.stdout }}"
     mode: "0644"
   when: lego_needs_install
 
 - name: Extract lego binary
   ansible.builtin.unarchive:
-    src: "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+    src: "{{ lego_tmp_dir.path }}/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
     dest: "{{ lego_bin_dir }}"
     remote_src: true
     extra_opts:
@@ -46,9 +53,6 @@
 
 - name: Clean up lego temp files
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ lego_tmp_dir.path }}"
     state: absent
-  loop:
-    - "/tmp/lego_{{ lego_version }}_checksums.txt"
-    - "/tmp/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
   when: lego_needs_install

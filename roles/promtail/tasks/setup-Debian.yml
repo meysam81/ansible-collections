@@ -1,4 +1,11 @@
 ---
+- name: Assert remote_write_url uses HTTPS
+  ansible.builtin.assert:
+    that:
+      - promtail_remote_write_url is defined
+      - promtail_remote_write_url | length > 0
+      - promtail_remote_write_url is regex('^https://')
+    fail_msg: "promtail_remote_write_url must use HTTPS (got: {{ promtail_remote_write_url | default('undefined') }})"
 - name: Download and read sha256sum file
   ansible.builtin.set_fact:
     sha256sum_file_content: "{{ lookup('ansible.builtin.url', promtail_sha256sum_url, wantlist=True) }}"
@@ -7,10 +14,15 @@
   ansible.builtin.set_fact:
     sha256sum: "{{ sha256sum_file_content | select('search', promtail_url | basename) | map('split', ' ') | map('first') | list | first }}"
   when: promtail_version and promtail_sha256sum_url
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: promtail_
+  register: promtail_tmp_dir
 - name: Download promtail
   ansible.builtin.get_url:
     url: "{{ promtail_url }}"
-    dest: "/tmp/{{ promtail_url | basename }}"
+    dest: "{{ promtail_tmp_dir.path }}/{{ promtail_url | basename }}"
     mode: "0444"
     owner: "{{ promtail_user }}"
     group: "{{ promtail_group }}"
@@ -18,8 +30,8 @@
   register: promtail_download
 - name: Extract promtail
   ansible.builtin.unarchive:
-    src: "/tmp/{{ promtail_url | basename }}"
-    dest: /tmp/
+    src: "{{ promtail_tmp_dir.path }}/{{ promtail_url | basename }}"
+    dest: "{{ promtail_tmp_dir.path }}/"
     owner: root
     group: root
     remote_src: true
@@ -36,6 +48,10 @@
     mode: "0555"
     remote_src: true
   notify: Restart promtail
+- name: Clean up promtail temp files
+  ansible.builtin.file:
+    path: "{{ promtail_tmp_dir.path }}"
+    state: absent
 - name: Create promtail relevant dir
   ansible.builtin.file:
     path: "{{ item }}"

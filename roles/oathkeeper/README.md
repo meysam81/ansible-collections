@@ -53,11 +53,14 @@ Ansible role for deploying Ory Oathkeeper Access Proxy
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [oathkeeper_arch](#oathkeeper_arch)
+  - [oathkeeper_checksum_sig_url](#oathkeeper_checksum_sig_url)
   - [oathkeeper_checksum_url](#oathkeeper_checksum_url)
   - [oathkeeper_configuration](#oathkeeper_configuration)
   - [oathkeeper_download_url](#oathkeeper_download_url)
   - [oathkeeper_envs](#oathkeeper_envs)
   - [oathkeeper_exec_cmd](#oathkeeper_exec_cmd)
+  - [oathkeeper_gpg_key_url](#oathkeeper_gpg_key_url)
+  - [oathkeeper_gpg_verify](#oathkeeper_gpg_verify)
   - [oathkeeper_group](#oathkeeper_group)
   - [oathkeeper_libmusl](#oathkeeper_libmusl)
   - [oathkeeper_os](#oathkeeper_os)
@@ -83,6 +86,15 @@ Ansible role for deploying Ory Oathkeeper Access Proxy
 ```YAML
 oathkeeper_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64',
   '64bit') | replace('aarch64', 'arm64') }}"
+```
+
+### oathkeeper_checksum_sig_url
+
+#### Default value
+
+```YAML
+oathkeeper_checksum_sig_url: https://github.com/ory/oathkeeper/releases/download/v{{
+  oathkeeper_version | regex_replace('^v', '') }}/checksums.txt.sig
 ```
 
 ### oathkeeper_checksum_url
@@ -135,6 +147,22 @@ oathkeeper_envs: {}
 
 ```YAML
 oathkeeper_exec_cmd: /usr/local/bin/oathkeeper serve
+```
+
+### oathkeeper_gpg_key_url
+
+#### Default value
+
+```YAML
+oathkeeper_gpg_key_url: https://keybase.io/ory/pgp_keys.asc
+```
+
+### oathkeeper_gpg_verify
+
+#### Default value
+
+```YAML
+oathkeeper_gpg_verify: false
 ```
 
 ### oathkeeper_group

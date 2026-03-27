@@ -26,3 +26,7 @@ kratos_os: linux
 kratos_sqlite: true
 kratos_user: kratos
 kratos_version: 1.3.1
+# GPG signature verification (requires gpg on target)
+kratos_gpg_verify: false
+kratos_checksum_sig_url: "https://github.com/ory/kratos/releases/download/v{{ kratos_version | regex_replace('^v', '') }}/checksums.txt.sig"
+kratos_gpg_key_url: "https://keybase.io/ory/pgp_keys.asc"

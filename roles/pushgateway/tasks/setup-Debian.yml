@@ -19,10 +19,15 @@
   ansible.builtin.set_fact:
     sha256sum: "{{ sha256sum_file_content | select('search', pushgateway_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
   when: pushgateway_version and pushgateway_sha256sum_url
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: pushgateway_
+  register: pushgateway_tmp_dir
 - name: Download pushgateway
   ansible.builtin.get_url:
     url: "{{ pushgateway_download_url }}"
-    dest: /tmp/{{ pushgateway_download_url | basename }}
+    dest: "{{ pushgateway_tmp_dir.path }}/{{ pushgateway_download_url | basename }}"
     mode: "0644"
     checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
     owner: "{{ pushgateway_user }}"
@@ -40,6 +45,10 @@
       - --wildcards
       - "*/pushgateway"
   notify: Restart pushgateway
+- name: Clean up pushgateway temp files
+  ansible.builtin.file:
+    path: "{{ pushgateway_tmp_dir.path }}"
+    state: absent
 - name: Copy systemd service
   ansible.builtin.template:
     src: pushgateway.service.j2

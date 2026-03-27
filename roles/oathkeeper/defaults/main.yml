@@ -19,3 +19,7 @@ oathkeeper_os: linux
 oathkeeper_sqlite: true
 oathkeeper_user: oathkeeper
 oathkeeper_version: 0.40.7
+# GPG signature verification (requires gpg on target)
+oathkeeper_gpg_verify: false
+oathkeeper_checksum_sig_url: "https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v', '') }}/checksums.txt.sig"
+oathkeeper_gpg_key_url: "https://keybase.io/ory/pgp_keys.asc"

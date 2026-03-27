@@ -10,6 +10,13 @@
   ansible.builtin.set_fact:
     go_needs_install: "{{ go_installed_version.rc != 0 or ('go' + go_version) not in (go_installed_version.stdout | default('')) }}"
 
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: golang_
+  register: golang_tmp_dir
+  when: go_needs_install
+
 - name: Download Go checksum
   ansible.builtin.uri:
     url: "{{ go_checksum_url }}"
@@ -20,7 +27,7 @@
 - name: Download Go tarball
   ansible.builtin.get_url:
     url: "{{ go_download_url }}"
-    dest: "/tmp/go{{ go_version }}.{{ go_os }}-{{ go_arch }}.tar.gz"
+    dest: "{{ golang_tmp_dir.path }}/go{{ go_version }}.{{ go_os }}-{{ go_arch }}.tar.gz"
     checksum: "sha256:{{ go_sha256.content | trim }}"
     mode: "0644"
   when: go_needs_install
@@ -33,13 +40,13 @@
 
 - name: Extract Go tarball
   ansible.builtin.unarchive:
-    src: "/tmp/go{{ go_version }}.{{ go_os }}-{{ go_arch }}.tar.gz"
+    src: "{{ golang_tmp_dir.path }}/go{{ go_version }}.{{ go_os }}-{{ go_arch }}.tar.gz"
     dest: "{{ go_install_dir }}"
     remote_src: true
   when: go_needs_install
 
 - name: Clean up Go temp files
   ansible.builtin.file:
-    path: "/tmp/go{{ go_version }}.{{ go_os }}-{{ go_arch }}.tar.gz"
+    path: "{{ golang_tmp_dir.path }}"
     state: absent
   when: go_needs_install

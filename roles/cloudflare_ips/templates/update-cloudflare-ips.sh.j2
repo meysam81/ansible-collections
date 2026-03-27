@@ -1,6 +1,7 @@
 #!/bin/bash
 # {{ ansible_managed }}
 set -euo pipefail
+umask 0077
 
 CF_IPV4_URL="https://www.cloudflare.com/ips-v4"
 CF_IPV6_URL="https://www.cloudflare.com/ips-v6"

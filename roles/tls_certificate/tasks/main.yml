@@ -3,10 +3,18 @@
   ansible.builtin.assert:
     that:
       - tls_cert_email | length > 0
+      - tls_cert_email is regex('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
       - cloudflare_dns_api_token is defined
       - cloudflare_dns_api_token | length > 0
       - served_domains | length > 0
-    fail_msg: "tls_cert_email, cloudflare_dns_api_token, and served_domains are required"
+    fail_msg: "tls_cert_email must be a valid email, cloudflare_dns_api_token and served_domains are required"
+
+- name: Assert served_domains contain valid domain names
+  ansible.builtin.assert:
+    that:
+      - item is regex('^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
+    fail_msg: "Invalid domain name: {{ item }}"
+  loop: "{{ served_domains }}"
 
 - name: Create HAProxy certificate directory
   ansible.builtin.file:

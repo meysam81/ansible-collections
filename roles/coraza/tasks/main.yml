@@ -6,11 +6,17 @@
     state: present
     update_cache: true
 
+- name: Create secure build directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: coraza_build_
+  register: coraza_build_dir
+
 - name: Clone coraza-spoa
   ansible.builtin.git:
     repo: https://github.com/corazawaf/coraza-spoa.git
-    version: "v{{ coraza_spoa_version }}"
-    dest: /tmp/coraza-spoa
+    version: "{{ coraza_spoa_commit if coraza_spoa_commit else 'v' + coraza_spoa_version }}"
+    dest: "{{ coraza_build_dir.path }}/coraza-spoa"
 
 - name: Deploy coraza SPOE config
   ansible.builtin.template:
@@ -18,7 +24,7 @@
     dest: "{{ haproxy_config_dir }}/coraza.cfg"
     owner: haproxy
     group: haproxy
-    mode: "0644"
+    mode: "0640"
   notify: Restart coraza-spoa service
 
 - name: Create coraza-spoa user
@@ -56,12 +62,12 @@
 - name: Clone CRS rules
   ansible.builtin.git:
     repo: https://github.com/coreruleset/coreruleset
-    version: "v{{ coreruleset_version }}"
-    dest: /tmp/coreruleset
+    version: "{{ coreruleset_commit if coreruleset_commit else 'v' + coreruleset_version }}"
+    dest: "{{ coraza_build_dir.path }}/coreruleset"
 
 - name: Copy CRS setup config
   ansible.builtin.copy:
-    src: /tmp/coreruleset/crs-setup.conf.example
+    src: "{{ coraza_build_dir.path }}/coreruleset/crs-setup.conf.example"
     dest: "{{ coraza_config_dir }}/crs-setup.conf"
     owner: coraza-spoa
     group: coraza-spoa
@@ -71,7 +77,7 @@
 
 - name: Copy CRS rules
   ansible.builtin.copy:
-    src: /tmp/coreruleset/rules/
+    src: "{{ coraza_build_dir.path }}/coreruleset/rules/"
     dest: "{{ coraza_config_dir }}/rules/"
     owner: coraza-spoa
     group: coraza-spoa
@@ -80,7 +86,7 @@
 
 - name: Copy CRS plugins
   ansible.builtin.copy:
-    src: /tmp/coreruleset/plugins/
+    src: "{{ coraza_build_dir.path }}/coreruleset/plugins/"
     dest: "{{ coraza_config_dir }}/plugins/"
     owner: coraza-spoa
     group: coraza-spoa
@@ -99,17 +105,22 @@
 - name: Build coraza-spoa
   ansible.builtin.command:
     cmd: "{{ go_install_dir }}/go/bin/go run mage.go build"
-    chdir: /tmp/coraza-spoa
-    creates: /tmp/coraza-spoa/build/coraza-spoa
+    chdir: "{{ coraza_build_dir.path }}/coraza-spoa"
+    creates: "{{ coraza_build_dir.path }}/coraza-spoa/build/coraza-spoa"
   environment:
     PATH: "{{ go_install_dir }}/go/bin:{{ ansible_env.PATH }}"
 
 - name: Copy coraza-spoa binary
   ansible.builtin.copy:
-    src: /tmp/coraza-spoa/build/coraza-spoa
+    src: "{{ coraza_build_dir.path }}/coraza-spoa/build/coraza-spoa"
     dest: /usr/local/bin/coraza-spoa
     owner: root
     group: root
     mode: "0755"
     remote_src: true
   notify: Start coraza-spoa service
+
+- name: Clean up coraza build directory
+  ansible.builtin.file:
+    path: "{{ coraza_build_dir.path }}"
+    state: absent

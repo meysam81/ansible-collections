@@ -1,4 +1,11 @@
 ---
+- name: Assert remote_write_url uses HTTPS
+  ansible.builtin.assert:
+    that:
+      - vmagent_remote_write_url is defined
+      - vmagent_remote_write_url | length > 0
+      - vmagent_remote_write_url is regex('^https://')
+    fail_msg: "vmagent_remote_write_url must use HTTPS (got: {{ vmagent_remote_write_url | default('undefined') }})"
 - name: Create group {{ vmagent_group }}
   ansible.builtin.group:
     name: "{{ vmagent_group }}"
@@ -13,10 +20,15 @@
     shell: /bin/false
     create_home: true
     group: "{{ created_group.name }}"
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: vmagent_
+  register: vmagent_tmp_dir
 - name: Download vmutils
   ansible.builtin.get_url:
     url: "{{ vmagent_vmutils_url }}"
-    dest: "/tmp/{{ vmagent_vmutils_url | basename }}"
+    dest: "{{ vmagent_tmp_dir.path }}/{{ vmagent_vmutils_url | basename }}"
     mode: "0644"
     owner: "{{ vmagent_user }}"
     group: "{{ vmagent_group }}"
@@ -30,6 +42,10 @@
     group: root
     extra_opts:
       - vmagent-prod
+- name: Clean up vmagent temp files
+  ansible.builtin.file:
+    path: "{{ vmagent_tmp_dir.path }}"
+    state: absent
 - name: Ensure vmagent dir exists
   ansible.builtin.file:
     path: "{{ item }}"

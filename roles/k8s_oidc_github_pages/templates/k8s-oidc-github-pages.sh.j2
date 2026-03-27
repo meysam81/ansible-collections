@@ -7,6 +7,7 @@ set -eux
 {% else %}
 set -eu
 {% endif %}
+umask 0077
 
 {% if k8s_oidc_github_pages_random_sleep_enabled -%}
 # To avoid contention with other K8s API server nodes
@@ -15,18 +16,17 @@ echo "Sleeping for $sleep_time seconds"
 sleep "$sleep_time"
 {% endif -%}
 
-timestamp=$(date +%s)
-repo_name={{ k8s_oidc_github_pages_repository_name }}-$timestamp
+work_dir=$(mktemp -d "/tmp/{{ k8s_oidc_github_pages_repository_name }}-XXXXXX")
 
 cleanup() {
   cd /
-  rm -rf "$repo_name"
+  rm -rf "$work_dir"
 }
 trap cleanup EXIT
 
-git clone --depth=1 "{{ k8s_oidc_github_pages_repository_ssh_url }}" "$repo_name"
+git clone --depth=1 "{{ k8s_oidc_github_pages_repository_ssh_url }}" "$work_dir/repo"
 
-cd "$repo_name"
+cd "$work_dir/repo"
 
 mkdir -p ./openid/v1 ./.well-known
 

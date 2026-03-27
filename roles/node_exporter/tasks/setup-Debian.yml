@@ -19,10 +19,15 @@
   ansible.builtin.set_fact:
     sha256sum: "{{ sha256sum_file_content | select('search', node_exporter_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
   when: node_exporter_version and node_exporter_sha256sum_url
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: node_exporter_
+  register: node_exporter_tmp_dir
 - name: Download node-exporter
   ansible.builtin.get_url:
     url: "{{ node_exporter_download_url }}"
-    dest: /tmp/{{ node_exporter_download_url | basename }}
+    dest: "{{ node_exporter_tmp_dir.path }}/{{ node_exporter_download_url | basename }}"
     mode: "0644"
     checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
     owner: "{{ node_exporter_owner }}"
@@ -40,6 +45,10 @@
       - --wildcards
       - "*/node_exporter"
   notify: Restart node-exporter
+- name: Clean up node_exporter temp files
+  ansible.builtin.file:
+    path: "{{ node_exporter_tmp_dir.path }}"
+    state: absent
 - name: Deploy systemd service from template
   ansible.builtin.template:
     src: node-exporter.service.j2

@@ -2,6 +2,9 @@
 coraza_spoa_version: "0.3.0"
 coraza_config_version: "3.3.3"
 coreruleset_version: "4.17.1"
+# Pin to specific commit SHA for supply chain integrity (update when bumping versions)
+coraza_spoa_commit: ""
+coreruleset_commit: ""
 coraza_spoa_addr: "127.0.0.1"
 coraza_spoa_port: 9000
 coraza_config_dir: "/etc/coraza-spoa"

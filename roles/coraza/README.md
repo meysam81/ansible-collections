@@ -6,8 +6,10 @@
   - [coraza_config_dir](#coraza_config_dir)
   - [coraza_config_version](#coraza_config_version)
   - [coraza_spoa_addr](#coraza_spoa_addr)
+  - [coraza_spoa_commit](#coraza_spoa_commit)
   - [coraza_spoa_port](#coraza_spoa_port)
   - [coraza_spoa_version](#coraza_spoa_version)
+  - [coreruleset_commit](#coreruleset_commit)
   - [coreruleset_version](#coreruleset_version)
   - [go_install_dir](#go_install_dir)
   - [haproxy_config_dir](#haproxy_config_dir)
@@ -47,6 +49,14 @@ coraza_config_version: 3.3.3
 coraza_spoa_addr: 127.0.0.1
 ```
 
+### coraza_spoa_commit
+
+#### Default value
+
+```YAML
+coraza_spoa_commit: ''
+```
+
 ### coraza_spoa_port
 
 #### Default value
@@ -61,6 +71,14 @@ coraza_spoa_port: 9000
 
 ```YAML
 coraza_spoa_version: 0.3.0
+```
+
+### coreruleset_commit
+
+#### Default value
+
+```YAML
+coreruleset_commit: ''
 ```
 
 ### coreruleset_version
