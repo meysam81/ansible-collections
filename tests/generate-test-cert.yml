@@ -1,0 +1,43 @@
+---
+# Generates a self-signed PEM bundle so HAProxy config validation passes
+# in CI and local molecule runs. Include this as a pre_task before the
+# haproxy role. Production playbooks should never include this file.
+- name: Create HAProxy cert directory for test
+  ansible.builtin.file:
+    path: "{{ haproxy_cert_dir | default('/etc/haproxy/certs') }}"
+    state: directory
+    mode: "0750"
+
+- name: Check for existing TLS certificates
+  ansible.builtin.stat:
+    path: "{{ haproxy_cert_dir | default('/etc/haproxy/certs') }}/test.pem"
+  register: _test_cert
+
+- name: Generate self-signed test certificate
+  when: not _test_cert.stat.exists
+  block:
+    - name: Create temp directory for test cert
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: haproxy_test_cert_
+      register: _test_cert_tmpdir
+
+    - name: Generate self-signed key and certificate
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048
+          -keyout {{ _test_cert_tmpdir.path }}/key.pem
+          -out {{ _test_cert_tmpdir.path }}/cert.pem
+          -days 1 -nodes -subj "/CN=localhost"
+      changed_when: true
+
+    - name: Assemble PEM bundle for HAProxy
+      ansible.builtin.assemble:
+        src: "{{ _test_cert_tmpdir.path }}"
+        dest: "{{ haproxy_cert_dir | default('/etc/haproxy/certs') }}/test.pem"
+        mode: "0640"
+
+    - name: Clean up temp directory
+      ansible.builtin.file:
+        path: "{{ _test_cert_tmpdir.path }}"
+        state: absent
