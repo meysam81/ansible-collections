@@ -69,7 +69,7 @@
     owner: "{{ vmagent_user }}"
     group: "{{ vmagent_group }}"
     mode: "0400"
-  when: vmagent_remote_write_password
+  when: vmagent_remote_write_password | length > 0
   no_log: true
 - name: Copy service file
   ansible.builtin.template:
