@@ -36,6 +36,7 @@ Build HAProxy from source
 - [Default Variables](#default-variables)
   - [haproxy_build_source_checksum](#haproxy_build_source_checksum)
   - [haproxy_build_version](#haproxy_build_version)
+  - [haproxy_force_rebuild](#haproxy_force_rebuild)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -62,6 +63,14 @@ haproxy_build_source_checksum: ''
 
 ```YAML
 haproxy_build_version: 3.2.3
+```
+
+### haproxy_force_rebuild
+
+#### Default value
+
+```YAML
+haproxy_force_rebuild: false
 ```
 
 

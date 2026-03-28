@@ -69,13 +69,14 @@
       USE_STATIC_PCRE2: 1
       USE_TFO: 1
       USE_THREAD: 1
-  when: haproxy_build_needs_build
+      USE_ZLIB: 1
+  when: haproxy_build_needs_build or haproxy_force_rebuild
 
 - name: Install HAProxy
   community.general.make:
     chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_build_version }}"
     target: install
-  when: haproxy_build_needs_build
+  when: haproxy_build_needs_build or haproxy_force_rebuild
 
 - name: Clean up build artifacts
   ansible.builtin.file:
