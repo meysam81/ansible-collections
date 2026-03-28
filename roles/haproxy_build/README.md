@@ -1,6 +1,6 @@
 # HAProxy Build
 
-Build HAProxy from source with OpenSSL, PCRE2, Lua, and zlib support.
+Build HAProxy from source with OpenSSL, QUIC, PCRE2, Lua, and Prometheus support.
 
 ## Install
 
@@ -25,7 +25,7 @@ collections:
   roles:
     - name: meysam81.general.haproxy_build
       vars:
-        haproxy_build_version: "3.2.3"
+        haproxy_build_version: "3.3.6"
 ```
 
 Build HAProxy from source
@@ -62,7 +62,7 @@ haproxy_build_source_checksum: ''
 #### Default value
 
 ```YAML
-haproxy_build_version: 3.2.3
+haproxy_build_version: 3.3.6
 ```
 
 ### haproxy_force_rebuild

@@ -4,8 +4,6 @@
     name:
       - build-essential
       - liblua5.4-dev
-      - libopentracing-c-wrapper-dev
-      - libopentracing-c-wrapper0
       - libpcre2-dev
       - libssl-dev
       - pkg-config
@@ -21,67 +19,71 @@
 
 - name: Set build needed flag
   ansible.builtin.set_fact:
-    haproxy_build_needs_build: "{{ haproxy_build_installed_version.rc != 0 or haproxy_build_version not in (haproxy_build_installed_version.stdout | default('')) }}"
+    haproxy_build_needs_build: >-
+      {{
+        haproxy_build_installed_version.rc != 0
+        or haproxy_build_version not in (haproxy_build_installed_version.stdout | default(''))
+      }}
 
-- name: Download HAProxy source
-  ansible.builtin.get_url:
-    url: "https://www.haproxy.org/download/{{ haproxy_build_version | regex_replace('\\.[0-9]+$', '') }}/src/haproxy-{{ haproxy_build_version }}.tar.gz"
-    dest: "{{ ansible_user_dir }}/haproxy-{{ haproxy_build_version }}.tar.gz"
-    checksum: "{{ haproxy_build_source_checksum | default(omit, true) }}"
-    owner: root
-    group: root
-    mode: "0644"
-  register: haproxy_build_download
-  when: haproxy_build_needs_build
-
-- name: Extract HAProxy source
-  ansible.builtin.unarchive:
-    src: "{{ haproxy_build_download.dest }}"
-    dest: "{{ ansible_user_dir }}"
-    remote_src: true
-  when: haproxy_build_needs_build
-
-- name: Clean previous HAProxy build
-  community.general.make:
-    chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_build_version }}"
-    target: clean
-  when: haproxy_build_needs_build
-
-- name: Compile HAProxy
-  community.general.make:
-    chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_build_version }}"
-    jobs: "{{ ansible_processor_vcpus }}"
-    params:
-      TARGET: linux-glibc
-      USE_ENGINE: 1
-      USE_GETADDRINFO: 1
-      USE_LINUX_CAP: 1
-      USE_LUA: 1
-      USE_MEMORY_PROFILING: 1
-      USE_NS: 1
-      USE_OPENSSL: 1
-      USE_OT: 1
-      USE_PCRE2_JIT: 1
-      USE_PCRE2: 1
-      USE_PROMEX: 1
-      USE_QUIC_OPENSSL_COMPAT: 1
-      USE_QUIC: 1
-      USE_STATIC_PCRE2: 1
-      USE_TFO: 1
-      USE_THREAD: 1
-      USE_ZLIB: 1
+- name: Build and install HAProxy
   when: haproxy_build_needs_build or haproxy_force_rebuild
+  block:
+    - name: Create temporary build directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: haproxy_build_
+      register: haproxy_build_tmpdir
 
-- name: Install HAProxy
-  community.general.make:
-    chdir: "{{ ansible_user_dir }}/haproxy-{{ haproxy_build_version }}"
-    target: install
-  when: haproxy_build_needs_build or haproxy_force_rebuild
+    - name: Download HAProxy source
+      ansible.builtin.get_url:
+        url: "https://www.haproxy.org/download/{{ haproxy_build_version | regex_replace('\\.[0-9]+$', '') }}/src/haproxy-{{ haproxy_build_version }}.tar.gz"
+        dest: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}.tar.gz"
+        checksum: "{{ haproxy_build_source_checksum | default(omit, true) }}"
+        mode: "0644"
 
-- name: Clean up build artifacts
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - "{{ ansible_user_dir }}/haproxy-{{ haproxy_build_version }}.tar.gz"
-  when: haproxy_build_needs_build
+    - name: Extract HAProxy source
+      ansible.builtin.unarchive:
+        src: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}.tar.gz"
+        dest: "{{ haproxy_build_tmpdir.path }}"
+        remote_src: true
+
+    - name: Clean previous HAProxy build
+      community.general.make:
+        chdir: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}"
+        target: clean
+
+    - name: Compile HAProxy
+      community.general.make:
+        chdir: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}"
+        jobs: "{{ ansible_processor_vcpus }}"
+        params:
+          TARGET: linux-glibc
+          USE_GETADDRINFO: 1
+          USE_KTLS: 1
+          USE_LINUX_CAP: 1
+          USE_LUA: 1
+          USE_MEMORY_PROFILING: 1
+          USE_NS: 1
+          USE_OPENSSL: 1
+          USE_PCRE2_JIT: 1
+          USE_PCRE2: 1
+          USE_PROMEX: 1
+          USE_PTHREAD_EMULATION: 1
+          USE_QUIC_OPENSSL_COMPAT: 1
+          USE_QUIC: 1
+          USE_SHM_OPEN: 1
+          USE_STATIC_PCRE2: 1
+          USE_TFO: 1
+          USE_THREAD: 1
+
+    - name: Install HAProxy
+      community.general.make:
+        chdir: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}"
+        target: install
+
+  always:
+    - name: Clean up temporary build directory
+      ansible.builtin.file:
+        path: "{{ haproxy_build_tmpdir.path }}"
+        state: absent
+      when: haproxy_build_tmpdir.path is defined
