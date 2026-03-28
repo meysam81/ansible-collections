@@ -3,10 +3,10 @@
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
-  - [haproxy_cert_dir](#haproxy_cert_dir)
-  - [lego_cert_dir](#lego_cert_dir)
-  - [served_domains](#served_domains)
-  - [tls_cert_email](#tls_cert_email)
+  - [tls_certificate_email](#tls_certificate_email)
+  - [tls_certificate_haproxy_cert_dir](#tls_certificate_haproxy_cert_dir)
+  - [tls_certificate_lego_cert_dir](#tls_certificate_lego_cert_dir)
+  - [tls_certificate_served_domains](#tls_certificate_served_domains)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -19,36 +19,36 @@ None.
 
 ## Default Variables
 
-### haproxy_cert_dir
+### tls_certificate_email
 
 #### Default value
 
 ```YAML
-haproxy_cert_dir: /etc/haproxy/certs
+tls_certificate_email: ''
 ```
 
-### lego_cert_dir
+### tls_certificate_haproxy_cert_dir
 
 #### Default value
 
 ```YAML
-lego_cert_dir: /etc/lego/certificates
+tls_certificate_haproxy_cert_dir: /etc/haproxy/certs
 ```
 
-### served_domains
+### tls_certificate_lego_cert_dir
 
 #### Default value
 
 ```YAML
-served_domains: []
+tls_certificate_lego_cert_dir: /etc/lego/certificates
 ```
 
-### tls_cert_email
+### tls_certificate_served_domains
 
 #### Default value
 
 ```YAML
-tls_cert_email: ''
+tls_certificate_served_domains: []
 ```
 
 

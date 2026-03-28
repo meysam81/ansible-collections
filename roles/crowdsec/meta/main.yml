@@ -1,5 +1,6 @@
 ---
 galaxy_info:
+  author: Meysam Azad
   role_name: crowdsec
   description: CrowdSec bouncer for HAProxy (Lua-based)
   min_ansible_version: "2.15"

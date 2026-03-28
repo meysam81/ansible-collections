@@ -4,21 +4,25 @@
     name: "{{ node_exporter_group }}"
     state: present
     system: true
-  when: node_exporter_create_user
+  when: node_exporter_create_user | bool
 - name: Create user {{ node_exporter_owner }}
   ansible.builtin.user:
     name: "{{ node_exporter_owner }}"
     group: "{{ node_exporter_group }}"
     state: present
-  when: node_exporter_create_user
+  when: node_exporter_create_user | bool
 - name: Download and read sha256sum file
   ansible.builtin.set_fact:
-    sha256sum_file_content: "{{ lookup('ansible.builtin.url', node_exporter_sha256sum_url, wantlist=True) }}"
-  when: node_exporter_version and node_exporter_sha256sum_url
+    node_exporter_sha256sum_file_content: "{{ lookup('ansible.builtin.url', node_exporter_sha256sum_url, wantlist=True) }}"
+  when:
+    - node_exporter_version | default('') | length > 0
+    - node_exporter_sha256sum_url | default('') | length > 0
 - name: Extract SHA256 checksums for {{ node_exporter_download_url | basename }}
   ansible.builtin.set_fact:
-    sha256sum: "{{ sha256sum_file_content | select('search', node_exporter_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
-  when: node_exporter_version and node_exporter_sha256sum_url
+    node_exporter_sha256sum: "{{ node_exporter_sha256sum_file_content | select('search', node_exporter_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+  when:
+    - node_exporter_version | default('') | length > 0
+    - node_exporter_sha256sum_url | default('') | length > 0
 - name: Create secure temp directory
   ansible.builtin.tempfile:
     state: directory
@@ -29,7 +33,7 @@
     url: "{{ node_exporter_download_url }}"
     dest: "{{ node_exporter_tmp_dir.path }}/{{ node_exporter_download_url | basename }}"
     mode: "0644"
-    checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
+    checksum: "{{ 'sha256:' + node_exporter_sha256sum if node_exporter_sha256sum else None }}"
     owner: "{{ node_exporter_owner }}"
     group: "{{ node_exporter_group }}"
   register: node_exporter_download
@@ -68,8 +72,8 @@
     url: http://localhost:9110/metrics
     status_code: 200
     timeout: 2
-  register: healthcheck
-  until: healthcheck.status == 200
-  when: node_exporter_healthcheck_enabled
+  register: node_exporter_healthcheck
+  until: node_exporter_healthcheck.status == 200
+  when: node_exporter_healthcheck_enabled | bool
   retries: 5
   delay: 1

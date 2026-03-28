@@ -13,8 +13,8 @@
     - role: tls_certificate
       tags: tls_certificate
       vars:
-        tls_cert_email: "{{ lookup('env', 'TLS_CERT_EMAIL') }}"
-        cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') }}"
+        tls_certificate_email: "{{ lookup('env', 'TLS_CERT_EMAIL') }}"
+        tls_certificate_cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') }}"
     - role: cloudflare_ips
       tags: cloudflare_ips
     - role: coraza
@@ -27,10 +27,12 @@
       tags: vmagent
       vars:
         vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write', true) }}"
+        vmagent_allow_insecure_url: true
     - role: promtail
       tags: promtail
       vars:
         promtail_remote_write_url: "{{ lookup('env', 'PROMTAIL_REMOTE_WRITE_URL') | default('http://localhost:3100/loki/api/v1/push', true) }}"
+        promtail_allow_insecure_url: true
     - role: pushgateway
       tags: pushgateway
     - role: k8s_oidc_github_pages

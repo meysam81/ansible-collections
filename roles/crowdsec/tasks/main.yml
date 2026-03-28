@@ -48,7 +48,7 @@
     - name: Deploy CrowdSec SPOE config
       ansible.builtin.template:
         src: crowdsec.cfg.j2
-        dest: "{{ haproxy_config_dir }}/crowdsec.cfg"
+        dest: "{{ crowdsec_haproxy_config_dir }}/crowdsec.cfg"
         owner: haproxy
         group: haproxy
         mode: "0644"

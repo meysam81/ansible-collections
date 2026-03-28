@@ -6,6 +6,7 @@ Install vmagent from GitHub release
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
+  - [vmagent_allow_insecure_url](#vmagent_allow_insecure_url)
   - [vmagent_arch](#vmagent_arch)
   - [vmagent_bin](#vmagent_bin)
   - [vmagent_docker_enabled](#vmagent_docker_enabled)
@@ -40,6 +41,14 @@ Install vmagent from GitHub release
 - Minimum Ansible version: `2.17`
 
 ## Default Variables
+
+### vmagent_allow_insecure_url
+
+#### Default value
+
+```YAML
+vmagent_allow_insecure_url: false
+```
 
 ### vmagent_arch
 

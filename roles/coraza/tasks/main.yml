@@ -21,7 +21,7 @@
 - name: Deploy coraza SPOE config
   ansible.builtin.template:
     src: coraza.cfg.j2
-    dest: "{{ haproxy_config_dir }}/coraza.cfg"
+    dest: "{{ coraza_haproxy_config_dir }}/coraza.cfg"
     owner: haproxy
     group: haproxy
     mode: "0640"
@@ -62,7 +62,7 @@
 - name: Clone CRS rules
   ansible.builtin.git:
     repo: https://github.com/coreruleset/coreruleset
-    version: "{{ coreruleset_commit if coreruleset_commit else 'v' + coreruleset_version }}"
+    version: "{{ coraza_coreruleset_commit if coraza_coreruleset_commit else 'v' + coraza_coreruleset_version }}"
     dest: "{{ coraza_build_dir.path }}/coreruleset"
 
 - name: Copy CRS setup config
@@ -104,11 +104,11 @@
 
 - name: Build coraza-spoa
   ansible.builtin.command:
-    cmd: "{{ go_install_dir }}/go/bin/go run mage.go build"
+    cmd: "{{ coraza_go_install_dir }}/go/bin/go run mage.go build"
     chdir: "{{ coraza_build_dir.path }}/coraza-spoa"
     creates: "{{ coraza_build_dir.path }}/coraza-spoa/build/coraza-spoa"
   environment:
-    PATH: "{{ go_install_dir }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ coraza_go_install_dir }}/go/bin:{{ ansible_env.PATH }}"
 
 - name: Copy coraza-spoa binary
   ansible.builtin.copy:

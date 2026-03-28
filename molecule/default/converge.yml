@@ -3,6 +3,9 @@
   hosts: all
   gather_facts: true
   become: true
+  vars:
+    haproxy_served_domains:
+      - example.com
   tasks:
     - name: Ping
       ansible.builtin.ping:
@@ -38,8 +41,8 @@
     - role: tls_certificate
       tags: tls_certificate
       vars:
-        tls_cert_email: "{{ lookup('env', 'TLS_CERT_EMAIL') | default('admin@example.com', true) }}"
-        cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') | default('dummy', true) }}"
+        tls_certificate_email: "{{ lookup('env', 'TLS_CERT_EMAIL') | default('admin@example.com', true) }}"
+        tls_certificate_cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') | default('dummy', true) }}"
     - role: cloudflare_ips
       tags: cloudflare_ips
     - role: coraza
@@ -52,11 +55,13 @@
       tags: vmagent
       vars:
         vmagent_remote_write_url: "{{ lookup('env', 'VMAGENT_REMOTE_WRITE_URL') | default('http://localhost:8428/api/v1/write', true) }}"
+        vmagent_allow_insecure_url: true
         vmagent_extra_cli_flags:
           - -remoteWrite.urlRelabelConfig=/etc/vmagent/relablings.yml
     - role: promtail
       tags: promtail
       vars:
         promtail_remote_write_url: "{{ lookup('env', 'PROMTAIL_REMOTE_WRITE_URL') | default('http://localhost:3100/loki/api/v1/push', true) }}"
+        promtail_allow_insecure_url: true
     - role: pushgateway
       tags: pushgateway

@@ -2,15 +2,15 @@
 - name: Assert required variables
   ansible.builtin.assert:
     that:
-      - served_domains | length > 0
-    fail_msg: "served_domains must be a non-empty list"
+      - haproxy_served_domains | length > 0
+    fail_msg: "haproxy_served_domains must be a non-empty list"
 
-- name: Assert served_domains contain valid domain names
+- name: Assert haproxy_served_domains contain valid domain names
   ansible.builtin.assert:
     that:
       - item is regex('^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
     fail_msg: "Invalid domain name: {{ item }}"
-  loop: "{{ served_domains }}"
+  loop: "{{ haproxy_served_domains }}"
 
 - name: Create haproxy user
   ansible.builtin.user:
@@ -41,7 +41,7 @@
 
 - name: Touch cloudflare-ips.txt
   ansible.builtin.file:
-    path: "{{ cloudflare_ips_file }}"
+    path: "{{ haproxy_cloudflare_ips_file }}"
     owner: haproxy
     group: haproxy
     mode: "0644"

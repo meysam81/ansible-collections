@@ -4,21 +4,25 @@
     name: "{{ pushgateway_group }}"
     state: present
     system: true
-  when: pushgateway_create_group
+  when: pushgateway_create_group | bool
 - name: Create user {{ pushgateway_user }}
   ansible.builtin.user:
     name: "{{ pushgateway_user }}"
     group: "{{ pushgateway_group }}"
     state: present
-  when: pushgateway_create_user
+  when: pushgateway_create_user | bool
 - name: Download and read sha256sum file
   ansible.builtin.set_fact:
-    sha256sum_file_content: "{{ lookup('ansible.builtin.url', pushgateway_sha256sum_url, wantlist=True) }}"
-  when: pushgateway_version and pushgateway_sha256sum_url
+    pushgateway_sha256sum_file_content: "{{ lookup('ansible.builtin.url', pushgateway_sha256sum_url, wantlist=True) }}"
+  when:
+    - pushgateway_version | default('') | length > 0
+    - pushgateway_sha256sum_url | default('') | length > 0
 - name: Extract SHA256 checksums for {{ pushgateway_download_url | basename }}
   ansible.builtin.set_fact:
-    sha256sum: "{{ sha256sum_file_content | select('search', pushgateway_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
-  when: pushgateway_version and pushgateway_sha256sum_url
+    pushgateway_sha256sum: "{{ pushgateway_sha256sum_file_content | select('search', pushgateway_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+  when:
+    - pushgateway_version | default('') | length > 0
+    - pushgateway_sha256sum_url | default('') | length > 0
 - name: Create secure temp directory
   ansible.builtin.tempfile:
     state: directory
@@ -29,7 +33,7 @@
     url: "{{ pushgateway_download_url }}"
     dest: "{{ pushgateway_tmp_dir.path }}/{{ pushgateway_download_url | basename }}"
     mode: "0644"
-    checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
+    checksum: "{{ 'sha256:' + pushgateway_sha256sum if pushgateway_sha256sum else None }}"
     owner: "{{ pushgateway_user }}"
     group: "{{ pushgateway_group }}"
   register: pushgateway_download

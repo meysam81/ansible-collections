@@ -1,5 +1,6 @@
 ---
 galaxy_info:
+  author: Meysam Azad
   role_name: golang
   description: Install Go from go.dev/dl
   min_ansible_version: "2.15"

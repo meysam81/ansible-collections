@@ -8,13 +8,21 @@
 #    Global section:
 #      lua-load {{ crowdsec_lua_dir }}/crowdsec.lua
 #    Frontend https section:
-#      filter spoe engine crowdsec config {{ haproxy_config_dir }}/crowdsec.cfg
+#      filter spoe engine crowdsec config {{ crowdsec_haproxy_config_dir }}/crowdsec.cfg
 #      http-request set-header X-CrowdSec-Remediation %[var(txn.crowdsec.remediation)]
-#      http-request redirect code 302 location %[var(txn.crowdsec.redirect)] if { var(txn.crowdsec.remediation) -m str "allow" } { var(txn.crowdsec.redirect) -m found }
+#      http-request redirect code 302 location %[var(txn.crowdsec.redirect)]
+#        if { var(txn.crowdsec.remediation) -m str "allow" }
+#        { var(txn.crowdsec.redirect) -m found }
 #      http-request lua.crowdsec_handle if { var(txn.crowdsec.remediation) -m str "captcha" }
 #      http-request lua.crowdsec_handle if { var(txn.crowdsec.remediation) -m str "ban" }
-#      http-after-response set-header Set-Cookie %[var(txn.crowdsec.captcha_cookie)] if { var(txn.crowdsec.captcha_status) -m found } { var(txn.crowdsec.captcha_cookie) -m found }
-#      http-after-response set-header Set-Cookie %[var(txn.crowdsec.captcha_cookie)] if { var(txn.crowdsec.captcha_cookie) -m found } !{ var(txn.crowdsec.captcha_status) -m found }
+#      http-after-response set-header Set-Cookie
+#        %[var(txn.crowdsec.captcha_cookie)]
+#        if { var(txn.crowdsec.captcha_status) -m found }
+#        { var(txn.crowdsec.captcha_cookie) -m found }
+#      http-after-response set-header Set-Cookie
+#        %[var(txn.crowdsec.captcha_cookie)]
+#        if { var(txn.crowdsec.captcha_cookie) -m found }
+#        !{ var(txn.crowdsec.captcha_status) -m found }
 #    Backends section:
 #      backend crowdsec-spoa
 #          mode tcp
@@ -25,4 +33,4 @@ crowdsec_spoa_addr: "127.0.0.1"
 crowdsec_spoa_port: 9001
 crowdsec_lua_dir: "/usr/lib/crowdsec-haproxy-spoa-bouncer/lua"
 crowdsec_html_dir: "/var/lib/crowdsec-haproxy-spoa-bouncer/html"
-haproxy_config_dir: "/etc/haproxy"
+crowdsec_haproxy_config_dir: "/etc/haproxy"

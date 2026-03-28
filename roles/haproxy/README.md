@@ -6,14 +6,6 @@ HAProxy with full config management, TLS, and security headers
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
-  - [cdn_domains](#cdn_domains)
-  - [cloudflare_bypass_hosts](#cloudflare_bypass_hosts)
-  - [cloudflare_ips_file](#cloudflare_ips_file)
-  - [coraza_enabled](#coraza_enabled)
-  - [coraza_spoa_addr](#coraza_spoa_addr)
-  - [coraza_spoa_port](#coraza_spoa_port)
-  - [cors_allowed_domains](#cors_allowed_domains)
-  - [cors_subdomain_patterns](#cors_subdomain_patterns)
   - [haproxy_alt_svc_enabled](#haproxy_alt_svc_enabled)
   - [haproxy_bin_path](#haproxy_bin_path)
   - [haproxy_blocked_extensions](#haproxy_blocked_extensions)
@@ -22,17 +14,25 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cache_control_default](#haproxy_cache_control_default)
   - [haproxy_cache_control_hashed](#haproxy_cache_control_hashed)
   - [haproxy_cache_control_static](#haproxy_cache_control_static)
+  - [haproxy_cdn_domains](#haproxy_cdn_domains)
   - [haproxy_cert_dir](#haproxy_cert_dir)
+  - [haproxy_cloudflare_bypass_hosts](#haproxy_cloudflare_bypass_hosts)
+  - [haproxy_cloudflare_ips_file](#haproxy_cloudflare_ips_file)
   - [haproxy_coep](#haproxy_coep)
   - [haproxy_compression_types](#haproxy_compression_types)
   - [haproxy_config_dir](#haproxy_config_dir)
   - [haproxy_coop](#haproxy_coop)
+  - [haproxy_coraza_enabled](#haproxy_coraza_enabled)
+  - [haproxy_coraza_spoa_addr](#haproxy_coraza_spoa_addr)
+  - [haproxy_coraza_spoa_port](#haproxy_coraza_spoa_port)
   - [haproxy_corp](#haproxy_corp)
   - [haproxy_cors_allow_credentials](#haproxy_cors_allow_credentials)
+  - [haproxy_cors_allowed_domains](#haproxy_cors_allowed_domains)
   - [haproxy_cors_allowed_headers](#haproxy_cors_allowed_headers)
   - [haproxy_cors_allowed_methods](#haproxy_cors_allowed_methods)
   - [haproxy_cors_expose_headers](#haproxy_cors_expose_headers)
   - [haproxy_cors_max_age](#haproxy_cors_max_age)
+  - [haproxy_cors_subdomain_patterns](#haproxy_cors_subdomain_patterns)
   - [haproxy_csp](#haproxy_csp)
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_errors_dir](#haproxy_errors_dir)
@@ -43,11 +43,24 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_hsts_include_subdomains](#haproxy_hsts_include_subdomains)
   - [haproxy_hsts_max_age](#haproxy_hsts_max_age)
   - [haproxy_hsts_preload](#haproxy_hsts_preload)
+  - [haproxy_k8s_apiserver_addr](#haproxy_k8s_apiserver_addr)
+  - [haproxy_k8s_apiserver_listen_port](#haproxy_k8s_apiserver_listen_port)
+  - [haproxy_k8s_apiserver_port](#haproxy_k8s_apiserver_port)
+  - [haproxy_k8s_backend_addr](#haproxy_k8s_backend_addr)
+  - [haproxy_k8s_backend_port](#haproxy_k8s_backend_port)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_option_forwardfor](#haproxy_option_forwardfor)
   - [haproxy_permissions_policy](#haproxy_permissions_policy)
+  - [haproxy_rate_limit_api_count](#haproxy_rate_limit_api_count)
+  - [haproxy_rate_limit_api_period](#haproxy_rate_limit_api_period)
+  - [haproxy_rate_limit_concurrent](#haproxy_rate_limit_concurrent)
+  - [haproxy_rate_limit_conn_count](#haproxy_rate_limit_conn_count)
+  - [haproxy_rate_limit_conn_period](#haproxy_rate_limit_conn_period)
+  - [haproxy_rate_limit_http_req_count](#haproxy_rate_limit_http_req_count)
+  - [haproxy_rate_limit_http_req_period](#haproxy_rate_limit_http_req_period)
   - [haproxy_referrer_policy](#haproxy_referrer_policy)
+  - [haproxy_served_domains](#haproxy_served_domains)
   - [haproxy_ssl_cachesize](#haproxy_ssl_cachesize)
   - [haproxy_ssl_maxrecord](#haproxy_ssl_maxrecord)
   - [haproxy_static_extensions](#haproxy_static_extensions)
@@ -70,19 +83,6 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_version](#haproxy_version)
   - [haproxy_x_frame_options](#haproxy_x_frame_options)
   - [haproxy_x_xss_protection](#haproxy_x_xss_protection)
-  - [k8s_apiserver_addr](#k8s_apiserver_addr)
-  - [k8s_apiserver_listen_port](#k8s_apiserver_listen_port)
-  - [k8s_apiserver_port](#k8s_apiserver_port)
-  - [k8s_backend_addr](#k8s_backend_addr)
-  - [k8s_backend_port](#k8s_backend_port)
-  - [rate_limit_api_count](#rate_limit_api_count)
-  - [rate_limit_api_period](#rate_limit_api_period)
-  - [rate_limit_concurrent](#rate_limit_concurrent)
-  - [rate_limit_conn_count](#rate_limit_conn_count)
-  - [rate_limit_conn_period](#rate_limit_conn_period)
-  - [rate_limit_http_req_count](#rate_limit_http_req_count)
-  - [rate_limit_http_req_period](#rate_limit_http_req_period)
-  - [served_domains](#served_domains)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -94,70 +94,6 @@ HAProxy with full config management, TLS, and security headers
 - Minimum Ansible version: `2.17`
 
 ## Default Variables
-
-### cdn_domains
-
-#### Default value
-
-```YAML
-cdn_domains: []
-```
-
-### cloudflare_bypass_hosts
-
-#### Default value
-
-```YAML
-cloudflare_bypass_hosts: []
-```
-
-### cloudflare_ips_file
-
-#### Default value
-
-```YAML
-cloudflare_ips_file: /etc/haproxy/cloudflare-ips.txt
-```
-
-### coraza_enabled
-
-#### Default value
-
-```YAML
-coraza_enabled: false
-```
-
-### coraza_spoa_addr
-
-#### Default value
-
-```YAML
-coraza_spoa_addr: 127.0.0.1
-```
-
-### coraza_spoa_port
-
-#### Default value
-
-```YAML
-coraza_spoa_port: 9000
-```
-
-### cors_allowed_domains
-
-#### Default value
-
-```YAML
-cors_allowed_domains: []
-```
-
-### cors_subdomain_patterns
-
-#### Default value
-
-```YAML
-cors_subdomain_patterns: []
-```
 
 ### haproxy_alt_svc_enabled
 
@@ -232,12 +168,36 @@ haproxy_cache_control_hashed: public, max-age=31536000, immutable
 haproxy_cache_control_static: public, max-age=86400, must-revalidate
 ```
 
+### haproxy_cdn_domains
+
+#### Default value
+
+```YAML
+haproxy_cdn_domains: []
+```
+
 ### haproxy_cert_dir
 
 #### Default value
 
 ```YAML
 haproxy_cert_dir: /etc/haproxy/certs
+```
+
+### haproxy_cloudflare_bypass_hosts
+
+#### Default value
+
+```YAML
+haproxy_cloudflare_bypass_hosts: []
+```
+
+### haproxy_cloudflare_ips_file
+
+#### Default value
+
+```YAML
+haproxy_cloudflare_ips_file: /etc/haproxy/cloudflare-ips.txt
 ```
 
 ### haproxy_coep
@@ -282,6 +242,30 @@ haproxy_config_dir: /etc/haproxy
 haproxy_coop: same-origin
 ```
 
+### haproxy_coraza_enabled
+
+#### Default value
+
+```YAML
+haproxy_coraza_enabled: false
+```
+
+### haproxy_coraza_spoa_addr
+
+#### Default value
+
+```YAML
+haproxy_coraza_spoa_addr: 127.0.0.1
+```
+
+### haproxy_coraza_spoa_port
+
+#### Default value
+
+```YAML
+haproxy_coraza_spoa_port: 9000
+```
+
 ### haproxy_corp
 
 #### Default value
@@ -296,6 +280,14 @@ haproxy_corp: same-site
 
 ```YAML
 haproxy_cors_allow_credentials: true
+```
+
+### haproxy_cors_allowed_domains
+
+#### Default value
+
+```YAML
+haproxy_cors_allowed_domains: []
 ```
 
 ### haproxy_cors_allowed_headers
@@ -332,14 +324,26 @@ haproxy_cors_expose_headers: X-Unique-ID, X-Request-ID, Content-Length, Content-
 haproxy_cors_max_age: '3600'
 ```
 
+### haproxy_cors_subdomain_patterns
+
+#### Default value
+
+```YAML
+haproxy_cors_subdomain_patterns: []
+```
+
 ### haproxy_csp
 
 #### Default value
 
 ```YAML
-haproxy_csp: "default-src 'self' https:; style-src 'self' 'unsafe-inline' https:;
-  img-src 'self' blob: data: https:; font-src 'self' data: https:; object-src 'none';
-  upgrade-insecure-requests"
+haproxy_csp: >-
+  default-src 'self' https:;
+  style-src 'self' 'unsafe-inline' https:;
+  img-src 'self' blob: data: https:;
+  font-src 'self' data: https:;
+  object-src 'none';
+  upgrade-insecure-requests
 ```
 
 ### haproxy_dh_param_bits
@@ -417,6 +421,46 @@ haproxy_hsts_max_age: 63072000
 haproxy_hsts_preload: true
 ```
 
+### haproxy_k8s_apiserver_addr
+
+#### Default value
+
+```YAML
+haproxy_k8s_apiserver_addr: 127.0.0.1
+```
+
+### haproxy_k8s_apiserver_listen_port
+
+#### Default value
+
+```YAML
+haproxy_k8s_apiserver_listen_port: ''
+```
+
+### haproxy_k8s_apiserver_port
+
+#### Default value
+
+```YAML
+haproxy_k8s_apiserver_port: 6443
+```
+
+### haproxy_k8s_backend_addr
+
+#### Default value
+
+```YAML
+haproxy_k8s_backend_addr: 127.0.0.1
+```
+
+### haproxy_k8s_backend_port
+
+#### Default value
+
+```YAML
+haproxy_k8s_backend_port: 80
+```
+
 ### haproxy_maxconn
 
 #### Default value
@@ -450,12 +494,76 @@ haproxy_permissions_policy: geolocation=(), microphone=(), camera=(), payment=()
   usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()
 ```
 
+### haproxy_rate_limit_api_count
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_api_count: 200
+```
+
+### haproxy_rate_limit_api_period
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_api_period: 60
+```
+
+### haproxy_rate_limit_concurrent
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_concurrent: 20
+```
+
+### haproxy_rate_limit_conn_count
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_conn_count: 50
+```
+
+### haproxy_rate_limit_conn_period
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_conn_period: 10
+```
+
+### haproxy_rate_limit_http_req_count
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_http_req_count: 100
+```
+
+### haproxy_rate_limit_http_req_period
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_http_req_period: 10
+```
+
 ### haproxy_referrer_policy
 
 #### Default value
 
 ```YAML
 haproxy_referrer_policy: strict-origin-when-cross-origin
+```
+
+### haproxy_served_domains
+
+#### Default value
+
+```YAML
+haproxy_served_domains: []
 ```
 
 ### haproxy_ssl_cachesize
@@ -647,110 +755,6 @@ haproxy_x_frame_options: SAMEORIGIN
 
 ```YAML
 haproxy_x_xss_protection: '0'
-```
-
-### k8s_apiserver_addr
-
-#### Default value
-
-```YAML
-k8s_apiserver_addr: 127.0.0.1
-```
-
-### k8s_apiserver_listen_port
-
-#### Default value
-
-```YAML
-k8s_apiserver_listen_port: ''
-```
-
-### k8s_apiserver_port
-
-#### Default value
-
-```YAML
-k8s_apiserver_port: 6443
-```
-
-### k8s_backend_addr
-
-#### Default value
-
-```YAML
-k8s_backend_addr: 127.0.0.1
-```
-
-### k8s_backend_port
-
-#### Default value
-
-```YAML
-k8s_backend_port: 80
-```
-
-### rate_limit_api_count
-
-#### Default value
-
-```YAML
-rate_limit_api_count: 200
-```
-
-### rate_limit_api_period
-
-#### Default value
-
-```YAML
-rate_limit_api_period: 60
-```
-
-### rate_limit_concurrent
-
-#### Default value
-
-```YAML
-rate_limit_concurrent: 20
-```
-
-### rate_limit_conn_count
-
-#### Default value
-
-```YAML
-rate_limit_conn_count: 50
-```
-
-### rate_limit_conn_period
-
-#### Default value
-
-```YAML
-rate_limit_conn_period: 10
-```
-
-### rate_limit_http_req_count
-
-#### Default value
-
-```YAML
-rate_limit_http_req_count: 100
-```
-
-### rate_limit_http_req_period
-
-#### Default value
-
-```YAML
-rate_limit_http_req_period: 10
-```
-
-### served_domains
-
-#### Default value
-
-```YAML
-served_domains: []
 ```
 
 

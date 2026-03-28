@@ -6,7 +6,7 @@ umask 0077
 CF_IPV4_URL="https://www.cloudflare.com/ips-v4"
 CF_IPV6_URL="https://www.cloudflare.com/ips-v6"
 IP_FILE="{{ cloudflare_ips_file }}"
-HAPROXY_CFG="{{ haproxy_config_dir }}/haproxy.cfg"
+HAPROXY_CFG="{{ cloudflare_ips_haproxy_config_dir }}/haproxy.cfg"
 
 touch "$IP_FILE"
 

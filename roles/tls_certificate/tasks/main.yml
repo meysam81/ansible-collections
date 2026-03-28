@@ -2,23 +2,23 @@
 - name: Assert required TLS certificate variables
   ansible.builtin.assert:
     that:
-      - tls_cert_email | length > 0
-      - tls_cert_email is regex('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-      - cloudflare_dns_api_token is defined
-      - cloudflare_dns_api_token | length > 0
-      - served_domains | length > 0
-    fail_msg: "tls_cert_email must be a valid email, cloudflare_dns_api_token and served_domains are required"
+      - tls_certificate_email | length > 0
+      - tls_certificate_email is regex('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+      - tls_certificate_cloudflare_dns_api_token is defined
+      - tls_certificate_cloudflare_dns_api_token | length > 0
+      - tls_certificate_served_domains | length > 0
+    fail_msg: "tls_certificate_email must be a valid email, tls_certificate_cloudflare_dns_api_token and tls_certificate_served_domains are required"
 
-- name: Assert served_domains contain valid domain names
+- name: Assert tls_certificate_served_domains contain valid domain names
   ansible.builtin.assert:
     that:
       - item is regex('^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
     fail_msg: "Invalid domain name: {{ item }}"
-  loop: "{{ served_domains }}"
+  loop: "{{ tls_certificate_served_domains }}"
 
 - name: Create HAProxy certificate directory
   ansible.builtin.file:
-    path: "{{ haproxy_cert_dir }}"
+    path: "{{ tls_certificate_haproxy_cert_dir }}"
     state: directory
     owner: root
     group: root
@@ -26,7 +26,7 @@
 
 - name: Create lego certificate directory
   ansible.builtin.file:
-    path: "{{ lego_cert_dir }}"
+    path: "{{ tls_certificate_lego_cert_dir }}"
     state: directory
     owner: root
     group: root
@@ -37,31 +37,31 @@
     cmd: >
       lego
       --accept-tos
-      --email "{{ tls_cert_email }}"
+      --email "{{ tls_certificate_email }}"
       --dns cloudflare
       --path /etc/lego
       -d '*.{{ item }}'
       run
-    creates: "{{ lego_cert_dir }}/_.{{ item }}.crt"
+    creates: "{{ tls_certificate_lego_cert_dir }}/_.{{ item }}.crt"
   environment:
-    CLOUDFLARE_DNS_API_TOKEN: "{{ cloudflare_dns_api_token }}"
-  loop: "{{ served_domains }}"
+    CLOUDFLARE_DNS_API_TOKEN: "{{ tls_certificate_cloudflare_dns_api_token }}"
+  loop: "{{ tls_certificate_served_domains }}"
   no_log: true
 
 - name: Create HAProxy compatible TLS certs
   ansible.builtin.shell:
     cmd: |
-      cat "{{ lego_cert_dir }}/_.{{ item }}.crt" \
-          "{{ lego_cert_dir }}/_.{{ item }}.key" > \
-          "{{ haproxy_cert_dir }}/{{ item }}"
-      chmod 600 "{{ haproxy_cert_dir }}/{{ item }}"
-    creates: "{{ haproxy_cert_dir }}/{{ item }}"
-  loop: "{{ served_domains }}"
+      cat "{{ tls_certificate_lego_cert_dir }}/_.{{ item }}.crt" \
+          "{{ tls_certificate_lego_cert_dir }}/_.{{ item }}.key" > \
+          "{{ tls_certificate_haproxy_cert_dir }}/{{ item }}"
+      chmod 600 "{{ tls_certificate_haproxy_cert_dir }}/{{ item }}"
+    creates: "{{ tls_certificate_haproxy_cert_dir }}/{{ item }}"
+  loop: "{{ tls_certificate_served_domains }}"
 
 - name: Deploy Cloudflare API token environment file
   ansible.builtin.copy:
-    content: "CLOUDFLARE_DNS_API_TOKEN={{ cloudflare_dns_api_token }}\n"
-    dest: "{{ haproxy_cert_dir }}/.env"
+    content: "CLOUDFLARE_DNS_API_TOKEN={{ tls_certificate_cloudflare_dns_api_token }}\n"
+    dest: "{{ tls_certificate_haproxy_cert_dir }}/.env"
     owner: root
     group: root
     mode: "0600"

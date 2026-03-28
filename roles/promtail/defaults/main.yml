@@ -13,6 +13,8 @@ promtail_remote_write_password: ""
 
 promtail_bearer_token_file: ""
 
+promtail_allow_insecure_url: false
+
 promtail_scrape_paths:
   - /var/log/*.log
   - /var/log/syslog

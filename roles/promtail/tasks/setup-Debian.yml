@@ -1,19 +1,28 @@
 ---
-- name: Assert remote_write_url uses HTTPS
+- name: Assert remote_write_url is defined
   ansible.builtin.assert:
     that:
       - promtail_remote_write_url is defined
       - promtail_remote_write_url | length > 0
+    fail_msg: "promtail_remote_write_url must be defined and non-empty (got: {{ promtail_remote_write_url | default('undefined') }})"
+- name: Assert remote_write_url uses HTTPS
+  ansible.builtin.assert:
+    that:
       - promtail_remote_write_url is regex('^https://')
-    fail_msg: "promtail_remote_write_url must use HTTPS (got: {{ promtail_remote_write_url | default('undefined') }})"
+    fail_msg: "promtail_remote_write_url must use HTTPS (got: {{ promtail_remote_write_url }})"
+  when: not (promtail_allow_insecure_url | bool)
 - name: Download and read sha256sum file
   ansible.builtin.set_fact:
-    sha256sum_file_content: "{{ lookup('ansible.builtin.url', promtail_sha256sum_url, wantlist=True) }}"
-  when: promtail_version and promtail_sha256sum_url
+    promtail_sha256sum_file_content: "{{ lookup('ansible.builtin.url', promtail_sha256sum_url, wantlist=True) }}"
+  when:
+    - promtail_version | default('') | length > 0
+    - promtail_sha256sum_url | default('') | length > 0
 - name: Extract SHA256 checksums for {{ promtail_url | basename }}
   ansible.builtin.set_fact:
-    sha256sum: "{{ sha256sum_file_content | select('search', promtail_url | basename) | map('split', ' ') | map('first') | list | first }}"
-  when: promtail_version and promtail_sha256sum_url
+    promtail_sha256sum: "{{ promtail_sha256sum_file_content | select('search', promtail_url | basename) | map('split', ' ') | map('first') | list | first }}"
+  when:
+    - promtail_version | default('') | length > 0
+    - promtail_sha256sum_url | default('') | length > 0
 - name: Create secure temp directory
   ansible.builtin.tempfile:
     state: directory
@@ -26,7 +35,7 @@
     mode: "0444"
     owner: "{{ promtail_user }}"
     group: "{{ promtail_group }}"
-    checksum: "{{ 'sha256:' + sha256sum if sha256sum else None }}"
+    checksum: "{{ 'sha256:' + promtail_sha256sum if promtail_sha256sum else None }}"
   register: promtail_download
 - name: Extract promtail
   ansible.builtin.unarchive:

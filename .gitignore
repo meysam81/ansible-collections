@@ -18,3 +18,4 @@ result
 .direnv
 .envrc
 docs/superpowers
+.ansible

@@ -5,8 +5,8 @@ Build HAProxy from source
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
-  - [haproxy_source_checksum](#haproxy_source_checksum)
-  - [haproxy_version](#haproxy_version)
+  - [haproxy_build_source_checksum](#haproxy_build_source_checksum)
+  - [haproxy_build_version](#haproxy_build_version)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -19,20 +19,20 @@ Build HAProxy from source
 
 ## Default Variables
 
-### haproxy_source_checksum
+### haproxy_build_source_checksum
 
 #### Default value
 
 ```YAML
-haproxy_source_checksum: ''
+haproxy_build_source_checksum: ''
 ```
 
-### haproxy_version
+### haproxy_build_version
 
 #### Default value
 
 ```YAML
-haproxy_version: 3.2.3
+haproxy_build_version: 3.2.3
 ```
 
 
@@ -44,3 +44,7 @@ None.
 ## License
 
 MIT
+
+## Author
+
+Meysam Azad

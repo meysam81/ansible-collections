@@ -4,7 +4,7 @@ haproxy_version: "3.2.3"
 haproxy_config_dir: "/etc/haproxy"
 haproxy_errors_dir: "/etc/haproxy/errors"
 haproxy_cert_dir: "/etc/haproxy/certs"
-cloudflare_ips_file: "/etc/haproxy/cloudflare-ips.txt"
+haproxy_cloudflare_ips_file: "/etc/haproxy/cloudflare-ips.txt"
 
 # Performance
 haproxy_maxconn: 4096
@@ -37,37 +37,43 @@ haproxy_ssl_cachesize: 100000
 haproxy_stats_port: 8404
 
 # WAF
-coraza_enabled: false
+haproxy_coraza_enabled: false
 
 # Backends — must be provided by the consumer
-served_domains: []
-cors_allowed_domains: []
-cors_subdomain_patterns: []
-cdn_domains: []
-cloudflare_bypass_hosts: []
+haproxy_served_domains: []
+haproxy_cors_allowed_domains: []
+haproxy_cors_subdomain_patterns: []
+haproxy_cdn_domains: []
+haproxy_cloudflare_bypass_hosts: []
 
 # Rate limiting
-rate_limit_http_req_period: 10
-rate_limit_http_req_count: 100
-rate_limit_conn_period: 10
-rate_limit_conn_count: 50
-rate_limit_concurrent: 20
-rate_limit_api_period: 60
-rate_limit_api_count: 200
+haproxy_rate_limit_http_req_period: 10
+haproxy_rate_limit_http_req_count: 100
+haproxy_rate_limit_conn_period: 10
+haproxy_rate_limit_conn_count: 50
+haproxy_rate_limit_concurrent: 20
+haproxy_rate_limit_api_period: 60
+haproxy_rate_limit_api_count: 200
 
 # K8s API server (set empty to disable listen block)
-k8s_apiserver_listen_port: ""
-k8s_apiserver_addr: "127.0.0.1"
-k8s_apiserver_port: 6443
-k8s_backend_addr: "127.0.0.1"
-k8s_backend_port: 80
+haproxy_k8s_apiserver_listen_port: ""
+haproxy_k8s_apiserver_addr: "127.0.0.1"
+haproxy_k8s_apiserver_port: 6443
+haproxy_k8s_backend_addr: "127.0.0.1"
+haproxy_k8s_backend_port: 80
 
 # Coraza SPOA backend
-coraza_spoa_addr: "127.0.0.1"
-coraza_spoa_port: 9000
+haproxy_coraza_spoa_addr: "127.0.0.1"
+haproxy_coraza_spoa_port: 9000
 
 # Security headers
-haproxy_csp: "default-src 'self' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; object-src 'none'; upgrade-insecure-requests"
+haproxy_csp: >-
+  default-src 'self' https:;
+  style-src 'self' 'unsafe-inline' https:;
+  img-src 'self' blob: data: https:;
+  font-src 'self' data: https:;
+  object-src 'none';
+  upgrade-insecure-requests
 haproxy_x_xss_protection: "0"
 haproxy_coep: "unsafe-none"
 haproxy_coop: "same-origin"

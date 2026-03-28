@@ -27,8 +27,10 @@
 - name: Extract lego SHA256 checksum
   ansible.builtin.shell:
     cmd: >
+      set -o pipefail &&
       grep -F "lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
       {{ lego_tmp_dir.path }}/lego_{{ lego_version }}_checksums.txt | awk '{print $1}'
+    executable: /bin/bash
   register: lego_sha256
   changed_when: false
   when: lego_needs_install

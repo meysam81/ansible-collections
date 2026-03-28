@@ -6,6 +6,7 @@ Install promtail from GitHub release
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
+  - [promtail_allow_insecure_url](#promtail_allow_insecure_url)
   - [promtail_arch](#promtail_arch)
   - [promtail_bearer_token_file](#promtail_bearer_token_file)
   - [promtail_group](#promtail_group)
@@ -28,6 +29,14 @@ Install promtail from GitHub release
 - Minimum Ansible version: `2.17`
 
 ## Default Variables
+
+### promtail_allow_insecure_url
+
+#### Default value
+
+```YAML
+promtail_allow_insecure_url: false
+```
 
 ### promtail_arch
 
