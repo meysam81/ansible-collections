@@ -17,7 +17,7 @@
     - name: Ping
       ansible.builtin.ping:
     - name: Generate test TLS certificate for HAProxy
-      ansible.builtin.include_tasks: tests/generate-test-cert.yml
+      ansible.builtin.import_tasks: tests/generate-test-cert.yml
       tags: haproxy
   roles:
     - role: haproxy
