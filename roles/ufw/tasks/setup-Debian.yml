@@ -1,0 +1,50 @@
+---
+- name: Install ufw
+  ansible.builtin.apt:
+    name:
+      - ufw
+    state: present
+    update_cache: true
+
+- name: Reset UFW rules
+  ansible.builtin.ufw:
+    state: reset
+  when: ufw_reset_before_apply
+
+- name: Set UFW default incoming policy
+  ansible.builtin.ufw:
+    direction: incoming
+    default: "{{ ufw_default_incoming }}"
+
+- name: Set UFW default outgoing policy
+  ansible.builtin.ufw:
+    direction: outgoing
+    default: "{{ ufw_default_outgoing }}"
+
+- name: Set UFW logging level
+  ansible.builtin.ufw:
+    logging: "{{ ufw_logging }}"
+
+- name: Apply UFW rules
+  ansible.builtin.ufw:
+    rule: "{{ item.rule }}"
+    port: "{{ item.port | default(omit) }}"
+    proto: "{{ item.proto | default(omit) }}"
+    from_ip: "{{ item.from_ip | default(omit) }}"
+    to_ip: "{{ item.to_ip | default(omit) }}"
+    comment: "{{ item.comment | default(omit) }}"
+    direction: "{{ item.direction | default(omit) }}"
+    route: "{{ item.route | default(omit) }}"
+  loop: "{{ ufw_rules }}"
+  loop_control:
+    label: "{{ item.comment | default(item.rule + ' ' + (item.port | default('any'))) }}"
+
+- name: Enable UFW
+  ansible.builtin.ufw:
+    state: enabled
+  when: ufw_enabled
+
+- name: Disable UFW
+  ansible.builtin.ufw:
+    state: disabled
+  when: not ufw_enabled

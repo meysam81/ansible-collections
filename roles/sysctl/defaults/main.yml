@@ -1,0 +1,4 @@
+---
+sysctl_params: {}
+sysctl_file: /etc/sysctl.d/99-ansible.conf
+sysctl_reload: true

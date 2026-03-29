@@ -1,0 +1,3 @@
+---
+# UFW rules take effect immediately via ansible.builtin.ufw module.
+# No reload handler needed.

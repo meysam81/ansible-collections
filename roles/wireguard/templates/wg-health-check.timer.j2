@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Run WireGuard health check every {{ wireguard_health_check_interval }} seconds
+
+[Timer]
+OnActiveSec=60
+OnUnitActiveSec={{ wireguard_health_check_interval }}
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

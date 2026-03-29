@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+{% for key, value in sysctl_params.items() | sort %}
+{{ key }} = {{ value }}
+{% endfor %}

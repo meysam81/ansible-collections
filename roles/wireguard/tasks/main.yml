@@ -1,0 +1,29 @@
+---
+- name: Assert wireguard_role is valid
+  ansible.builtin.assert:
+    that:
+      - wireguard_role in ['server', 'client']
+    fail_msg: "wireguard_role must be 'server' or 'client' (got: {{ wireguard_role }})"
+
+- name: Assert wireguard_address is defined
+  ansible.builtin.assert:
+    that:
+      - wireguard_address | length > 0
+    fail_msg: "wireguard_address must be defined and non-empty"
+
+- name: Assert wireguard_private_key is defined
+  ansible.builtin.assert:
+    that:
+      - wireguard_private_key | length > 0
+    fail_msg: "wireguard_private_key must be defined and non-empty"
+  no_log: true
+
+- name: Assert wireguard_peers is not empty
+  ansible.builtin.assert:
+    that:
+      - wireguard_peers | length > 0
+    fail_msg: "wireguard_peers must be a non-empty list"
+
+- name: Setup WireGuard on Debian/Ubuntu
+  ansible.builtin.include_tasks: setup-Debian.yml
+  when: ansible_os_family == 'Debian'

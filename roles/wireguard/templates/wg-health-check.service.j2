@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=WireGuard tunnel health check
+After=wg-quick@{{ wireguard_interface }}.service
+Requires=wg-quick@{{ wireguard_interface }}.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wg-health-check

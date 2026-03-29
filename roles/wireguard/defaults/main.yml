@@ -1,0 +1,39 @@
+---
+# ── Mode ─────────────────────────────────────────────────────────────
+# "server" = exit node with ListenPort + NAT masquerade
+# "client" = production node connecting to a server endpoint
+wireguard_role: server
+wireguard_interface: wg0
+
+# ── Interface ────────────────────────────────────────────────────────
+# CIDR address for the WireGuard interface (required)
+wireguard_address: ""
+wireguard_listen_port: 51820
+# Pre-generated private key (required). Use ansible-vault to encrypt.
+wireguard_private_key: ""
+
+# ── Peers ────────────────────────────────────────────────────────────
+# List of peer definitions. Each entry:
+#   public_key:           (required) peer's WireGuard public key
+#   allowed_ips:          (required) e.g. "10.99.0.2/32" or "0.0.0.0/0"
+#   endpoint:             host:port of the peer (client mode needs this)
+#   persistent_keepalive: seconds between keepalive packets
+wireguard_peers: []
+
+# ── NAT masquerade (server mode only) ────────────────────────────────
+wireguard_nat_enabled: true
+wireguard_nat_interface: eth0
+wireguard_nat_source: "10.99.0.0/24"
+
+# ── Escape hatches ───────────────────────────────────────────────────
+# Additional PostUp/PostDown lines (e.g. policy routing, kill switch)
+wireguard_post_up_extra: []
+wireguard_post_down_extra: []
+
+# ── Kernel parameters ────────────────────────────────────────────────
+wireguard_ip_forward: true
+
+# ── Health check (verifies egress IP through tunnel) ─────────────────
+wireguard_health_check_enabled: false
+wireguard_health_check_expected_ip: ""
+wireguard_health_check_interval: 300

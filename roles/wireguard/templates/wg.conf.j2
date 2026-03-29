@@ -1,0 +1,36 @@
+# {{ ansible_managed }}
+
+[Interface]
+Address = {{ wireguard_address }}
+{% if wireguard_role == 'server' %}
+ListenPort = {{ wireguard_listen_port }}
+{% endif %}
+PrivateKey = {{ wireguard_private_key }}
+{% if wireguard_role == 'server' and wireguard_nat_enabled %}
+
+PostUp = iptables -t nat -A POSTROUTING -s {{ wireguard_nat_source }} -o {{ wireguard_nat_interface }} -j MASQUERADE
+PostUp = iptables -A FORWARD -i {{ wireguard_interface }} -o {{ wireguard_nat_interface }} -j ACCEPT
+PostUp = iptables -A FORWARD -i {{ wireguard_nat_interface }} -o {{ wireguard_interface }} -m state --state RELATED,ESTABLISHED -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -s {{ wireguard_nat_source }} -o {{ wireguard_nat_interface }} -j MASQUERADE
+PostDown = iptables -D FORWARD -i {{ wireguard_interface }} -o {{ wireguard_nat_interface }} -j ACCEPT
+PostDown = iptables -D FORWARD -i {{ wireguard_nat_interface }} -o {{ wireguard_interface }} -m state --state RELATED,ESTABLISHED -j ACCEPT
+{% endif %}
+{% for line in wireguard_post_up_extra %}
+PostUp = {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+{% for line in wireguard_post_down_extra %}
+PostDown = {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+
+{% for peer in wireguard_peers %}
+[Peer]
+PublicKey = {{ peer.public_key }}
+AllowedIPs = {{ peer.allowed_ips }}
+{% if peer.endpoint is defined %}
+Endpoint = {{ peer.endpoint }}
+{% endif %}
+{% if peer.persistent_keepalive is defined %}
+PersistentKeepalive = {{ peer.persistent_keepalive }}
+{% endif %}
+
+{% endfor %}

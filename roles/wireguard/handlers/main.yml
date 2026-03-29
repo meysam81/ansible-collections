@@ -1,0 +1,19 @@
+---
+- name: Restart wireguard
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: restarted
+    daemon_reload: true
+    enabled: true
+
+- name: Restart wg-health-check timer
+  ansible.builtin.systemd:
+    name: wg-health-check.timer
+    state: restarted
+    daemon_reload: true
+    enabled: true
+
+- name: Apply sysctl forwarding
+  ansible.builtin.command:
+    cmd: sysctl --system
+  changed_when: true

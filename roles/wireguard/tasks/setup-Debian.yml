@@ -1,0 +1,90 @@
+---
+- name: Install wireguard-tools and iptables-persistent
+  ansible.builtin.apt:
+    name:
+      - wireguard-tools
+      - iptables-persistent
+    state: present
+    update_cache: true
+
+- name: Install curl for health check
+  ansible.builtin.apt:
+    name:
+      - curl
+    state: present
+  when: wireguard_health_check_enabled
+
+- name: Create /etc/wireguard directory
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Enable IP forwarding via sysctl
+  ansible.builtin.copy:
+    content: |
+      # {{ ansible_managed }}
+      net.ipv4.ip_forward = 1
+    dest: /etc/sysctl.d/99-wireguard-forward.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply sysctl forwarding
+  when: wireguard_ip_forward
+
+- name: Deploy WireGuard interface configuration
+  ansible.builtin.template:
+    src: wg.conf.j2
+    dest: "/etc/wireguard/{{ wireguard_interface }}.conf"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart wireguard
+  no_log: true
+
+- name: Deploy health check script
+  ansible.builtin.template:
+    src: wg-health-check.sh.j2
+    dest: /usr/local/bin/wg-health-check
+    owner: root
+    group: root
+    mode: "0755"
+  when: wireguard_health_check_enabled
+  notify: Restart wg-health-check timer
+
+- name: Deploy health check systemd service
+  ansible.builtin.template:
+    src: wg-health-check.service.j2
+    dest: /etc/systemd/system/wg-health-check.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: wireguard_health_check_enabled
+  notify: Restart wg-health-check timer
+
+- name: Deploy health check systemd timer
+  ansible.builtin.template:
+    src: wg-health-check.timer.j2
+    dest: /etc/systemd/system/wg-health-check.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: wireguard_health_check_enabled
+  notify: Restart wg-health-check timer
+
+- name: Enable and start wg-quick service
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Enable and start health check timer
+  ansible.builtin.systemd:
+    name: wg-health-check.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: wireguard_health_check_enabled

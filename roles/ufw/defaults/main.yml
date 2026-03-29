@@ -1,0 +1,18 @@
+---
+ufw_enabled: true
+ufw_default_incoming: deny
+ufw_default_outgoing: allow
+ufw_logging: low
+
+# List of firewall rules. Each entry:
+#   rule:      (required) allow, deny, reject, or limit
+#   port:      port number or range (e.g. "22", "8000:8100")
+#   proto:     tcp, udp, or any
+#   from_ip:   source CIDR (e.g. "10.0.0.0/8")
+#   to_ip:     destination CIDR
+#   comment:   human-readable description
+#   direction: in, out, or routed
+#   route:     true for routed/forwarded traffic
+ufw_rules: []
+
+ufw_reset_before_apply: false

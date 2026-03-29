@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# WireGuard tunnel health check — verifies egress IP matches expected value.
+# Restarts wg-quick if the check fails.
+
+set -euo pipefail
+
+INTERFACE="{{ wireguard_interface }}"
+EXPECTED_IP="{{ wireguard_health_check_expected_ip }}"
+
+CURRENT_IP=$(curl -s --max-time 10 https://ifconfig.me || true)
+
+if [ -z "$CURRENT_IP" ]; then
+  echo "ERROR: Could not determine current egress IP" >&2
+  systemctl restart "wg-quick@${INTERFACE}"
+  exit 1
+fi
+
+if [ "$CURRENT_IP" != "$EXPECTED_IP" ]; then
+  echo "MISMATCH: egress IP is ${CURRENT_IP}, expected ${EXPECTED_IP}" >&2
+  systemctl restart "wg-quick@${INTERFACE}"
+  exit 1
+fi
+
+echo "OK: egress IP is ${CURRENT_IP}"

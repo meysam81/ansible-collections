@@ -75,3 +75,22 @@
         promtail_allow_insecure_url: true
     - role: pushgateway
       tags: pushgateway
+    - role: sysctl
+      tags: sysctl
+      vars:
+        sysctl_params:
+          net.ipv4.ip_forward: 1
+    - role: ufw
+      tags: ufw
+      vars:
+        ufw_rules:
+          - { rule: allow, port: "22", proto: tcp, comment: "SSH" }
+    - role: wireguard
+      tags: wireguard
+      vars:
+        wireguard_role: server
+        wireguard_address: "10.99.0.1/24"
+        wireguard_private_key: "test-key-not-real"
+        wireguard_peers:
+          - public_key: "test-peer-key"
+            allowed_ips: "10.99.0.2/32"
