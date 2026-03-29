@@ -24,6 +24,19 @@
       - wireguard_peers | length > 0
     fail_msg: "wireguard_peers must be a non-empty list"
 
+- name: Assert wireguard_nat_source is set when NAT is enabled
+  ansible.builtin.assert:
+    that:
+      - wireguard_nat_source | length > 0
+    fail_msg: >-
+      wireguard_nat_source must be set when NAT is enabled.
+      It should match the subnet of wireguard_address (e.g. if
+      wireguard_address is "10.99.0.1/24", set wireguard_nat_source
+      to "10.99.0.0/24").
+  when:
+    - wireguard_role == 'server'
+    - wireguard_nat_enabled
+
 - name: Setup WireGuard on Debian/Ubuntu
   ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'

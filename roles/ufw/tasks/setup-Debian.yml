@@ -1,4 +1,14 @@
 ---
+- name: Validate UFW rule types
+  ansible.builtin.assert:
+    that:
+      - item.rule in ['allow', 'deny', 'reject', 'limit']
+    fail_msg: "Invalid rule type '{{ item.rule }}' — must be allow, deny, reject, or limit"
+  loop: "{{ ufw_rules }}"
+  loop_control:
+    label: "{{ item.comment | default(item.rule + ' ' + (item.port | default('any'))) }}"
+  when: ufw_rules | length > 0
+
 - name: Install ufw
   ansible.builtin.apt:
     name:

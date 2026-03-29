@@ -23,7 +23,10 @@ wireguard_peers: []
 # ── NAT masquerade (server mode only) ────────────────────────────────
 wireguard_nat_enabled: true
 wireguard_nat_interface: eth0
-wireguard_nat_source: "10.99.0.0/24"
+# CIDR of the WireGuard subnet for NAT masquerade (server mode).
+# Must match the subnet of wireguard_address.
+# Example: if wireguard_address is "10.99.0.1/24", set this to "10.99.0.0/24"
+wireguard_nat_source: ""
 
 # ── Escape hatches ───────────────────────────────────────────────────
 # Additional PostUp/PostDown lines (e.g. policy routing, kill switch)

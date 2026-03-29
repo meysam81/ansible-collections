@@ -1,9 +1,8 @@
 ---
-- name: Install wireguard-tools and iptables-persistent
+- name: Install wireguard-tools
   ansible.builtin.apt:
     name:
       - wireguard-tools
-      - iptables-persistent
     state: present
     update_cache: true
 
@@ -88,3 +87,21 @@
     enabled: true
     daemon_reload: true
   when: wireguard_health_check_enabled
+
+- name: Stop and disable health check timer
+  ansible.builtin.systemd:
+    name: wg-health-check.timer
+    state: stopped
+    enabled: false
+  when: not wireguard_health_check_enabled
+  failed_when: false
+
+- name: Remove health check files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /usr/local/bin/wg-health-check
+    - /etc/systemd/system/wg-health-check.service
+    - /etc/systemd/system/wg-health-check.timer
+  when: not wireguard_health_check_enabled

@@ -48,3 +48,23 @@ collections:
         ufw_rules:
           - { rule: allow, port: "22", proto: tcp, comment: "SSH" }
 ```
+
+## Safety Notes
+
+**SSH lockout risk:** The default incoming policy is `deny`. If you do not
+include a rule allowing SSH (port 22), you **will be locked out** of remote
+hosts. Always include an SSH allow rule:
+
+```yaml
+ufw_rules:
+  - { rule: allow, port: "22", proto: tcp, comment: "SSH" }
+```
+
+**Reset behaviour:** Setting `ufw_reset_before_apply: true` deletes **all**
+existing rules and briefly disables the firewall before re-applying. If the
+play fails mid-run, the host may be left with no firewall rules. Only use this
+on hosts where you can recover access through an out-of-band console.
+
+**Stale rules:** This role only _adds_ rules. Removing a rule from
+`ufw_rules` and re-running will **not** delete it from the host. Use
+`ufw_reset_before_apply: true` to converge to the exact declared rule set.

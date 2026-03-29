@@ -4,8 +4,8 @@ Install and configure a [WireGuard](https://www.wireguard.com/) VPN tunnel.
 Supports two modes: **server** (exit node with NAT masquerade) and **client**
 (production server routing traffic through the tunnel).
 
-Installs `wireguard-tools` and `iptables-persistent`, manages the interface
-configuration, and optionally deploys an egress IP health check timer.
+Installs `wireguard-tools`, manages the interface configuration, and optionally
+deploys an egress IP health check timer.
 
 ## Install
 
@@ -61,6 +61,7 @@ wireguard_private_key: "{{ lookup('file', '/path/to/wg-private.key') }}"
         wireguard_address: "10.99.0.1/24"
         wireguard_private_key: "{{ vault_wg_server_private_key }}"
         wireguard_nat_interface: eth0
+        wireguard_nat_source: "10.99.0.0/24"
         wireguard_peers:
           - public_key: "CLIENT_PUBLIC_KEY_HERE"
             allowed_ips: "10.99.0.2/32"
@@ -110,4 +111,22 @@ wireguard_private_key: "{{ lookup('file', '/path/to/wg-private.key') }}"
         wireguard_health_check_enabled: true
         wireguard_health_check_expected_ip: "203.0.113.50"
         wireguard_health_check_interval: 300
+```
+
+### IPv6
+
+This role enables only IPv4 forwarding (`net.ipv4.ip_forward`). For IPv6
+tunnel traffic, add the IPv6 forwarding parameter via the `sysctl` role or
+the escape hatches:
+
+```yaml
+wireguard_post_up_extra:
+  - "sysctl -w net.ipv6.conf.all.forwarding=1"
+```
+
+Or use the `meysam81.general.sysctl` role alongside:
+
+```yaml
+sysctl_params:
+  net.ipv6.conf.all.forwarding: 1
 ```

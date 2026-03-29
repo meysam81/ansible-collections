@@ -2,25 +2,48 @@
 # {{ ansible_managed }}
 #
 # WireGuard tunnel health check — verifies egress IP matches expected value.
-# Restarts wg-quick if the check fails.
+# Restarts wg-quick if the check fails. Stops restarting after 3 consecutive
+# failures to avoid a restart storm.
 
 set -euo pipefail
 
 INTERFACE="{{ wireguard_interface }}"
 EXPECTED_IP="{{ wireguard_health_check_expected_ip }}"
+STATE_FILE="/run/wg-health-check.failures"
+
+# Read consecutive failure count
+FAILURES=0
+if [ -f "$STATE_FILE" ]; then
+  FAILURES=$(cat "$STATE_FILE" 2>/dev/null || echo 0)
+fi
+
+MAX_FAILURES=3
+
+if [ "$FAILURES" -ge "$MAX_FAILURES" ]; then
+  echo "SKIP: $FAILURES consecutive failures, not restarting (manual intervention required)" >&2
+  exit 1
+fi
 
 CURRENT_IP=$(curl -s --max-time 10 https://ifconfig.me || true)
 
 if [ -z "$CURRENT_IP" ]; then
-  echo "ERROR: Could not determine current egress IP" >&2
+  FAILURES=$((FAILURES + 1))
+  echo "$FAILURES" > "$STATE_FILE"
+  echo "ERROR: Could not determine current egress IP (failure $FAILURES/$MAX_FAILURES)" >&2
   systemctl restart "wg-quick@${INTERFACE}"
   exit 1
 fi
 
 if [ "$CURRENT_IP" != "$EXPECTED_IP" ]; then
-  echo "MISMATCH: egress IP is ${CURRENT_IP}, expected ${EXPECTED_IP}" >&2
+  FAILURES=$((FAILURES + 1))
+  echo "$FAILURES" > "$STATE_FILE"
+  echo "MISMATCH: egress IP is ${CURRENT_IP}, expected ${EXPECTED_IP} (failure $FAILURES/$MAX_FAILURES)" >&2
   systemctl restart "wg-quick@${INTERFACE}"
   exit 1
 fi
 
+# Success — reset failure counter
+if [ "$FAILURES" -gt 0 ]; then
+  rm -f "$STATE_FILE"
+fi
 echo "OK: egress IP is ${CURRENT_IP}"

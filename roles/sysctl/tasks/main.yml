@@ -1,7 +1,8 @@
 ---
-- name: Assert sysctl_params is not empty
+- name: Assert sysctl_params is a non-empty dict
   ansible.builtin.assert:
     that:
+      - sysctl_params is mapping
       - sysctl_params | length > 0
     fail_msg: "sysctl_params must be a non-empty dict"
 

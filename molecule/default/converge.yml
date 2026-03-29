@@ -18,6 +18,38 @@
     - name: Generate test TLS certificate for HAProxy
       ansible.builtin.include_tasks: ../../tests/generate-test-cert.yml
       tags: haproxy
+    - name: Install wireguard-tools for key generation
+      ansible.builtin.apt:
+        name: wireguard-tools
+        state: present
+        update_cache: true
+      tags: wireguard
+    - name: Generate WireGuard server private key
+      ansible.builtin.command:
+        cmd: wg genkey
+      register: wg_server_privkey
+      changed_when: false
+      tags: wireguard
+    - name: Derive WireGuard server public key
+      ansible.builtin.command:
+        cmd: wg pubkey
+        stdin: "{{ wg_server_privkey.stdout }}"
+      register: wg_server_pubkey
+      changed_when: false
+      tags: wireguard
+    - name: Generate WireGuard peer private key
+      ansible.builtin.command:
+        cmd: wg genkey
+      register: wg_peer_privkey
+      changed_when: false
+      tags: wireguard
+    - name: Derive WireGuard peer public key
+      ansible.builtin.command:
+        cmd: wg pubkey
+        stdin: "{{ wg_peer_privkey.stdout }}"
+      register: wg_peer_pubkey
+      changed_when: false
+      tags: wireguard
   tasks:
     - name: Copy relabling config
       ansible.builtin.copy:
@@ -90,7 +122,8 @@
       vars:
         wireguard_role: server
         wireguard_address: "10.99.0.1/24"
-        wireguard_private_key: "test-key-not-real"
+        wireguard_private_key: "{{ wg_server_privkey.stdout }}"
+        wireguard_nat_source: "10.99.0.0/24"
         wireguard_peers:
-          - public_key: "test-peer-key"
+          - public_key: "{{ wg_peer_pubkey.stdout }}"
             allowed_ips: "10.99.0.2/32"
