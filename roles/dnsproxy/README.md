@@ -152,8 +152,9 @@ dnsproxy_disable_resolvers: true
 #### Default value
 
 ```YAML
-dnsproxy_download_url: https://github.com/AdguardTeam/dnsproxy/releases/download/v{{
-  dnsproxy_version }}/dnsproxy-linux-{{ dnsproxy_arch }}-v{{ dnsproxy_version }}.tar.gz
+dnsproxy_download_url: >-
+  https://github.com/AdguardTeam/dnsproxy/releases/download/v{{ dnsproxy_version
+  }}/dnsproxy-linux-{{ dnsproxy_arch }}-v{{ dnsproxy_version }}.tar.gz
 ```
 
 ### dnsproxy_extra_args

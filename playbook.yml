@@ -13,9 +13,6 @@
   roles:
     - role: haproxy
       tags: haproxy
-      vars:
-        haproxy_served_domains:
-          - example.com
     - role: tls_certificate
       tags: tls_certificate
       vars:

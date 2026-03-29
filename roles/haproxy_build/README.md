@@ -34,9 +34,9 @@ Build HAProxy from source
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
+  - [haproxy_build_force_rebuild](#haproxy_build_force_rebuild)
   - [haproxy_build_source_checksum](#haproxy_build_source_checksum)
   - [haproxy_build_version](#haproxy_build_version)
-  - [haproxy_force_rebuild](#haproxy_force_rebuild)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -48,6 +48,14 @@ Build HAProxy from source
 - Minimum Ansible version: `2.15`
 
 ## Default Variables
+
+### haproxy_build_force_rebuild
+
+#### Default value
+
+```YAML
+haproxy_build_force_rebuild: false
+```
 
 ### haproxy_build_source_checksum
 
@@ -63,14 +71,6 @@ haproxy_build_source_checksum: ''
 
 ```YAML
 haproxy_build_version: 3.3.6
-```
-
-### haproxy_force_rebuild
-
-#### Default value
-
-```YAML
-haproxy_force_rebuild: false
 ```
 
 

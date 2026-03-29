@@ -26,7 +26,7 @@
       }}
 
 - name: Build and install HAProxy
-  when: haproxy_build_needs_build or haproxy_force_rebuild
+  when: haproxy_build_needs_build or haproxy_build_force_rebuild
   block:
     - name: Create temporary build directory
       ansible.builtin.tempfile:
@@ -80,6 +80,13 @@
       community.general.make:
         chdir: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}"
         target: install
+
+    - name: Install HAProxy error files
+      ansible.builtin.copy:
+        src: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}/examples/errorfiles/"
+        dest: /usr/local/share/haproxy/errors/
+        remote_src: true
+        mode: "0644"
 
   always:
     - name: Clean up temporary build directory

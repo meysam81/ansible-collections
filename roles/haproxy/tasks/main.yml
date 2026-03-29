@@ -57,7 +57,7 @@
 
 - name: Copy HAProxy error files from build
   ansible.builtin.copy:
-    src: "{{ ansible_facts['user_dir'] }}/haproxy-{{ haproxy_version }}/examples/errorfiles/"
+    src: /usr/local/share/haproxy/errors/
     dest: "{{ haproxy_errors_dir }}/"
     owner: haproxy
     group: haproxy
