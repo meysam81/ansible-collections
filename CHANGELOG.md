@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.11.1](https://github.com/meysam81/ansible-collections/compare/v1.11.0...v1.11.1) (2026-03-29)
+
+
+### Features
+
+* add dnsproxy role ([524e3f1](https://github.com/meysam81/ansible-collections/commit/524e3f129aacfd36f4486d4b5fd23eb9a1811cf3))
+* add squid and blocklist role ([faea07a](https://github.com/meysam81/ansible-collections/commit/faea07aa06a4607d420f2ad677f267f31dcc15dd))
+* add wireguard role and siblings ([78ddd5d](https://github.com/meysam81/ansible-collections/commit/78ddd5dc2c6e0253cb6fac00492c4fded7638adb))
+* **haproxy:** update to the latest stable haproxy v3.3.6 ([2ad1d5b](https://github.com/meysam81/ansible-collections/commit/2ad1d5bd90194f288f963407d80ede536f9ef48b))
+
+
+### Bug Fixes
+
+* add assertions to crowsed, squid and blocklist ([dca555a](https://github.com/meysam81/ansible-collections/commit/dca555ad84bdd6c2821de85d0f9cd7dbc8857efb))
+* **CI:** make haproxy test happy, again ([20d7475](https://github.com/meysam81/ansible-collections/commit/20d74755c1285277424bb9d4b6e397458bbb189d))
+* **CI:** make linter happy ([0e3742c](https://github.com/meysam81/ansible-collections/commit/0e3742cf4b22c95a2fb0a2dfa6c7ece90dc43fd2))
+* **CI:** make linter happy ([e30340e](https://github.com/meysam81/ansible-collections/commit/e30340e903dcf7847f1fe0d438be74544c141756))
+* **docs:** add notes and assertions in wg role ([6413713](https://github.com/meysam81/ansible-collections/commit/641371325a9c41feb1c9171245febd9c5e08ba2e))
+* drop autoincrement from domain_verifications ([ced114c](https://github.com/meysam81/ansible-collections/commit/ced114cee40d9c98255697570cb330fba81c091b))
+* **haproxy:** allow for more flexibility in haproxy config ([0328715](https://github.com/meysam81/ansible-collections/commit/032871504f9ffd863ebecb6c5b9915eb4e27386e))
+
 ## [1.11.0](https://github.com/meysam81/ansible-collections/compare/v1.10.13...v1.11.0) (2026-03-28)
 
 
