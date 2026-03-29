@@ -4,8 +4,14 @@
   gather_facts: true
   become: true
   vars:
-    haproxy_served_domains:
-      - example.com
+    haproxy_backends:
+      - name: app
+        servers:
+          - { name: sv0, address: "127.0.0.1", port: 80 }
+        health_check: "GET /healthz"
+    haproxy_routes:
+      - match: { host_suffix: "example.com" }
+        backend: app
   pre_tasks:
     - name: Ping
       ansible.builtin.ping:

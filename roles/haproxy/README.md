@@ -1,6 +1,8 @@
 # HAProxy
 
-Deploy HAProxy with full config management, TLS termination, security headers, CORS, rate limiting, and compression.
+Deploy HAProxy with full config management, TLS termination, security headers,
+CORS, rate limiting, and compression. Generic backend/route system — not tied
+to any specific backend technology.
 
 Depends on `haproxy_build` (builds from source automatically).
 
@@ -11,12 +13,12 @@ Depends on `haproxy_build` (builds from source automatically).
 ```yaml
 collections:
   - name: meysam81.general
-    version: 1.10.13
+    version: 1.11.0
 ```
 
 ## Usage
 
-### playbook.yml
+### Minimal (single backend)
 
 ```yaml
 ---
@@ -27,11 +29,72 @@ collections:
   roles:
     - name: meysam81.general.haproxy
       vars:
-        haproxy_served_domains:
-          - app.example.com
-          - api.example.com
-        haproxy_cors_allowed_domains:
-          - app.example.com
+        haproxy_backends:
+          - name: app
+            servers:
+              - { name: sv0, address: "127.0.0.1", port: 3000 }
+        haproxy_routes:
+          - match: { host: "app.example.com" }
+            backend: app
+```
+
+### Multi-backend with path routing
+
+```yaml
+        haproxy_backends:
+          - name: frontend
+            servers:
+              - { name: sv0, address: "10.0.0.1", port: 3000 }
+          - name: api
+            servers:
+              - { name: sv0, address: "10.0.0.2", port: 8080 }
+              - { name: sv1, address: "10.0.0.3", port: 8080 }
+            balance: roundrobin
+            health_check: "GET /health"
+        haproxy_routes:
+          - match: { host: "app.example.com" }
+            backend: frontend
+          - match: { host: "api.example.com" }
+            backend: api
+```
+
+### TCP passthrough (e.g. K8s API server)
+
+```yaml
+        haproxy_listen_sections:
+          - name: apiserver
+            bind: ":6443"
+            mode: tcp
+            servers:
+              - { name: k8s, address: "127.0.0.1", port: 6443 }
+            rate_limit:
+              conn_rate: 10
+              conn_cur: 5
+```
+
+### Feature flags
+
+All horizontal features (security headers, rate limiting, cache control) are
+enabled by default. Cloudflare enforcement is opt-in:
+
+```yaml
+        haproxy_cloudflare_enabled: false      # default
+        haproxy_rate_limiting_enabled: true     # default
+        haproxy_security_headers_enabled: true  # default
+        haproxy_cache_control_enabled: true     # default
+```
+
+### Escape hatches
+
+Inject raw HAProxy config lines into specific sections:
+
+```yaml
+        haproxy_global_extra:
+          - "ssl-dh-param-file /etc/haproxy/dhparam.pem"
+        haproxy_frontend_extra_acls:
+          - "acl is_websocket hdr(Upgrade) -i websocket"
+        haproxy_frontend_extra_rules:
+          - "use_backend ws if is_websocket"
 ```
 
 HAProxy with full config management, TLS, and security headers
@@ -41,16 +104,19 @@ HAProxy with full config management, TLS, and security headers
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [haproxy_alt_svc_enabled](#haproxy_alt_svc_enabled)
+  - [haproxy_backends](#haproxy_backends)
   - [haproxy_bin_path](#haproxy_bin_path)
   - [haproxy_blocked_extensions](#haproxy_blocked_extensions)
   - [haproxy_blocked_user_agents](#haproxy_blocked_user_agents)
   - [haproxy_bufsize](#haproxy_bufsize)
   - [haproxy_cache_control_default](#haproxy_cache_control_default)
+  - [haproxy_cache_control_enabled](#haproxy_cache_control_enabled)
   - [haproxy_cache_control_hashed](#haproxy_cache_control_hashed)
   - [haproxy_cache_control_static](#haproxy_cache_control_static)
   - [haproxy_cdn_domains](#haproxy_cdn_domains)
   - [haproxy_cert_dir](#haproxy_cert_dir)
   - [haproxy_cloudflare_bypass_hosts](#haproxy_cloudflare_bypass_hosts)
+  - [haproxy_cloudflare_enabled](#haproxy_cloudflare_enabled)
   - [haproxy_cloudflare_ips_file](#haproxy_cloudflare_ips_file)
   - [haproxy_coep](#haproxy_coep)
   - [haproxy_compression_types](#haproxy_compression_types)
@@ -68,33 +134,35 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cors_max_age](#haproxy_cors_max_age)
   - [haproxy_cors_subdomain_patterns](#haproxy_cors_subdomain_patterns)
   - [haproxy_csp](#haproxy_csp)
+  - [haproxy_defaults_extra](#haproxy_defaults_extra)
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_errors_dir](#haproxy_errors_dir)
+  - [haproxy_frontend_extra_acls](#haproxy_frontend_extra_acls)
+  - [haproxy_frontend_extra_rules](#haproxy_frontend_extra_rules)
+  - [haproxy_global_extra](#haproxy_global_extra)
   - [haproxy_hashed_asset_regex](#haproxy_hashed_asset_regex)
-  - [haproxy_health_check_path](#haproxy_health_check_path)
   - [haproxy_honeypot_enabled](#haproxy_honeypot_enabled)
   - [haproxy_honeypot_fields](#haproxy_honeypot_fields)
   - [haproxy_hsts_include_subdomains](#haproxy_hsts_include_subdomains)
   - [haproxy_hsts_max_age](#haproxy_hsts_max_age)
   - [haproxy_hsts_preload](#haproxy_hsts_preload)
-  - [haproxy_k8s_apiserver_addr](#haproxy_k8s_apiserver_addr)
-  - [haproxy_k8s_apiserver_listen_port](#haproxy_k8s_apiserver_listen_port)
-  - [haproxy_k8s_apiserver_port](#haproxy_k8s_apiserver_port)
-  - [haproxy_k8s_backend_addr](#haproxy_k8s_backend_addr)
-  - [haproxy_k8s_backend_port](#haproxy_k8s_backend_port)
+  - [haproxy_listen_sections](#haproxy_listen_sections)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_option_forwardfor](#haproxy_option_forwardfor)
   - [haproxy_permissions_policy](#haproxy_permissions_policy)
   - [haproxy_rate_limit_api_count](#haproxy_rate_limit_api_count)
+  - [haproxy_rate_limit_api_path_prefix](#haproxy_rate_limit_api_path_prefix)
   - [haproxy_rate_limit_api_period](#haproxy_rate_limit_api_period)
   - [haproxy_rate_limit_concurrent](#haproxy_rate_limit_concurrent)
   - [haproxy_rate_limit_conn_count](#haproxy_rate_limit_conn_count)
   - [haproxy_rate_limit_conn_period](#haproxy_rate_limit_conn_period)
   - [haproxy_rate_limit_http_req_count](#haproxy_rate_limit_http_req_count)
   - [haproxy_rate_limit_http_req_period](#haproxy_rate_limit_http_req_period)
+  - [haproxy_rate_limiting_enabled](#haproxy_rate_limiting_enabled)
   - [haproxy_referrer_policy](#haproxy_referrer_policy)
-  - [haproxy_served_domains](#haproxy_served_domains)
+  - [haproxy_routes](#haproxy_routes)
+  - [haproxy_security_headers_enabled](#haproxy_security_headers_enabled)
   - [haproxy_ssl_cachesize](#haproxy_ssl_cachesize)
   - [haproxy_ssl_maxrecord](#haproxy_ssl_maxrecord)
   - [haproxy_static_extensions](#haproxy_static_extensions)
@@ -135,6 +203,14 @@ HAProxy with full config management, TLS, and security headers
 
 ```YAML
 haproxy_alt_svc_enabled: true
+```
+
+### haproxy_backends
+
+#### Default value
+
+```YAML
+haproxy_backends: []
 ```
 
 ### haproxy_bin_path
@@ -186,6 +262,14 @@ haproxy_bufsize: 32768
 haproxy_cache_control_default: no-cache
 ```
 
+### haproxy_cache_control_enabled
+
+#### Default value
+
+```YAML
+haproxy_cache_control_enabled: true
+```
+
 ### haproxy_cache_control_hashed
 
 #### Default value
@@ -224,6 +308,14 @@ haproxy_cert_dir: /etc/haproxy/certs
 
 ```YAML
 haproxy_cloudflare_bypass_hosts: []
+```
+
+### haproxy_cloudflare_enabled
+
+#### Default value
+
+```YAML
+haproxy_cloudflare_enabled: false
 ```
 
 ### haproxy_cloudflare_ips_file
@@ -380,6 +472,14 @@ haproxy_csp: >-
   upgrade-insecure-requests
 ```
 
+### haproxy_defaults_extra
+
+#### Default value
+
+```YAML
+haproxy_defaults_extra: []
+```
+
 ### haproxy_dh_param_bits
 
 #### Default value
@@ -396,20 +496,36 @@ haproxy_dh_param_bits: 4096
 haproxy_errors_dir: /etc/haproxy/errors
 ```
 
+### haproxy_frontend_extra_acls
+
+#### Default value
+
+```YAML
+haproxy_frontend_extra_acls: []
+```
+
+### haproxy_frontend_extra_rules
+
+#### Default value
+
+```YAML
+haproxy_frontend_extra_rules: []
+```
+
+### haproxy_global_extra
+
+#### Default value
+
+```YAML
+haproxy_global_extra: []
+```
+
 ### haproxy_hashed_asset_regex
 
 #### Default value
 
 ```YAML
 haproxy_hashed_asset_regex: \\.[a-f0-9]{8,}\\.(js|css|woff2?|ttf|png|jpg|svg|webp|avif)$
-```
-
-### haproxy_health_check_path
-
-#### Default value
-
-```YAML
-haproxy_health_check_path: /healthz
 ```
 
 ### haproxy_honeypot_enabled
@@ -455,44 +571,12 @@ haproxy_hsts_max_age: 63072000
 haproxy_hsts_preload: true
 ```
 
-### haproxy_k8s_apiserver_addr
+### haproxy_listen_sections
 
 #### Default value
 
 ```YAML
-haproxy_k8s_apiserver_addr: 127.0.0.1
-```
-
-### haproxy_k8s_apiserver_listen_port
-
-#### Default value
-
-```YAML
-haproxy_k8s_apiserver_listen_port: ''
-```
-
-### haproxy_k8s_apiserver_port
-
-#### Default value
-
-```YAML
-haproxy_k8s_apiserver_port: 6443
-```
-
-### haproxy_k8s_backend_addr
-
-#### Default value
-
-```YAML
-haproxy_k8s_backend_addr: 127.0.0.1
-```
-
-### haproxy_k8s_backend_port
-
-#### Default value
-
-```YAML
-haproxy_k8s_backend_port: 80
+haproxy_listen_sections: []
 ```
 
 ### haproxy_maxconn
@@ -534,6 +618,14 @@ haproxy_permissions_policy: geolocation=(), microphone=(), camera=(), payment=()
 
 ```YAML
 haproxy_rate_limit_api_count: 200
+```
+
+### haproxy_rate_limit_api_path_prefix
+
+#### Default value
+
+```YAML
+haproxy_rate_limit_api_path_prefix: /api/
 ```
 
 ### haproxy_rate_limit_api_period
@@ -584,6 +676,14 @@ haproxy_rate_limit_http_req_count: 100
 haproxy_rate_limit_http_req_period: 10
 ```
 
+### haproxy_rate_limiting_enabled
+
+#### Default value
+
+```YAML
+haproxy_rate_limiting_enabled: true
+```
+
 ### haproxy_referrer_policy
 
 #### Default value
@@ -592,12 +692,20 @@ haproxy_rate_limit_http_req_period: 10
 haproxy_referrer_policy: strict-origin-when-cross-origin
 ```
 
-### haproxy_served_domains
+### haproxy_routes
 
 #### Default value
 
 ```YAML
-haproxy_served_domains: []
+haproxy_routes: []
+```
+
+### haproxy_security_headers_enabled
+
+#### Default value
+
+```YAML
+haproxy_security_headers_enabled: true
 ```
 
 ### haproxy_ssl_cachesize

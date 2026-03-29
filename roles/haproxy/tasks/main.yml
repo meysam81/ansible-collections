@@ -1,16 +1,22 @@
 ---
-- name: Assert required variables
+- name: Assert backends are defined
   ansible.builtin.assert:
     that:
-      - haproxy_served_domains | length > 0
-    fail_msg: "haproxy_served_domains must be a non-empty list"
+      - haproxy_backends | length > 0
+    fail_msg: "haproxy_backends must be a non-empty list"
 
-- name: Assert haproxy_served_domains contain valid domain names
+- name: Assert routes are defined
   ansible.builtin.assert:
     that:
-      - item is regex('^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
-    fail_msg: "Invalid domain name: {{ item }}"
-  loop: "{{ haproxy_served_domains }}"
+      - haproxy_routes | length > 0
+    fail_msg: "haproxy_routes must be a non-empty list"
+
+- name: Assert all route backends exist
+  ansible.builtin.assert:
+    that:
+      - item.backend in (haproxy_backends | map(attribute='name') | list)
+    fail_msg: "Route references unknown backend '{{ item.backend }}'"
+  loop: "{{ haproxy_routes }}"
 
 - name: Create haproxy user
   ansible.builtin.user:
@@ -47,6 +53,7 @@
     mode: "0644"
     state: touch
   changed_when: false
+  when: haproxy_cloudflare_enabled
 
 - name: Copy HAProxy error files from build
   ansible.builtin.copy:
@@ -73,6 +80,7 @@
     group: haproxy
     mode: "0644"
   notify: Reload haproxy service
+  when: haproxy_cors_allowed_domains | length > 0
 
 - name: Deploy HAProxy config
   ansible.builtin.template:

@@ -4,7 +4,6 @@ haproxy_version: "3.2.3"
 haproxy_config_dir: "/etc/haproxy"
 haproxy_errors_dir: "/etc/haproxy/errors"
 haproxy_cert_dir: "/etc/haproxy/certs"
-haproxy_cloudflare_ips_file: "/etc/haproxy/cloudflare-ips.txt"
 
 # Performance
 haproxy_maxconn: 4096
@@ -35,18 +34,59 @@ haproxy_ssl_cachesize: 100000
 
 # Stats
 haproxy_stats_port: 8404
+haproxy_stats_auth_user: ""
+haproxy_stats_auth_password: ""
 
-# WAF
-haproxy_coraza_enabled: false
+# ── Feature flags ───────────────────────────────────────────────────
+haproxy_cloudflare_enabled: false
+haproxy_rate_limiting_enabled: true
+haproxy_security_headers_enabled: true
+haproxy_cache_control_enabled: true
 
-# Backends — must be provided by the consumer
-haproxy_served_domains: []
+# ── Backends ────────────────────────────────────────────────────────
+# List of backend definitions. Each entry:
+#   name:              (required) backend name used in routes
+#   servers:           (required) list of { name, address, port }
+#   mode:              http (default) or tcp
+#   balance:           roundrobin, leastconn, etc. (omit for haproxy default)
+#   health_check:      "GET /healthz" or omit to skip httpchk
+#   options:           [] list of raw haproxy lines injected into backend
+haproxy_backends: []
+
+# ── Routes (frontend web → backend) ────────────────────────────────
+# List of routing rules evaluated in order. Each entry:
+#   backend:           (required) name matching a haproxy_backends entry
+#   match:             (required) one of:
+#     host:            exact host match, e.g. "app.example.com"
+#     host_suffix:     suffix match, e.g. "example.com" matches *.example.com
+#     path_prefix:     path prefix match, e.g. "/api"
+haproxy_routes: []
+
+# ── Listen sections (TCP passthrough, etc.) ─────────────────────────
+# List of raw listen blocks. Each entry:
+#   name:              (required) section name
+#   bind:              (required) e.g. ":6443"
+#   mode:              tcp (default) or http
+#   servers:           (required) list of { name, address, port }
+#   options:           [] list of raw haproxy lines
+#   rate_limit:        optional { conn_rate: 10, conn_cur: 5, gpc0_rate: 100 }
+haproxy_listen_sections: []
+
+# ── Cloudflare (only when haproxy_cloudflare_enabled) ───────────────
+haproxy_cloudflare_ips_file: "/etc/haproxy/cloudflare-ips.txt"
+haproxy_cloudflare_bypass_hosts: []
+
+# ── CORS ────────────────────────────────────────────────────────────
 haproxy_cors_allowed_domains: []
 haproxy_cors_subdomain_patterns: []
 haproxy_cdn_domains: []
-haproxy_cloudflare_bypass_hosts: []
+haproxy_cors_allowed_methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+haproxy_cors_allowed_headers: "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID"
+haproxy_cors_expose_headers: "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date"
+haproxy_cors_max_age: "3600"
+haproxy_cors_allow_credentials: true
 
-# Rate limiting
+# ── Rate limiting (only when haproxy_rate_limiting_enabled) ─────────
 haproxy_rate_limit_http_req_period: 10
 haproxy_rate_limit_http_req_count: 100
 haproxy_rate_limit_conn_period: 10
@@ -54,19 +94,9 @@ haproxy_rate_limit_conn_count: 50
 haproxy_rate_limit_concurrent: 20
 haproxy_rate_limit_api_period: 60
 haproxy_rate_limit_api_count: 200
+haproxy_rate_limit_api_path_prefix: "/api/"
 
-# K8s API server (set empty to disable listen block)
-haproxy_k8s_apiserver_listen_port: ""
-haproxy_k8s_apiserver_addr: "127.0.0.1"
-haproxy_k8s_apiserver_port: 6443
-haproxy_k8s_backend_addr: "127.0.0.1"
-haproxy_k8s_backend_port: 80
-
-# Coraza SPOA backend
-haproxy_coraza_spoa_addr: "127.0.0.1"
-haproxy_coraza_spoa_port: 9000
-
-# Security headers
+# ── Security headers (only when haproxy_security_headers_enabled) ───
 haproxy_csp: >-
   default-src 'self' https:;
   style-src 'self' 'unsafe-inline' https:;
@@ -85,7 +115,7 @@ haproxy_hsts_max_age: 63072000
 haproxy_hsts_include_subdomains: true
 haproxy_hsts_preload: true
 
-# Cache-Control (differentiated by content type)
+# ── Cache-Control (only when haproxy_cache_control_enabled) ─────────
 haproxy_cache_control_default: "no-cache"
 haproxy_cache_control_hashed: "public, max-age=31536000, immutable"
 haproxy_cache_control_static: "public, max-age=86400, must-revalidate"
@@ -106,14 +136,7 @@ haproxy_static_extensions:
   - avif
 haproxy_hashed_asset_regex: '\\.[a-f0-9]{8,}\\.(js|css|woff2?|ttf|png|jpg|svg|webp|avif)$'
 
-# CORS response values (only set if backend doesn't provide its own)
-haproxy_cors_allowed_methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-haproxy_cors_allowed_headers: "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID"
-haproxy_cors_expose_headers: "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date"
-haproxy_cors_max_age: "3600"
-haproxy_cors_allow_credentials: true
-
-# Request filtering
+# ── Request filtering ───────────────────────────────────────────────
 haproxy_blocked_extensions:
   - php
   - asp
@@ -131,7 +154,12 @@ haproxy_honeypot_fields:
   - company
   - website
 
-# Compression
+# ── WAF ─────────────────────────────────────────────────────────────
+haproxy_coraza_enabled: false
+haproxy_coraza_spoa_addr: "127.0.0.1"
+haproxy_coraza_spoa_port: 9000
+
+# ── Compression ─────────────────────────────────────────────────────
 haproxy_compression_types:
   - text/html
   - text/plain
@@ -144,15 +172,13 @@ haproxy_compression_types:
   - application/wasm
   - application/manifest+json
 
-# Misc
+# ── Misc ────────────────────────────────────────────────────────────
 haproxy_alt_svc_enabled: true
-haproxy_health_check_path: "/healthz"
-
-# Stats authentication (leave empty to disable)
-haproxy_stats_auth_user: ""
-haproxy_stats_auth_password: ""
-
-# Binary path
 haproxy_bin_path: "/usr/local/sbin/haproxy"
-
 haproxy_option_forwardfor: true
+
+# ── Escape hatches (raw lines injected into sections) ───────────────
+haproxy_global_extra: []
+haproxy_defaults_extra: []
+haproxy_frontend_extra_acls: []
+haproxy_frontend_extra_rules: []

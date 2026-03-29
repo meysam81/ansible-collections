@@ -34,6 +34,9 @@ global
     tune.maxrewrite {{ haproxy_maxrewrite }}
     tune.ssl.maxrecord {{ haproxy_ssl_maxrecord }}
     tune.ssl.cachesize {{ haproxy_ssl_cachesize }}
+{% for line in haproxy_global_extra %}
+    {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
 
 defaults
     mode http
@@ -72,7 +75,11 @@ defaults
     errorfile 502 {{ haproxy_errors_dir }}/502.http
     errorfile 503 {{ haproxy_errors_dir }}/503.http
     errorfile 504 {{ haproxy_errors_dir }}/504.http
+{% for line in haproxy_defaults_extra %}
+    {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
 
+# ── Stats frontend ──────────────────────────────────────────────────
 frontend stats
     bind 127.0.0.1:{{ haproxy_stats_port }}
     stats enable
@@ -84,6 +91,7 @@ frontend stats
 {% endif %}
     http-request use-service prometheus-exporter if { path /metrics }
 
+# ── Main web frontend ──────────────────────────────────────────────
 frontend web
     bind *:80
     bind *:443 ssl crt {{ haproxy_cert_dir }}/ alpn h2,http/1.1
@@ -95,21 +103,24 @@ frontend web
     log-format "${HAPROXY_HTTP_LOG_FMT} req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
 {% endif %}
 
+{% if haproxy_cloudflare_enabled %}
+    # --- Cloudflare enforcement ---
     acl is_cloudflare src -f {{ haproxy_cloudflare_ips_file }}
     acl has_cf_ray hdr(CF-Ray) -m found
     acl has_cf_visitor hdr(CF-Visitor) -m found
     acl has_cf_connecting_ip hdr(CF-Connecting-IP) -m found
 {% if haproxy_cloudflare_bypass_hosts %}
 {% for host in haproxy_cloudflare_bypass_hosts %}
-    acl checkout hdr(host) -i {{ host }}
+    acl cf_bypass hdr(host) -i {{ host }}
 {% endfor %}
     http-request capture src len 40 if !is_cloudflare
-    http-request silent-drop unless checkout || is_cloudflare has_cf_ray has_cf_visitor has_cf_connecting_ip
+    http-request silent-drop unless cf_bypass || is_cloudflare has_cf_ray has_cf_visitor has_cf_connecting_ip
 {% else %}
     http-request capture src len 40 if !is_cloudflare
     http-request silent-drop unless is_cloudflare has_cf_ray has_cf_visitor has_cf_connecting_ip
 {% endif %}
     http-request set-src req.hdr(CF-Connecting-IP) if has_cf_connecting_ip
+{% endif %}
 
 {% if haproxy_cors_allowed_domains %}
     acl allowed_origin_exact hdr(origin) -i -m str -f {{ haproxy_config_dir }}/allowed_domains.txt
@@ -126,13 +137,16 @@ frontend web
     unique-id-format %[uuid()]
     unique-id-header X-Unique-ID
 
+{% if haproxy_rate_limiting_enabled %}
+    # --- Rate limiting ---
     stick-table type ip size 100k expire 30s store http_req_rate({{ haproxy_rate_limit_http_req_period }}s),http_err_rate({{ haproxy_rate_limit_http_req_period }}s),conn_rate({{ haproxy_rate_limit_conn_period }}s),conn_cur,gpc0,gpc0_rate({{ haproxy_rate_limit_api_period }}s)
     http-request track-sc0 src
     http-request return status 429 if { sc_http_req_rate(0) gt {{ haproxy_rate_limit_http_req_count }} }
     http-request return status 429 if { sc_conn_rate(0) gt {{ haproxy_rate_limit_conn_count }} }
     http-request return status 429 if { sc_conn_cur(0) gt {{ haproxy_rate_limit_concurrent }} }
-    http-request sc-inc-gpc0(0) if { path_beg /api/ }
-    http-request return status 429 if { sc_gpc0_rate(0) gt {{ haproxy_rate_limit_api_count }} } { path_beg /api/ }
+    http-request sc-inc-gpc0(0) if { path_beg {{ haproxy_rate_limit_api_path_prefix }} }
+    http-request return status 429 if { sc_gpc0_rate(0) gt {{ haproxy_rate_limit_api_count }} } { path_beg {{ haproxy_rate_limit_api_path_prefix }} }
+{% endif %}
 
 {% if haproxy_blocked_extensions %}
     http-request return status 403 if { path_reg -i \.({{ haproxy_blocked_extensions | join('|') }})$ }
@@ -148,6 +162,10 @@ frontend web
 {% endfor %}
 {% endif %}
 
+{% for line in haproxy_frontend_extra_acls %}
+    {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+
     filter compression
 {% if haproxy_coraza_enabled %}
     filter spoe engine coraza config {{ haproxy_config_dir }}/coraza.cfg
@@ -155,10 +173,8 @@ frontend web
 
 {% if haproxy_coraza_enabled %}
     http-request set-var(txn.coraza.app) str(app)
-
     http-request return status 403 if { var(txn.coraza.fail) -m int eq 1 }
     http-response return status 403 if { var(txn.coraza.fail) -m int eq 1 }
-
     http-request return status 503 if { var(txn.coraza.error) -m int gt 0 }
     http-response return status 503 if { var(txn.coraza.error) -m int gt 0 }
 {% endif %}
@@ -179,6 +195,7 @@ frontend web
 
     http-request set-var(txn.path) path
 
+{% if haproxy_cache_control_enabled %}
     # --- Cache-Control (differentiated by content type) ---
     acl is_static_asset var(txn.path) -m end {{ haproxy_static_extensions | map('regex_replace', '^', '.') | join(' ') }}
     acl is_hashed_asset var(txn.path) -m reg -i {{ haproxy_hashed_asset_regex }}
@@ -187,7 +204,9 @@ frontend web
     http-response set-header Cache-Control "{{ haproxy_cache_control_hashed }}" if is_hashed_asset
     http-response set-header Cache-Control "{{ haproxy_cache_control_static }}" if is_static_asset !is_hashed_asset
     http-response set-header Cache-Control "{{ haproxy_cache_control_default }}" if !is_static_asset !has_cache_control
+{% endif %}
 
+{% if haproxy_security_headers_enabled %}
     # --- Security headers (configurable, backend-respecting) ---
 {% if haproxy_alt_svc_enabled %}
     http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
@@ -209,7 +228,9 @@ frontend web
     http-response set-header X-Permitted-Cross-Domain-Policies none
     http-response del-header Server
     http-response del-header X-Powered-By
+{% endif %}
 
+{% if haproxy_cors_allowed_domains or haproxy_cors_subdomain_patterns %}
     # --- CORS (only if backend doesn't set its own) ---
     acl has_cors_origin res.hdr(Access-Control-Allow-Origin) -m found
     http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found } !has_cors_origin
@@ -220,38 +241,75 @@ frontend web
     http-response set-header Access-Control-Allow-Credentials "true" if { var(txn.origin) -m found } !has_cors_origin
 {% endif %}
     http-response set-header Access-Control-Max-Age "{{ haproxy_cors_max_age }}" if { var(txn.origin) -m found } !has_cors_origin
-{% if haproxy_cors_allowed_domains or haproxy_cors_subdomain_patterns %}
     http-response set-header Vary "Origin"
 {% endif %}
 
-{% for domain in haproxy_served_domains %}
-    acl {{ domain | replace('.', '_') | replace('-', '_') }} hdr(host) -i -m end .{{ domain }}
+{% for line in haproxy_frontend_extra_rules %}
+    {{ line | regex_replace('^\s+', '') }}
 {% endfor %}
-    use_backend k8s if {{ haproxy_served_domains | map('replace', '.', '_') | map('replace', '-', '_') | join(' || ') }}
+
+    # --- Routing ---
+{% for route in haproxy_routes %}
+{% if route.match.host is defined %}
+    acl route_{{ loop.index }} hdr(host) -i {{ route.match.host }}
+{% elif route.match.host_suffix is defined %}
+    acl route_{{ loop.index }} hdr(host) -i -m end .{{ route.match.host_suffix }}
+{% elif route.match.path_prefix is defined %}
+    acl route_{{ loop.index }} path_beg {{ route.match.path_prefix }}
+{% endif %}
+    use_backend {{ route.backend }} if route_{{ loop.index }}
+{% endfor %}
 
     default_backend not_found
 
-{% if haproxy_k8s_apiserver_listen_port %}
-listen apiserver
-  bind :{{ haproxy_k8s_apiserver_listen_port }}
-  mode tcp
-  option tcplog
-  option log-health-checks
-
-  stick-table type ip size 10k expire 30s store conn_rate(10s),conn_cur,gpc0,gpc0_rate(60s)
-  tcp-request connection track-sc0 src
-  tcp-request connection reject if { sc_conn_rate(0) gt 10 }
-  tcp-request connection reject if { sc_conn_cur(0) gt 5 }
-  tcp-request connection sc-inc-gpc0(0)
-  tcp-request connection reject if { sc_gpc0_rate(0) gt 100 }
-
-  server k8s {{ haproxy_k8s_apiserver_addr }}:{{ haproxy_k8s_apiserver_port }} check inter 3000 rise 1 fall 3
+# ── Listen sections ─────────────────────────────────────────────────
+{% for section in haproxy_listen_sections %}
+listen {{ section.name }}
+    bind {{ section.bind }}
+    mode {{ section.mode | default('tcp') }}
+{% if section.mode | default('tcp') == 'tcp' %}
+    option tcplog
+{% else %}
+    option httplog
 {% endif %}
+    option log-health-checks
+{% if section.rate_limit is defined %}
 
-backend k8s
-    option httpchk GET {{ haproxy_health_check_path }}
-    server sv0 {{ haproxy_k8s_backend_addr }}:{{ haproxy_k8s_backend_port }}  check inter 3000 rise 1 fall 3
+    stick-table type ip size 10k expire 30s store conn_rate(10s),conn_cur,gpc0,gpc0_rate(60s)
+    tcp-request connection track-sc0 src
+    tcp-request connection reject if { sc_conn_rate(0) gt {{ section.rate_limit.conn_rate | default(10) }} }
+    tcp-request connection reject if { sc_conn_cur(0) gt {{ section.rate_limit.conn_cur | default(5) }} }
+    tcp-request connection sc-inc-gpc0(0)
+    tcp-request connection reject if { sc_gpc0_rate(0) gt {{ section.rate_limit.gpc0_rate | default(100) }} }
+{% endif %}
+{% for line in section.options | default([]) %}
+    {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+{% for server in section.servers %}
+    server {{ server.name }} {{ server.address }}:{{ server.port }} check inter 3000 rise 1 fall 3
+{% endfor %}
 
+{% endfor %}
+# ── Backends ────────────────────────────────────────────────────────
+{% for backend in haproxy_backends %}
+backend {{ backend.name }}
+{% if backend.mode | default('http') != 'http' %}
+    mode {{ backend.mode }}
+{% endif %}
+{% if backend.balance is defined %}
+    balance {{ backend.balance }}
+{% endif %}
+{% if backend.health_check is defined %}
+    option httpchk {{ backend.health_check }}
+{% endif %}
+{% for line in backend.options | default([]) %}
+    {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+{% for server in backend.servers %}
+    server {{ server.name }} {{ server.address }}:{{ server.port }} check inter 3000 rise 1 fall 3
+{% endfor %}
+
+{% endfor %}
 backend not_found
     http-request return status 404
 
