@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+{% for source in crowdsec_agent_acquis_extra %}
+---
+filenames:
+  - "{{ source.filename }}"
+labels:
+{% for key, value in source.labels.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+{% endfor %}

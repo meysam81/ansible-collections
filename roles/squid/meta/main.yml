@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: squid
+  description: Install and configure Squid forward proxy with blocklist and CrowdSec support
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
+
+dependencies: []

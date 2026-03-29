@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: crowdsec_agent
+  description: Install CrowdSec Security Engine agent with acquisition sources and collections
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
+
+dependencies: []

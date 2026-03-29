@@ -1,0 +1,7 @@
+---
+- name: Install curl
+  ansible.builtin.apt:
+    name: curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

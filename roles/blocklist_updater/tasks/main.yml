@@ -1,0 +1,60 @@
+---
+- name: Setup blocklist updater dependencies on Debian/Ubuntu
+  ansible.builtin.include_tasks: setup-Debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Create blocklist directory
+  ansible.builtin.file:
+    path: "{{ blocklist_updater_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy update-blocklists script
+  ansible.builtin.template:
+    src: update-blocklists.sh.j2
+    dest: /usr/local/bin/update-blocklists
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy custom blocklist
+  ansible.builtin.copy:
+    src: "{{ blocklist_updater_custom_blocklist }}"
+    dest: "{{ blocklist_updater_dir }}/custom.txt"
+    owner: root
+    group: root
+    mode: "0644"
+  when: blocklist_updater_custom_blocklist | length > 0
+
+- name: Deploy blocklist-updater systemd service
+  ansible.builtin.template:
+    src: blocklist-updater.service.j2
+    dest: /etc/systemd/system/blocklist-updater.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart blocklist-updater timer
+
+- name: Deploy blocklist-updater systemd timer
+  ansible.builtin.template:
+    src: blocklist-updater.timer.j2
+    dest: /etc/systemd/system/blocklist-updater.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart blocklist-updater timer
+
+- name: Enable and start blocklist-updater timer
+  ansible.builtin.systemd:
+    name: blocklist-updater.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Run initial blocklist update
+  ansible.builtin.command:
+    cmd: /usr/local/bin/update-blocklists
+    creates: "{{ blocklist_updater_dir }}/{{ blocklist_updater_feeds[0].name }}.txt"
+  when: blocklist_updater_feeds | length > 0

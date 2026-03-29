@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# CrowdSec external ACL helper for Squid.
+# Reads destination domain/IP from stdin, queries CrowdSec LAPI,
+# returns OK (allow) or ERR (block).
+#
+# Squid sends one line per request: "domain\n"
+# Helper must reply with "OK\n" or "ERR\n"
+
+LAPI_URL="{{ squid_crowdsec_lapi_url }}"
+
+while read -r dst; do
+  dst="${dst%% *}"
+  [ -z "$dst" ] && { echo "OK"; continue; }
+
+  status=$(curl -sf --max-time 2 \
+    "${LAPI_URL}/v1/decisions?ip=${dst}" \
+    -H "Accept: application/json" 2>/dev/null)
+
+  if [ -n "$status" ] && [ "$status" != "null" ]; then
+    echo "ERR"
+  else
+    echo "OK"
+  fi
+done

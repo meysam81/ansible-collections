@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+set -euo pipefail
+
+{% for feed in blocklist_updater_feeds %}
+curl -sS --max-time 30 "{{ feed.url }}" | {{ feed.filter }} > "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp"
+mv "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp" "{{ blocklist_updater_dir }}/{{ feed.name }}.txt"
+{% endfor %}
+{% if blocklist_updater_signal_process %}
+
+pkill -HUP {{ blocklist_updater_signal_process }} || true
+{% endif %}

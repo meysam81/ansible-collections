@@ -1,0 +1,19 @@
+---
+blocklist_updater_dir: /etc/egress-proxy/blocklists
+
+blocklist_updater_feeds:
+  - name: urlhaus-domains
+    url: "https://urlhaus.abuse.ch/downloads/hostfile/"
+    filter: "grep -v '^#' | awk '{print $2}'"
+  - name: threatfox-domains
+    url: "https://threatfox.abuse.ch/downloads/hostfile/"
+    filter: "grep -v '^#' | awk '{print $2}'"
+  - name: spamhaus-drop-cidrs
+    url: "https://www.spamhaus.org/drop/drop.txt"
+    filter: "grep -v '^;' | awk '{print $1}'"
+
+blocklist_updater_interval: "*:0/15"
+
+blocklist_updater_signal_process: ""
+
+blocklist_updater_custom_blocklist: ""

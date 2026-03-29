@@ -1,0 +1,41 @@
+---
+- name: Install squid
+  ansible.builtin.apt:
+    name: squid
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create squid log directory
+  ansible.builtin.file:
+    path: "{{ squid_access_log_path | dirname }}"
+    state: directory
+    owner: proxy
+    group: proxy
+    mode: "0750"
+
+- name: Deploy CrowdSec squid helper script
+  ansible.builtin.template:
+    src: crowdsec-squid-helper.sh.j2
+    dest: /usr/local/bin/crowdsec-squid-helper
+    owner: root
+    group: root
+    mode: "0755"
+  when: squid_crowdsec_enabled
+  notify: Reload squid
+
+- name: Deploy squid configuration
+  ansible.builtin.template:
+    src: squid.conf.j2
+    dest: /etc/squid/squid.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: squid -k parse -f %s
+  notify: Reload squid
+
+- name: Enable and start squid
+  ansible.builtin.systemd:
+    name: squid
+    state: started
+    enabled: true

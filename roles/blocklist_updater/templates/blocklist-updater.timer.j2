@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Periodic blocklist update timer
+
+[Timer]
+OnCalendar={{ blocklist_updater_interval }}
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

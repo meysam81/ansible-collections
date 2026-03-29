@@ -127,3 +127,13 @@
         wireguard_peers:
           - public_key: "{{ wg_peer_pubkey.stdout }}"
             allowed_ips: "10.99.0.2/32"
+    - role: blocklist_updater
+      tags: blocklist_updater
+      vars:
+        blocklist_updater_dir: /tmp/blocklists
+    - role: squid
+      tags: squid
+      vars:
+        squid_listen_address: "127.0.0.1"
+    - role: crowdsec_agent
+      tags: crowdsec_agent

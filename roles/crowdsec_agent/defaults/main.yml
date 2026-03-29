@@ -1,0 +1,10 @@
+---
+crowdsec_agent_collections:
+  - crowdsecurity/http-probing
+  - crowdsecurity/iptables
+
+crowdsec_agent_enrollment_key: ""
+
+crowdsec_agent_acquis_extra: []
+
+crowdsec_agent_lapi_listen: "127.0.0.1:8080"

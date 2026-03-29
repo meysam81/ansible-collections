@@ -1,0 +1,68 @@
+---
+- name: Install CrowdSec apt repository dependencies
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Download CrowdSec GPG key
+  ansible.builtin.get_url:
+    url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+    dest: /tmp/crowdsec-gpgkey.asc
+    mode: "0644"
+
+- name: Dearmor CrowdSec GPG key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/crowdsec-archive-keyring.gpg /tmp/crowdsec-gpgkey.asc
+    creates: /usr/share/keyrings/crowdsec-archive-keyring.gpg
+
+- name: Add CrowdSec apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/crowdsec-archive-keyring.gpg]
+      https://packagecloud.io/crowdsec/crowdsec/{{ ansible_distribution | lower }}
+      {{ ansible_distribution_release }} main
+    filename: crowdsec
+    state: present
+
+- name: Install CrowdSec
+  ansible.builtin.apt:
+    name: crowdsec
+    state: present
+    update_cache: true
+
+- name: Install CrowdSec collections
+  ansible.builtin.command:
+    cmd: "cscli collections install {{ item }}"
+  loop: "{{ crowdsec_agent_collections }}"
+  register: crowdsec_agent_collections_result
+  changed_when: "'overwrite' not in crowdsec_agent_collections_result.stderr"
+
+- name: Enroll in CrowdSec console
+  ansible.builtin.command:
+    cmd: "cscli console enroll {{ crowdsec_agent_enrollment_key }}"
+  when: crowdsec_agent_enrollment_key | length > 0
+  register: crowdsec_agent_enroll_result
+  changed_when: "'already enrolled' not in (crowdsec_agent_enroll_result.stderr | default(''))"
+  failed_when:
+    - crowdsec_agent_enroll_result.rc != 0
+    - "'already enrolled' not in (crowdsec_agent_enroll_result.stderr | default(''))"
+  no_log: true
+  notify: Restart crowdsec
+
+- name: Deploy extra acquisition config
+  ansible.builtin.template:
+    src: acquis-extra.yaml.j2
+    dest: /etc/crowdsec/acquis.d/egress.yaml
+    owner: root
+    group: root
+    mode: "0644"
+  when: crowdsec_agent_acquis_extra | length > 0
+  notify: Restart crowdsec
+
+- name: Enable and start CrowdSec service
+  ansible.builtin.systemd:
+    name: crowdsec
+    state: started
+    enabled: true
