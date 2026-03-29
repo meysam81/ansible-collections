@@ -880,7 +880,7 @@ haproxy_tls_options: no-tls-tickets
 #### Default value
 
 ```YAML
-haproxy_version: 3.2.3
+haproxy_version: 3.3.6
 ```
 
 ### haproxy_x_frame_options
