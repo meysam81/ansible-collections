@@ -8,7 +8,7 @@ haproxy_cloudflare_ips_file: "/etc/haproxy/cloudflare-ips.txt"
 
 # Performance
 haproxy_maxconn: 4096
-haproxy_threads: "{{ ansible_processor_vcpus }}"
+haproxy_threads: "{{ ansible_facts['processor_vcpus'] }}"
 
 # Timeouts
 haproxy_timeout_connect: "5s"

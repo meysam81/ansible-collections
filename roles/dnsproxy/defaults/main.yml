@@ -1,0 +1,41 @@
+---
+dnsproxy_version: "0.81.0"
+dnsproxy_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+dnsproxy_download_url: "https://github.com/AdguardTeam/dnsproxy/releases/download/v{{ dnsproxy_version }}/dnsproxy-linux-{{ dnsproxy_arch }}-v{{ dnsproxy_version }}.tar.gz"
+
+dnsproxy_listen: "127.0.0.1"
+dnsproxy_port: 53
+dnsproxy_http3: true
+
+dnsproxy_upstreams:
+  - "https://1.1.1.1/dns-query"
+  - "https://1.0.0.1/dns-query"
+  - "https://8.8.8.8/dns-query"
+  - "https://8.8.4.4/dns-query"
+
+dnsproxy_fallbacks:
+  - "tls://1.1.1.1:853"
+  - "tls://1.0.0.1:853"
+  - "tls://8.8.8.8:853"
+  - "tls://8.8.4.4:853"
+
+dnsproxy_cache: true
+dnsproxy_cache_optimistic: true
+dnsproxy_cache_size: 4194304
+dnsproxy_cache_min_ttl: 60
+dnsproxy_cache_max_ttl: 86400
+
+dnsproxy_upstream_mode: "fastest_addr"
+dnsproxy_refuse_any: true
+dnsproxy_timeout: "10s"
+dnsproxy_max_goroutines: 1000
+dnsproxy_pending_requests: true
+
+# Additional CLI flags not covered above
+dnsproxy_extra_args: []
+
+# Disable conflicting local DNS resolvers (systemd-resolved, dnsmasq, etc.)
+dnsproxy_disable_resolvers: true
+
+# Write /etc/resolv.conf to point to dnsproxy
+dnsproxy_manage_resolv_conf: true

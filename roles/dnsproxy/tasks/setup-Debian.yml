@@ -1,0 +1,63 @@
+---
+- name: Check installed dnsproxy version
+  ansible.builtin.command:
+    cmd: /usr/local/bin/dnsproxy --version
+  register: dnsproxy_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Set dnsproxy install needed flag
+  ansible.builtin.set_fact:
+    dnsproxy_needs_install: >-
+      {{ dnsproxy_installed_version.rc != 0 or
+         ('v' + dnsproxy_version) not in (dnsproxy_installed_version.stdout | default('')) }}
+
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: dnsproxy_
+  register: dnsproxy_tmp_dir
+  when: dnsproxy_needs_install
+
+- name: Download dnsproxy {{ dnsproxy_version }}
+  ansible.builtin.get_url:
+    url: "{{ dnsproxy_download_url }}"
+    dest: "{{ dnsproxy_tmp_dir.path }}/{{ dnsproxy_download_url | basename }}"
+    mode: "0644"
+  register: dnsproxy_download
+  when: dnsproxy_needs_install
+
+- name: Extract dnsproxy binary to /usr/local/bin
+  ansible.builtin.unarchive:
+    src: "{{ dnsproxy_download.dest }}"
+    dest: /usr/local/bin
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    mode: "0755"
+    owner: root
+    group: root
+  when: dnsproxy_needs_install
+  notify: Restart dnsproxy
+
+- name: Clean up temp files
+  ansible.builtin.file:
+    path: "{{ dnsproxy_tmp_dir.path }}"
+    state: absent
+  when: dnsproxy_needs_install
+
+- name: Deploy dnsproxy systemd service
+  ansible.builtin.template:
+    src: dnsproxy.service.j2
+    dest: /etc/systemd/system/dnsproxy.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart dnsproxy
+
+- name: Enable and start dnsproxy
+  ansible.builtin.systemd:
+    name: dnsproxy
+    state: started
+    enabled: true
+    daemon_reload: true

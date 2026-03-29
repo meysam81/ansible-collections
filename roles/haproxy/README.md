@@ -667,7 +667,7 @@ haproxy_stats_port: 8404
 #### Default value
 
 ```YAML
-haproxy_threads: '{{ ansible_processor_vcpus }}'
+haproxy_threads: "{{ ansible_facts['processor_vcpus'] }}"
 ```
 
 ### haproxy_timeout_client

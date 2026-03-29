@@ -55,7 +55,7 @@
     - name: Compile HAProxy
       community.general.make:
         chdir: "{{ haproxy_build_tmpdir.path }}/haproxy-{{ haproxy_build_version }}"
-        jobs: "{{ ansible_processor_vcpus }}"
+        jobs: "{{ ansible_facts['processor_vcpus'] }}"
         params:
           TARGET: linux-glibc
           USE_GETADDRINFO: 1

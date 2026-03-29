@@ -1,0 +1,182 @@
+---
+# ── Stop and mask all known services that bind port 53 ──────────────
+#
+# Each service is stopped, disabled, and masked. If the unit does not
+# exist on the target host the task succeeds silently.
+
+- name: Stop and mask conflicting DNS services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - systemd-resolved
+    - dnsmasq
+    - bind9
+    - named
+    - unbound
+    - dnscrypt-proxy
+    - stubby
+  failed_when: false
+
+- name: Stop and mask dnscrypt-proxy socket
+  ansible.builtin.systemd:
+    name: dnscrypt-proxy.socket
+    state: stopped
+    enabled: false
+    masked: true
+  failed_when: false
+
+- name: Stop and mask kresd template instances
+  ansible.builtin.systemd:
+    name: "kresd@{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - "1"
+    - "2"
+    - "3"
+  failed_when: false
+
+# ── Disable ConnMan DNS proxy (without stopping ConnMan itself) ─────
+
+- name: Check if ConnMan is active
+  ansible.builtin.command:
+    cmd: systemctl is-active connman
+  register: dnsproxy_connman_status
+  changed_when: false
+  failed_when: false
+
+- name: Create ConnMan override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/connman.service.d
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: dnsproxy_connman_status.rc == 0
+
+- name: Disable ConnMan DNS proxy
+  ansible.builtin.copy:
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/usr/bin/connmand -n --nodnsproxy
+    dest: /etc/systemd/system/connman.service.d/disable-dns-proxy.conf
+    mode: "0644"
+    owner: root
+    group: root
+  when: dnsproxy_connman_status.rc == 0
+  notify: Restart dnsproxy
+
+# ── Disable systemd-resolved stub listener config ──────────────────
+#
+# Even though we masked the service above, leave the drop-in so that
+# if someone unmasks it, the stub listener stays off.
+
+- name: Create resolved.conf.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Disable systemd-resolved stub listener
+  ansible.builtin.copy:
+    content: |
+      [Resolve]
+      DNSStubListener=no
+    dest: /etc/systemd/resolved.conf.d/no-stub.conf
+    mode: "0644"
+    owner: root
+    group: root
+
+# ── Disable NetworkManager DNS management ───────────────────────────
+
+- name: Check if NetworkManager is active
+  ansible.builtin.command:
+    cmd: systemctl is-active NetworkManager
+  register: dnsproxy_nm_status
+  changed_when: false
+  failed_when: false
+
+- name: Create NetworkManager conf.d directory
+  ansible.builtin.file:
+    path: /etc/NetworkManager/conf.d
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: dnsproxy_nm_status.rc == 0
+
+- name: Disable NetworkManager DNS and resolv.conf management
+  ansible.builtin.copy:
+    content: |
+      [main]
+      dns=none
+      rc-manager=unmanaged
+    dest: /etc/NetworkManager/conf.d/90-dns-none.conf
+    mode: "0644"
+    owner: root
+    group: root
+  when: dnsproxy_nm_status.rc == 0
+  register: dnsproxy_nm_dns_config
+
+- name: Reload NetworkManager
+  ansible.builtin.systemd:
+    name: NetworkManager
+    state: reloaded
+  when:
+    - dnsproxy_nm_status.rc == 0
+    - dnsproxy_nm_dns_config is changed
+
+# ── Disable resolvconf / openresolv ─────────────────────────────────
+
+- name: Check if resolvconf is installed
+  ansible.builtin.stat:
+    path: /etc/resolvconf.conf
+  register: dnsproxy_resolvconf_stat
+
+- name: Disable resolvconf
+  ansible.builtin.lineinfile:
+    path: /etc/resolvconf.conf
+    regexp: "^resolvconf="
+    line: "resolvconf=NO"
+    create: false
+  when: dnsproxy_resolvconf_stat.stat.exists
+
+- name: Check if resolvconf binary exists
+  ansible.builtin.stat:
+    path: /sbin/resolvconf
+  register: dnsproxy_resolvconf_bin
+
+- name: Check if resolvconf is a standalone package (not systemd-resolved symlink)
+  ansible.builtin.command:
+    cmd: dpkg -l resolvconf
+  register: dnsproxy_resolvconf_pkg
+  changed_when: false
+  failed_when: false
+  when: dnsproxy_resolvconf_bin.stat.exists
+
+# ── Write /etc/resolv.conf ──────────────────────────────────────────
+
+- name: Remove resolv.conf symlink
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  when: dnsproxy_manage_resolv_conf
+
+- name: Write resolv.conf pointing to dnsproxy
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible (meysam81.general.dnsproxy)
+      nameserver {{ dnsproxy_listen }}
+      options edns0 trust-ad
+    dest: /etc/resolv.conf
+    mode: "0644"
+    owner: root
+    group: root
+  when: dnsproxy_manage_resolv_conf
