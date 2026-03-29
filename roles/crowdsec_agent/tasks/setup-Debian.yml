@@ -44,11 +44,11 @@
   ansible.builtin.command:
     cmd: "cscli collections install {{ item }}"
   loop: "{{ crowdsec_agent_collections }}"
-  register: cscli_result
-  changed_when: "'overwrite' not in cscli_result.stderr"
+  register: crowdsec_agent_cscli_result
+  changed_when: "'overwrite' not in crowdsec_agent_cscli_result.stderr"
   failed_when:
-    - cscli_result.rc != 0
-    - "'already' not in (cscli_result.stderr | default(''))"
+    - crowdsec_agent_cscli_result.rc != 0
+    - "'already' not in (crowdsec_agent_cscli_result.stderr | default(''))"
 
 - name: Enroll in CrowdSec console
   ansible.builtin.command:

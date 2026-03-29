@@ -30,61 +30,29 @@
           - blocklist_script.stat.executable
       tags: blocklist_updater
 
-    - name: Check blocklist-updater timer is active
-      ansible.builtin.command:
-        cmd: systemctl is-active blocklist-updater.timer
-      register: blocklist_timer_status
-      changed_when: false
-      failed_when: false
+    - name: Gather service facts for blocklist_updater
+      ansible.builtin.service_facts:
       tags: blocklist_updater
 
-    - name: Assert blocklist-updater timer is active
+    - name: Assert blocklist-updater timer is active and enabled
       ansible.builtin.assert:
         that:
-          - blocklist_timer_status.stdout == 'active'
-      tags: blocklist_updater
-
-    - name: Check blocklist-updater timer is enabled
-      ansible.builtin.command:
-        cmd: systemctl is-enabled blocklist-updater.timer
-      register: blocklist_timer_enabled
-      changed_when: false
-      failed_when: false
-      tags: blocklist_updater
-
-    - name: Assert blocklist-updater timer is enabled
-      ansible.builtin.assert:
-        that:
-          - blocklist_timer_enabled.stdout == 'enabled'
+          - "'blocklist-updater.timer' in ansible_facts.services"
+          - ansible_facts.services['blocklist-updater.timer'].state == 'active'
+          - ansible_facts.services['blocklist-updater.timer'].status == 'enabled'
       tags: blocklist_updater
 
     # ── squid ─────────────────────────────────────
-    - name: Check squid service is running
-      ansible.builtin.command:
-        cmd: systemctl is-active squid
-      register: squid_status
-      changed_when: false
-      failed_when: false
+    - name: Gather service facts for squid
+      ansible.builtin.service_facts:
       tags: squid
 
-    - name: Assert squid service is running
+    - name: Assert squid service is running and enabled
       ansible.builtin.assert:
         that:
-          - squid_status.stdout == 'active'
-      tags: squid
-
-    - name: Check squid is enabled
-      ansible.builtin.command:
-        cmd: systemctl is-enabled squid
-      register: squid_enabled
-      changed_when: false
-      failed_when: false
-      tags: squid
-
-    - name: Assert squid is enabled
-      ansible.builtin.assert:
-        that:
-          - squid_enabled.stdout == 'enabled'
+          - "'squid.service' in ansible_facts.services"
+          - ansible_facts.services['squid.service'].state == 'running'
+          - ansible_facts.services['squid.service'].status == 'enabled'
       tags: squid
 
     - name: Check squid configuration is valid
@@ -129,32 +97,16 @@
       tags: squid
 
     # ── crowdsec_agent ────────────────────────────
-    - name: Check crowdsec service is running
-      ansible.builtin.command:
-        cmd: systemctl is-active crowdsec
-      register: crowdsec_status
-      changed_when: false
-      failed_when: false
+    - name: Gather service facts for crowdsec_agent
+      ansible.builtin.service_facts:
       tags: crowdsec_agent
 
-    - name: Assert crowdsec service is running
+    - name: Assert crowdsec service is running and enabled
       ansible.builtin.assert:
         that:
-          - crowdsec_status.stdout == 'active'
-      tags: crowdsec_agent
-
-    - name: Check crowdsec is enabled
-      ansible.builtin.command:
-        cmd: systemctl is-enabled crowdsec
-      register: crowdsec_enabled
-      changed_when: false
-      failed_when: false
-      tags: crowdsec_agent
-
-    - name: Assert crowdsec is enabled
-      ansible.builtin.assert:
-        that:
-          - crowdsec_enabled.stdout == 'enabled'
+          - "'crowdsec.service' in ansible_facts.services"
+          - ansible_facts.services['crowdsec.service'].state == 'running'
+          - ansible_facts.services['crowdsec.service'].status == 'enabled'
       tags: crowdsec_agent
 
     - name: Check CrowdSec GPG keyring exists

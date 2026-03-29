@@ -2,8 +2,17 @@
   hosts: all
   gather_facts: true
   become: true
-  vars_files:
-    - vars.yml
+  vars:
+    haproxy_backends:
+      - name: app
+        servers:
+          - name: app1
+            address: 127.0.0.1
+            port: 8080
+    haproxy_routes:
+      - backend: app
+        match:
+          host: example.com
   pre_tasks:
     - name: Ping
       ansible.builtin.ping:

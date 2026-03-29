@@ -92,7 +92,7 @@
 - name: Run initial blocklist update
   ansible.builtin.command:
     cmd: /usr/local/bin/update-blocklists
-  register: blocklist_initial_update
+  register: blocklist_updater_initial_result
   changed_when: false
   failed_when: false
   when: blocklist_updater_feeds | length > 0

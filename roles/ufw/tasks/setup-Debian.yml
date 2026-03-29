@@ -17,26 +17,26 @@
     update_cache: true
 
 - name: Reset UFW rules
-  ansible.builtin.ufw:
+  community.general.ufw:
     state: reset
   when: ufw_reset_before_apply
 
 - name: Set UFW default incoming policy
-  ansible.builtin.ufw:
+  community.general.ufw:
     direction: incoming
     default: "{{ ufw_default_incoming }}"
 
 - name: Set UFW default outgoing policy
-  ansible.builtin.ufw:
+  community.general.ufw:
     direction: outgoing
     default: "{{ ufw_default_outgoing }}"
 
 - name: Set UFW logging level
-  ansible.builtin.ufw:
+  community.general.ufw:
     logging: "{{ ufw_logging }}"
 
 - name: Apply UFW rules
-  ansible.builtin.ufw:
+  community.general.ufw:
     rule: "{{ item.rule }}"
     port: "{{ item.port | default(omit) }}"
     proto: "{{ item.proto | default(omit) }}"
@@ -50,11 +50,11 @@
     label: "{{ item.comment | default(item.rule + ' ' + (item.port | default('any'))) }}"
 
 - name: Enable UFW
-  ansible.builtin.ufw:
+  community.general.ufw:
     state: enabled
   when: ufw_enabled
 
 - name: Disable UFW
-  ansible.builtin.ufw:
+  community.general.ufw:
     state: disabled
   when: not ufw_enabled

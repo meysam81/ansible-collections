@@ -12,11 +12,11 @@ global
 {% else %}
 {% set _ciphers = haproxy_tls_ciphers %}
 {% endif %}
-    ssl-default-bind-ciphersuites {{ haproxy_tls_ciphersuites }}
     ssl-default-bind-ciphers {{ _ciphers }}
+    ssl-default-bind-ciphersuites {{ haproxy_tls_ciphersuites }}
     ssl-default-bind-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
-    ssl-default-server-ciphersuites {{ haproxy_tls_ciphersuites }}
     ssl-default-server-ciphers {{ _ciphers }}
+    ssl-default-server-ciphersuites {{ haproxy_tls_ciphersuites }}
     ssl-default-server-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
 
     ca-base /etc/ssl/certs
