@@ -68,6 +68,7 @@ Install CrowdSec Security Engine agent with acquisition sources and collections
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [crowdsec_agent_acquis_extra](#crowdsec_agent_acquis_extra)
+  - [crowdsec_agent_acquis_filename](#crowdsec_agent_acquis_filename)
   - [crowdsec_agent_collections](#crowdsec_agent_collections)
   - [crowdsec_agent_enrollment_key](#crowdsec_agent_enrollment_key)
   - [crowdsec_agent_lapi_listen](#crowdsec_agent_lapi_listen)
@@ -89,6 +90,14 @@ Install CrowdSec Security Engine agent with acquisition sources and collections
 
 ```YAML
 crowdsec_agent_acquis_extra: []
+```
+
+### crowdsec_agent_acquis_filename
+
+#### Default value
+
+```YAML
+crowdsec_agent_acquis_filename: egress
 ```
 
 ### crowdsec_agent_collections

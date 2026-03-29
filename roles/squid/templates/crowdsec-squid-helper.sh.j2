@@ -8,6 +8,7 @@
 # Helper must reply with "OK\n" or "ERR\n"
 
 LAPI_URL="{{ squid_crowdsec_lapi_url }}"
+FAIL_MODE="{{ squid_crowdsec_fail_mode }}"
 
 while read -r dst; do
   dst="${dst%% *}"
@@ -16,6 +17,17 @@ while read -r dst; do
   status=$(curl -sf --max-time 2 \
     "${LAPI_URL}/v1/decisions?ip=${dst}" \
     -H "Accept: application/json" 2>/dev/null)
+  curl_rc=$?
+
+  if [ $curl_rc -ne 0 ]; then
+    # LAPI unreachable
+    if [ "$FAIL_MODE" = "closed" ]; then
+      echo "ERR"
+    else
+      echo "OK"
+    fi
+    continue
+  fi
 
   if [ -n "$status" ] && [ "$status" != "null" ]; then
     echo "ERR"

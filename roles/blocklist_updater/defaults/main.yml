@@ -1,6 +1,8 @@
 ---
 blocklist_updater_dir: /etc/egress-proxy/blocklists
 
+# Each feed entry requires: name, url, filter.
+# 'filter' is executed as a shell pipeline — only use trusted values.
 blocklist_updater_feeds:
   - name: urlhaus-domains
     url: "https://urlhaus.abuse.ch/downloads/hostfile/"
@@ -14,6 +16,7 @@ blocklist_updater_feeds:
 
 blocklist_updater_interval: "*:0/15"
 
+# Simple process name to SIGHUP after update (e.g. "squid"). Leave empty to skip.
 blocklist_updater_signal_process: ""
 
 blocklist_updater_custom_blocklist: ""

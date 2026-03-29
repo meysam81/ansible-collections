@@ -1,0 +1,184 @@
+---
+- name: Verify new roles
+  hosts: all
+  become: true
+  tasks:
+    # ── blocklist_updater ─────────────────────────
+    - name: Check blocklist directory exists
+      ansible.builtin.stat:
+        path: /tmp/blocklists
+      register: blocklist_dir
+      tags: blocklist_updater
+
+    - name: Assert blocklist directory exists
+      ansible.builtin.assert:
+        that:
+          - blocklist_dir.stat.exists
+          - blocklist_dir.stat.isdir
+      tags: blocklist_updater
+
+    - name: Check update-blocklists script exists
+      ansible.builtin.stat:
+        path: /usr/local/bin/update-blocklists
+      register: blocklist_script
+      tags: blocklist_updater
+
+    - name: Assert update-blocklists script is executable
+      ansible.builtin.assert:
+        that:
+          - blocklist_script.stat.exists
+          - blocklist_script.stat.executable
+      tags: blocklist_updater
+
+    - name: Check blocklist-updater timer is active
+      ansible.builtin.command:
+        cmd: systemctl is-active blocklist-updater.timer
+      register: blocklist_timer_status
+      changed_when: false
+      failed_when: false
+      tags: blocklist_updater
+
+    - name: Assert blocklist-updater timer is active
+      ansible.builtin.assert:
+        that:
+          - blocklist_timer_status.stdout == 'active'
+      tags: blocklist_updater
+
+    - name: Check blocklist-updater timer is enabled
+      ansible.builtin.command:
+        cmd: systemctl is-enabled blocklist-updater.timer
+      register: blocklist_timer_enabled
+      changed_when: false
+      failed_when: false
+      tags: blocklist_updater
+
+    - name: Assert blocklist-updater timer is enabled
+      ansible.builtin.assert:
+        that:
+          - blocklist_timer_enabled.stdout == 'enabled'
+      tags: blocklist_updater
+
+    # ── squid ─────────────────────────────────────
+    - name: Check squid service is running
+      ansible.builtin.command:
+        cmd: systemctl is-active squid
+      register: squid_status
+      changed_when: false
+      failed_when: false
+      tags: squid
+
+    - name: Assert squid service is running
+      ansible.builtin.assert:
+        that:
+          - squid_status.stdout == 'active'
+      tags: squid
+
+    - name: Check squid is enabled
+      ansible.builtin.command:
+        cmd: systemctl is-enabled squid
+      register: squid_enabled
+      changed_when: false
+      failed_when: false
+      tags: squid
+
+    - name: Assert squid is enabled
+      ansible.builtin.assert:
+        that:
+          - squid_enabled.stdout == 'enabled'
+      tags: squid
+
+    - name: Check squid configuration is valid
+      ansible.builtin.command:
+        cmd: squid -k parse
+      register: squid_parse
+      changed_when: false
+      failed_when: false
+      tags: squid
+
+    - name: Assert squid configuration is valid
+      ansible.builtin.assert:
+        that:
+          - squid_parse.rc == 0
+      tags: squid
+
+    - name: Check squid log directory exists
+      ansible.builtin.stat:
+        path: /var/log/squid
+      register: squid_log_dir
+      tags: squid
+
+    - name: Assert squid log directory exists with correct ownership
+      ansible.builtin.assert:
+        that:
+          - squid_log_dir.stat.exists
+          - squid_log_dir.stat.isdir
+      tags: squid
+
+    - name: Check squid logrotate config exists
+      ansible.builtin.stat:
+        path: /etc/logrotate.d/squid-json
+      register: squid_logrotate
+      when: squid_access_log_format | default('json') == 'json'
+      tags: squid
+
+    - name: Assert squid logrotate config exists
+      ansible.builtin.assert:
+        that:
+          - squid_logrotate.stat.exists
+      when: squid_access_log_format | default('json') == 'json'
+      tags: squid
+
+    # ── crowdsec_agent ────────────────────────────
+    - name: Check crowdsec service is running
+      ansible.builtin.command:
+        cmd: systemctl is-active crowdsec
+      register: crowdsec_status
+      changed_when: false
+      failed_when: false
+      tags: crowdsec_agent
+
+    - name: Assert crowdsec service is running
+      ansible.builtin.assert:
+        that:
+          - crowdsec_status.stdout == 'active'
+      tags: crowdsec_agent
+
+    - name: Check crowdsec is enabled
+      ansible.builtin.command:
+        cmd: systemctl is-enabled crowdsec
+      register: crowdsec_enabled
+      changed_when: false
+      failed_when: false
+      tags: crowdsec_agent
+
+    - name: Assert crowdsec is enabled
+      ansible.builtin.assert:
+        that:
+          - crowdsec_enabled.stdout == 'enabled'
+      tags: crowdsec_agent
+
+    - name: Check CrowdSec GPG keyring exists
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/crowdsec-archive-keyring.gpg
+      register: crowdsec_keyring
+      tags: crowdsec_agent
+
+    - name: Assert CrowdSec GPG keyring exists
+      ansible.builtin.assert:
+        that:
+          - crowdsec_keyring.stat.exists
+      tags: crowdsec_agent
+
+    - name: Check CrowdSec collections are installed
+      ansible.builtin.command:
+        cmd: cscli collections list -o raw
+      register: crowdsec_collections
+      changed_when: false
+      tags: crowdsec_agent
+
+    - name: Assert default collections are installed
+      ansible.builtin.assert:
+        that:
+          - "'http-probing' in crowdsec_collections.stdout"
+          - "'iptables' in crowdsec_collections.stdout"
+      tags: crowdsec_agent

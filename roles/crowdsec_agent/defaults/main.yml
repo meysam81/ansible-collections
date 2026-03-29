@@ -7,4 +7,7 @@ crowdsec_agent_enrollment_key: ""
 
 crowdsec_agent_acquis_extra: []
 
+# Filename (without extension) for extra acquisition config in /etc/crowdsec/acquis.d/
+crowdsec_agent_acquis_filename: egress
+
 crowdsec_agent_lapi_listen: "127.0.0.1:8080"

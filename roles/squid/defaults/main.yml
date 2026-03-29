@@ -2,6 +2,8 @@
 squid_listen_address: "127.0.0.1"
 squid_listen_port: 3128
 
+# CIDR list of allowed source networks. Change this for your environment.
+# Default matches a typical WireGuard tunnel subnet.
 squid_allowed_sources:
   - "10.99.0.0/24"
 
@@ -17,6 +19,12 @@ squid_access_log_path: /var/log/squid/access-json.log
 squid_crowdsec_enabled: false
 squid_crowdsec_lapi_url: "http://127.0.0.1:8080"
 squid_crowdsec_ttl: 60
+# Behaviour when CrowdSec LAPI is unreachable: "open" (allow) or "closed" (block)
+squid_crowdsec_fail_mode: "open"
+squid_crowdsec_children_max: 10
+squid_crowdsec_children_startup: 2
 
 squid_extra_acls: []
+# NOTE: extra_rules are injected AFTER blocklist/CrowdSec denies but BEFORE
+# the final "allow wg_clients / deny all". Order matters for http_access.
 squid_extra_rules: []

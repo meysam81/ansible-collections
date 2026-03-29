@@ -1,4 +1,22 @@
 ---
+- name: Assert LAPI listen address format
+  ansible.builtin.assert:
+    that:
+      - "':' in crowdsec_agent_lapi_listen"
+    fail_msg: "crowdsec_agent_lapi_listen must be in 'host:port' format (got: {{ crowdsec_agent_lapi_listen }})"
+
+- name: Assert acquis filename is safe
+  ansible.builtin.assert:
+    that:
+      - crowdsec_agent_acquis_filename is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "crowdsec_agent_acquis_filename must be a simple name (alphanumeric, dash, underscore)"
+
+- name: Assert collections list is non-empty
+  ansible.builtin.assert:
+    that:
+      - crowdsec_agent_collections | length > 0
+    fail_msg: "crowdsec_agent_collections must contain at least one collection"
+
 - name: Setup CrowdSec agent on Debian/Ubuntu
   ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'

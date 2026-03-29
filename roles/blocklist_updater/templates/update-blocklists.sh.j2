@@ -1,12 +1,27 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-set -euo pipefail
+set -uo pipefail
+
+exit_code=0
 
 {% for feed in blocklist_updater_feeds %}
-curl -sS --max-time 30 "{{ feed.url }}" | {{ feed.filter }} > "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp"
-mv "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp" "{{ blocklist_updater_dir }}/{{ feed.name }}.txt"
+if curl -sS --max-time 30 "{{ feed.url }}" | {{ feed.filter }} > "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp"; then
+  if [ -s "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp" ]; then
+    mv "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp" "{{ blocklist_updater_dir }}/{{ feed.name }}.txt"
+  else
+    echo "WARNING: {{ feed.name }} returned empty output, keeping existing file" >&2
+    rm -f "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp"
+    exit_code=1
+  fi
+else
+  echo "ERROR: Failed to fetch {{ feed.name }}" >&2
+  rm -f "{{ blocklist_updater_dir }}/{{ feed.name }}.txt.tmp"
+  exit_code=1
+fi
 {% endfor %}
 {% if blocklist_updater_signal_process %}
 
 pkill -HUP {{ blocklist_updater_signal_process }} || true
 {% endif %}
+
+exit $exit_code

@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+{{ squid_access_log_path }} {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    postrotate
+        squid -k rotate 2>/dev/null || true
+    endscript
+}

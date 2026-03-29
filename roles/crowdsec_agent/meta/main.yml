@@ -13,6 +13,6 @@ galaxy_info:
         - jammy
         - noble
   license: Apache-2.0
-allow_duplicates: false
+  allow_duplicates: false
 
 dependencies: []

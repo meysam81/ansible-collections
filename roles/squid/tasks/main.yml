@@ -1,4 +1,37 @@
 ---
+- name: Assert squid_listen_port is valid
+  ansible.builtin.assert:
+    that:
+      - squid_listen_port | int > 0
+      - squid_listen_port | int < 65536
+    fail_msg: "squid_listen_port must be between 1 and 65535 (got: {{ squid_listen_port }})"
+
+- name: Assert squid_workers is positive
+  ansible.builtin.assert:
+    that:
+      - squid_workers | int > 0
+    fail_msg: "squid_workers must be a positive integer (got: {{ squid_workers }})"
+
+- name: Assert squid_allowed_sources is non-empty
+  ansible.builtin.assert:
+    that:
+      - squid_allowed_sources | length > 0
+    fail_msg: "squid_allowed_sources must contain at least one CIDR"
+
+- name: Assert CrowdSec LAPI URL when enabled
+  ansible.builtin.assert:
+    that:
+      - squid_crowdsec_lapi_url | length > 0
+    fail_msg: "squid_crowdsec_lapi_url is required when squid_crowdsec_enabled is true"
+  when: squid_crowdsec_enabled
+
+- name: Assert CrowdSec fail mode is valid
+  ansible.builtin.assert:
+    that:
+      - squid_crowdsec_fail_mode in ['open', 'closed']
+    fail_msg: "squid_crowdsec_fail_mode must be 'open' or 'closed' (got: {{ squid_crowdsec_fail_mode }})"
+  when: squid_crowdsec_enabled
+
 - name: Setup Squid on Debian/Ubuntu
   ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'

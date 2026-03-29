@@ -1,4 +1,40 @@
 ---
+- name: Assert blocklist feeds have required keys
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.url is defined
+      - item.filter is defined
+    fail_msg: "Each feed must have 'name', 'url', and 'filter' keys"
+  loop: "{{ blocklist_updater_feeds }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"
+
+- name: Assert blocklist feed names are safe
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "Feed name '{{ item.name }}' contains unsafe characters (allowed: alphanumeric, dash, underscore)"
+  loop: "{{ blocklist_updater_feeds }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Assert blocklist feed URLs use HTTP(S)
+  ansible.builtin.assert:
+    that:
+      - item.url is match('^https?://')
+    fail_msg: "Feed URL '{{ item.url }}' must start with http:// or https://"
+  loop: "{{ blocklist_updater_feeds }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Assert signal process name is safe
+  ansible.builtin.assert:
+    that:
+      - blocklist_updater_signal_process is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "blocklist_updater_signal_process must be a simple process name (alphanumeric, dash, underscore)"
+  when: blocklist_updater_signal_process | length > 0
+
 - name: Setup blocklist updater dependencies on Debian/Ubuntu
   ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'
@@ -56,5 +92,7 @@
 - name: Run initial blocklist update
   ansible.builtin.command:
     cmd: /usr/local/bin/update-blocklists
-    creates: "{{ blocklist_updater_dir }}/{{ blocklist_updater_feeds[0].name }}.txt"
+  register: blocklist_initial_update
+  changed_when: false
+  failed_when: false
   when: blocklist_updater_feeds | length > 0

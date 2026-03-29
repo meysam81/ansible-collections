@@ -76,7 +76,10 @@ Install and configure Squid forward proxy with blocklist and CrowdSec support
   - [squid_blocked_domains_file](#squid_blocked_domains_file)
   - [squid_blocked_ips_file](#squid_blocked_ips_file)
   - [squid_cache_enabled](#squid_cache_enabled)
+  - [squid_crowdsec_children_max](#squid_crowdsec_children_max)
+  - [squid_crowdsec_children_startup](#squid_crowdsec_children_startup)
   - [squid_crowdsec_enabled](#squid_crowdsec_enabled)
+  - [squid_crowdsec_fail_mode](#squid_crowdsec_fail_mode)
   - [squid_crowdsec_lapi_url](#squid_crowdsec_lapi_url)
   - [squid_crowdsec_ttl](#squid_crowdsec_ttl)
   - [squid_extra_acls](#squid_extra_acls)
@@ -145,12 +148,36 @@ squid_blocked_ips_file: ''
 squid_cache_enabled: false
 ```
 
+### squid_crowdsec_children_max
+
+#### Default value
+
+```YAML
+squid_crowdsec_children_max: 10
+```
+
+### squid_crowdsec_children_startup
+
+#### Default value
+
+```YAML
+squid_crowdsec_children_startup: 2
+```
+
 ### squid_crowdsec_enabled
 
 #### Default value
 
 ```YAML
 squid_crowdsec_enabled: false
+```
+
+### squid_crowdsec_fail_mode
+
+#### Default value
+
+```YAML
+squid_crowdsec_fail_mode: open
 ```
 
 ### squid_crowdsec_lapi_url

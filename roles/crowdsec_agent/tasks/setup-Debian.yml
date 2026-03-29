@@ -6,15 +6,23 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Download CrowdSec GPG key
   ansible.builtin.get_url:
     url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
-    dest: /tmp/crowdsec-gpgkey.asc
+    dest: /etc/apt/keyrings/crowdsec.asc
     mode: "0644"
 
 - name: Dearmor CrowdSec GPG key
   ansible.builtin.command:
-    cmd: gpg --dearmor -o /usr/share/keyrings/crowdsec-archive-keyring.gpg /tmp/crowdsec-gpgkey.asc
+    cmd: gpg --batch --yes --dearmor -o /usr/share/keyrings/crowdsec-archive-keyring.gpg /etc/apt/keyrings/crowdsec.asc
     creates: /usr/share/keyrings/crowdsec-archive-keyring.gpg
 
 - name: Add CrowdSec apt repository
@@ -36,8 +44,11 @@
   ansible.builtin.command:
     cmd: "cscli collections install {{ item }}"
   loop: "{{ crowdsec_agent_collections }}"
-  register: crowdsec_agent_collections_result
-  changed_when: "'overwrite' not in crowdsec_agent_collections_result.stderr"
+  register: cscli_result
+  changed_when: "'overwrite' not in cscli_result.stderr"
+  failed_when:
+    - cscli_result.rc != 0
+    - "'already' not in (cscli_result.stderr | default(''))"
 
 - name: Enroll in CrowdSec console
   ansible.builtin.command:
@@ -54,7 +65,7 @@
 - name: Deploy extra acquisition config
   ansible.builtin.template:
     src: acquis-extra.yaml.j2
-    dest: /etc/crowdsec/acquis.d/egress.yaml
+    dest: "/etc/crowdsec/acquis.d/{{ crowdsec_agent_acquis_filename }}.yaml"
     owner: root
     group: root
     mode: "0644"
@@ -66,3 +77,4 @@
     name: crowdsec
     state: started
     enabled: true
+    daemon_reload: true

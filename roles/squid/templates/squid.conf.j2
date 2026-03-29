@@ -18,17 +18,17 @@ http_access deny blocked_ips
 
 # CrowdSec external ACL
 {% if squid_crowdsec_enabled %}
-external_acl_type crowdsec_check ttl={{ squid_crowdsec_ttl }} %DST /usr/local/bin/crowdsec-squid-helper
+external_acl_type crowdsec_check ttl={{ squid_crowdsec_ttl }} children-max={{ squid_crowdsec_children_max }} children-startup={{ squid_crowdsec_children_startup }} %DST /usr/local/bin/crowdsec-squid-helper
 acl crowdsec_blocked external crowdsec_check
 http_access deny crowdsec_blocked
 {% endif %}
 
-# Extra ACLs
+# Extra ACLs (injected before extra rules)
 {% for line in squid_extra_acls %}
 {{ line | regex_replace('^\s+', '') }}
 {% endfor %}
 
-# Extra rules
+# Extra rules (between deny blocklists and allow wg_clients — order matters)
 {% for line in squid_extra_rules %}
 {{ line | regex_replace('^\s+', '') }}
 {% endfor %}
