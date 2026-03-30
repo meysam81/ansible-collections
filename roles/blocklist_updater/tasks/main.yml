@@ -36,7 +36,7 @@
   when: blocklist_updater_signal_process | length > 0
 
 - name: Setup blocklist updater dependencies on Debian/Ubuntu
-  ansible.builtin.include_tasks: setup-Debian.yml
+  ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'
 
 - name: Create blocklist directory

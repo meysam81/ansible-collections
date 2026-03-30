@@ -18,5 +18,5 @@
     fail_msg: "crowdsec_agent_collections must contain at least one collection"
 
 - name: Setup CrowdSec agent on Debian/Ubuntu
-  ansible.builtin.include_tasks: setup-Debian.yml
+  ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'

@@ -38,5 +38,5 @@
     - wireguard_nat_enabled
 
 - name: Setup WireGuard on Debian/Ubuntu
-  ansible.builtin.include_tasks: setup-Debian.yml
+  ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'

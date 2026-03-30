@@ -11,5 +11,5 @@
     lego_needs_install: "{{ lego_installed_version.rc != 0 or lego_version not in (lego_installed_version.stdout | default('')) }}"
 
 - name: Install Lego
-  ansible.builtin.include_tasks: install-lego.yml
+  ansible.builtin.import_tasks: install-lego.yml
   when: lego_needs_install or ( lego_force_download | bool )
