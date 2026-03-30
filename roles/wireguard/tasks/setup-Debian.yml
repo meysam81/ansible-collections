@@ -22,10 +22,8 @@
     mode: "0700"
 
 - name: Enable IP forwarding via sysctl
-  ansible.builtin.copy:
-    content: |
-      # {{ ansible_managed }}
-      net.ipv4.ip_forward = 1
+  ansible.builtin.template:
+    src: wg-sysctl.conf
     dest: /etc/sysctl.d/99-wireguard-forward.conf
     owner: root
     group: root

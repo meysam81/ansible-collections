@@ -10,7 +10,8 @@
   ansible.builtin.set_fact:
     dnsproxy_needs_install: >-
       {{ dnsproxy_installed_version.rc != 0 or
-         ('v' + dnsproxy_version) not in (dnsproxy_installed_version.stdout | default('')) }}
+         ('v' + dnsproxy_version) not in (dnsproxy_installed_version.stdout | default('')) or
+         dnsproxy_force_download }}
 
 - name: Create secure temp directory
   ansible.builtin.tempfile:
@@ -33,7 +34,9 @@
     dest: /usr/local/bin
     remote_src: true
     extra_opts:
-      - --strip-components=1
+      - --strip-components=2
+      - --wildcards
+      - "*/dnsproxy"
     mode: "0755"
     owner: root
     group: root

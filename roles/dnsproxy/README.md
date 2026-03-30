@@ -68,6 +68,7 @@ Install and configure AdguardTeam/dnsproxy as a local encrypted DNS forwarder
   - [dnsproxy_download_url](#dnsproxy_download_url)
   - [dnsproxy_extra_args](#dnsproxy_extra_args)
   - [dnsproxy_fallbacks](#dnsproxy_fallbacks)
+  - [dnsproxy_force_download](#dnsproxy_force_download)
   - [dnsproxy_http3](#dnsproxy_http3)
   - [dnsproxy_listen](#dnsproxy_listen)
   - [dnsproxy_manage_resolv_conf](#dnsproxy_manage_resolv_conf)
@@ -176,6 +177,14 @@ dnsproxy_fallbacks:
   - tls://1.0.0.1:853
   - tls://8.8.8.8:853
   - tls://8.8.4.4:853
+```
+
+### dnsproxy_force_download
+
+#### Default value
+
+```YAML
+dnsproxy_force_download: false
 ```
 
 ### dnsproxy_http3

@@ -39,4 +39,4 @@
 
 - name: Setup WireGuard on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
-  when: ansible_os_family == 'Debian'
+  when: ansible['os_family'] == 'Debian'

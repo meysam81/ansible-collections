@@ -41,3 +41,5 @@ dnsproxy_disable_resolvers: true
 
 # Write /etc/resolv.conf to point to dnsproxy
 dnsproxy_manage_resolv_conf: true
+
+dnsproxy_force_download: false
