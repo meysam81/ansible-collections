@@ -4,15 +4,26 @@ blocklist_updater_dir: /etc/egress-proxy/blocklists
 # Each feed entry requires: name, url, filter.
 # 'filter' is executed as a shell pipeline — only use trusted values.
 blocklist_updater_feeds:
+  # --- Domain blocklists (for Squid dstdomain ACLs) ---
   - name: urlhaus-domains
     url: "https://urlhaus.abuse.ch/downloads/hostfile/"
-    filter: "grep -v '^#' | awk '{print $2}'"
+    filter: "grep -v '^#' | awk '{print $2}' | sort -u"
   - name: threatfox-domains
     url: "https://threatfox.abuse.ch/downloads/hostfile/"
-    filter: "grep -v '^#' | awk '{print $2}'"
+    filter: "grep -v '^#' | awk '{print $2}' | sort -u"
+  # --- IP/CIDR blocklists (for Squid dst ACLs) ---
   - name: spamhaus-drop-cidrs
     url: "https://www.spamhaus.org/drop/drop.txt"
-    filter: "grep -v '^;' | awk '{print $1}'"
+    filter: "grep -v '^;' | awk '{print $1}' | sort -u"
+  - name: feodo-botnet-ips
+    url: "https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt"
+    filter: "grep -v '^#' | sort -u"
+  - name: emergingthreats-ips
+    url: "https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt"
+    filter: "grep -v '^#' | grep -v '^$' | sort -u"
+  - name: firehol-level1
+    url: "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset"
+    filter: "grep -v '^#' | grep -v '^$' | sort -u"
 
 blocklist_updater_interval: "*:0/15"
 
@@ -20,3 +31,13 @@ blocklist_updater_interval: "*:0/15"
 blocklist_updater_signal_process: ""
 
 blocklist_updater_custom_blocklist: ""
+
+# ── Allowlist ──────────────────────────────────────────────────────────
+# Domains/IPs to exclude from all blocklists (exact whole-line match).
+# Takes precedence over all feeds.
+blocklist_updater_allowlist: []
+
+# ── Validation ─────────────────────────────────────────────────────────
+# Reject RFC 1918 / RFC 6598 / loopback / link-local / multicast from feeds.
+# Transparent for domain feeds (they won't match the IP regex).
+blocklist_updater_reject_bogons: true

@@ -47,6 +47,21 @@
     group: root
     mode: "0755"
 
+- name: Deploy allowlist file
+  ansible.builtin.template:
+    src: allowlist.txt.j2
+    dest: "{{ blocklist_updater_dir }}/.allowlist"
+    owner: root
+    group: root
+    mode: "0644"
+  when: blocklist_updater_allowlist | length > 0
+
+- name: Remove allowlist file when list is empty
+  ansible.builtin.file:
+    path: "{{ blocklist_updater_dir }}/.allowlist"
+    state: absent
+  when: blocklist_updater_allowlist | length == 0
+
 - name: Deploy update-blocklists script
   ansible.builtin.template:
     src: update-blocklists.sh.j2

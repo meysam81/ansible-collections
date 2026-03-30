@@ -38,7 +38,8 @@ repos:
       - id: trailing-whitespace
         exclude: |
           (?x)^(
-            roles/haproxy/README.md
+            roles/haproxy/README.md|
+            roles/blocklist_updater/README.md
           )$
       - id: fix-byte-order-marker
       - id: check-builtin-literals
