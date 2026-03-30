@@ -80,17 +80,17 @@
       tags: golang
     - role: haproxy
       tags: haproxy
-    - role: tls_certificate
-      tags: tls_certificate
+    - role: haproxy_tls_certificate
+      tags: haproxy_tls_certificate
       vars:
-        tls_certificate_email: "{{ lookup('env', 'TLS_CERT_EMAIL') | default('admin@example.com', true) }}"
-        tls_certificate_cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') | default('dummy', true) }}"
+        haproxy_tls_certificate_email: "{{ lookup('env', 'TLS_CERT_EMAIL') | default('admin@example.com', true) }}"
+        haproxy_tls_certificate_cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') | default('dummy', true) }}"
     - role: cloudflare_ips
       tags: cloudflare_ips
     - role: coraza
       tags: coraza
-    - role: crowdsec
-      tags: crowdsec
+    - role: crowdsec_haproxy_bouncer
+      tags: crowdsec_haproxy_bouncer
     - role: node_exporter
       tags: node_exporter
     - role: vmagent

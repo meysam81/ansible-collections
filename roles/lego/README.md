@@ -36,6 +36,7 @@ collections:
   - [lego_bin_dir](#lego_bin_dir)
   - [lego_checksums_url](#lego_checksums_url)
   - [lego_download_url](#lego_download_url)
+  - [lego_force_download](#lego_force_download)
   - [lego_os](#lego_os)
   - [lego_version](#lego_version)
 - [Dependencies](#dependencies)
@@ -55,7 +56,8 @@ None.
 #### Default value
 
 ```YAML
-lego_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+lego_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64'
+  }}"
 ```
 
 ### lego_bin_dir
@@ -82,6 +84,14 @@ lego_checksums_url: https://github.com/go-acme/lego/releases/download/v{{ lego_v
 ```YAML
 lego_download_url: https://github.com/go-acme/lego/releases/download/v{{ lego_version
   }}/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz
+```
+
+### lego_force_download
+
+#### Default value
+
+```YAML
+lego_force_download: false
 ```
 
 ### lego_os

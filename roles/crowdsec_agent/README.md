@@ -4,7 +4,7 @@ Install the [CrowdSec](https://www.crowdsec.net/) Security Engine (agent
 daemon) with configurable acquisition sources and threat detection collections.
 
 This role installs the CrowdSec agent that parses log files and detects
-threats. It is separate from bouncer roles (e.g. `crowdsec` for HAProxy) —
+threats. It is separate from bouncer roles (e.g. `crowdsec_haproxy_bouncer`) —
 the agent feeds the Local API (LAPI) that bouncers query.
 
 ## Install

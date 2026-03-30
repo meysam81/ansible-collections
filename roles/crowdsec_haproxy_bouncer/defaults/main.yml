@@ -3,12 +3,12 @@
 # into haproxy.cfg. The role is a stub for future enablement.
 #
 # To enable CrowdSec:
-# 1. Uncomment the crowdsec role in your playbook
+# 1. Uncomment the crowdsec_haproxy_bouncer role in your playbook
 # 2. Add the following to your haproxy.cfg.j2:
 #    Global section:
-#      lua-load {{ crowdsec_lua_dir }}/crowdsec.lua
+#      lua-load {{ crowdsec_haproxy_bouncer_lua_dir }}/crowdsec.lua
 #    Frontend https section:
-#      filter spoe engine crowdsec config {{ crowdsec_haproxy_config_dir }}/crowdsec.cfg
+#      filter spoe engine crowdsec config {{ crowdsec_haproxy_bouncer_config_dir }}/crowdsec.cfg
 #      http-request set-header X-CrowdSec-Remediation %[var(txn.crowdsec.remediation)]
 #      http-request redirect code 302 location %[var(txn.crowdsec.redirect)]
 #        if { var(txn.crowdsec.remediation) -m str "allow" }
@@ -26,11 +26,11 @@
 #    Backends section:
 #      backend crowdsec-spoa
 #          mode tcp
-#          server s1 {{ crowdsec_spoa_addr }}:{{ crowdsec_spoa_port }}
+#          server s1 {{ crowdsec_haproxy_bouncer_spoa_addr }}:{{ crowdsec_haproxy_bouncer_spoa_port }}
 #
-crowdsec_enabled: true
-crowdsec_spoa_addr: "127.0.0.1"
-crowdsec_spoa_port: 9001
-crowdsec_lua_dir: "/usr/lib/crowdsec-haproxy-spoa-bouncer/lua"
-crowdsec_html_dir: "/var/lib/crowdsec-haproxy-spoa-bouncer/html"
-crowdsec_haproxy_config_dir: "/etc/haproxy"
+crowdsec_haproxy_bouncer_enabled: true
+crowdsec_haproxy_bouncer_spoa_addr: "127.0.0.1"
+crowdsec_haproxy_bouncer_spoa_port: 9001
+crowdsec_haproxy_bouncer_lua_dir: "/usr/lib/crowdsec-haproxy-spoa-bouncer/lua"
+crowdsec_haproxy_bouncer_html_dir: "/var/lib/crowdsec-haproxy-spoa-bouncer/html"
+crowdsec_haproxy_bouncer_config_dir: "/etc/haproxy"

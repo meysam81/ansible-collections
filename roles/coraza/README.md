@@ -142,4 +142,4 @@ coraza_spoa_version: 0.3.0
 ## Dependencies
 
 - golang
-- haproxy
+- haproxy_base

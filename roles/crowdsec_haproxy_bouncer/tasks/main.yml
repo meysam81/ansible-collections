@@ -2,19 +2,18 @@
 # NOTE: This role installs CrowdSec bouncer components but does NOT wire them
 # into haproxy.cfg. See defaults/main.yml for enablement instructions.
 - name: Install and configure CrowdSec HAProxy bouncer
-  when: crowdsec_enabled
+  when: crowdsec_haproxy_bouncer_enabled
   block:
     - name: Install CrowdSec HAProxy bouncer
       ansible.builtin.apt:
         name:
-          - crowdsec
           - crowdsec-haproxy-bouncer
         state: present
         update_cache: true
 
     - name: Create Lua script directory
       ansible.builtin.file:
-        path: "{{ crowdsec_lua_dir }}"
+        path: "{{ crowdsec_haproxy_bouncer_lua_dir }}"
         state: directory
         owner: root
         group: root
@@ -23,7 +22,7 @@
     - name: Deploy CrowdSec Lua scripts
       ansible.builtin.copy:
         src: "lua/"
-        dest: "{{ crowdsec_lua_dir }}/"
+        dest: "{{ crowdsec_haproxy_bouncer_lua_dir }}/"
         owner: root
         group: root
         mode: "0644"
@@ -31,7 +30,7 @@
 
     - name: Create HTML template directory
       ansible.builtin.file:
-        path: "{{ crowdsec_html_dir }}"
+        path: "{{ crowdsec_haproxy_bouncer_html_dir }}"
         state: directory
         owner: root
         group: root
@@ -40,7 +39,7 @@
     - name: Deploy CrowdSec HTML templates
       ansible.builtin.copy:
         src: "html/"
-        dest: "{{ crowdsec_html_dir }}/"
+        dest: "{{ crowdsec_haproxy_bouncer_html_dir }}/"
         owner: root
         group: root
         mode: "0644"
@@ -48,7 +47,7 @@
     - name: Deploy CrowdSec SPOE config
       ansible.builtin.template:
         src: crowdsec.cfg.j2
-        dest: "{{ crowdsec_haproxy_config_dir }}/crowdsec.cfg"
+        dest: "{{ crowdsec_haproxy_bouncer_config_dir }}/crowdsec.cfg"
         owner: haproxy
         group: haproxy
         mode: "0644"

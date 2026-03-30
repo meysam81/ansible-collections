@@ -1,8 +1,8 @@
 ---
 galaxy_info:
   author: Meysam Azad
-  role_name: crowdsec
-  description: CrowdSec bouncer for HAProxy (Lua-based)
+  role_name: crowdsec_haproxy_bouncer
+  description: CrowdSec HAProxy bouncer (Lua-based SPOE)
   min_ansible_version: "2.15"
   platforms:
     - name: Debian
@@ -16,4 +16,4 @@ galaxy_info:
 allow_duplicates: false
 
 dependencies:
-  - role: haproxy
+  - role: haproxy_base
