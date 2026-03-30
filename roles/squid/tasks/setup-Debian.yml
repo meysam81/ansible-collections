@@ -6,6 +6,32 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Check for existing CrowdSec bouncer key
+  ansible.builtin.stat:
+    path: /etc/squid/crowdsec-bouncer.key
+  register: squid_crowdsec_key_stat
+  when: squid_crowdsec_enabled
+
+- name: Register CrowdSec bouncer for Squid
+  ansible.builtin.command:
+    cmd: cscli bouncers add squid-helper -o raw
+  register: squid_crowdsec_bouncer_result
+  changed_when: true
+  when:
+    - squid_crowdsec_enabled
+    - not squid_crowdsec_key_stat.stat.exists
+
+- name: Save CrowdSec bouncer key
+  ansible.builtin.copy:
+    content: "{{ squid_crowdsec_bouncer_result.stdout }}"
+    dest: /etc/squid/crowdsec-bouncer.key
+    owner: root
+    group: proxy
+    mode: "0640"
+  when:
+    - squid_crowdsec_enabled
+    - squid_crowdsec_bouncer_result is changed
+
 - name: Deploy CrowdSec squid helper script
   ansible.builtin.template:
     src: crowdsec-squid-helper.sh.j2

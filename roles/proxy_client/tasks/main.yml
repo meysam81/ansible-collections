@@ -1,0 +1,71 @@
+---
+- name: Assert proxy URL is set
+  ansible.builtin.assert:
+    that:
+      - proxy_client_proxy_url | length > 0
+    fail_msg: "proxy_client_proxy_url is required (e.g. http://10.99.0.1:3128)"
+
+- name: Deploy /etc/profile.d/proxy.sh
+  ansible.builtin.template:
+    src: profile-proxy.sh.j2
+    dest: /etc/profile.d/proxy.sh
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create /etc/environment.d directory
+  ansible.builtin.file:
+    path: /etc/environment.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy /etc/environment.d/99-proxy.conf
+  ansible.builtin.template:
+    src: environment-proxy.conf.j2
+    dest: /etc/environment.d/99-proxy.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy /etc/apt/apt.conf.d/99proxy
+  ansible.builtin.template:
+    src: apt-proxy.conf.j2
+    dest: /etc/apt/apt.conf.d/99proxy
+    owner: root
+    group: root
+    mode: "0644"
+  when: proxy_client_configure_apt
+
+- name: Remove apt proxy config when disabled
+  ansible.builtin.file:
+    path: /etc/apt/apt.conf.d/99proxy
+    state: absent
+  when: not proxy_client_configure_apt
+
+- name: Create /etc/systemd/system.conf.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/system.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: proxy_client_configure_systemd
+
+- name: Deploy /etc/systemd/system.conf.d/99-proxy.conf
+  ansible.builtin.template:
+    src: systemd-proxy.conf.j2
+    dest: /etc/systemd/system.conf.d/99-proxy.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Re-exec systemd manager
+  when: proxy_client_configure_systemd
+
+- name: Remove systemd proxy config when disabled
+  ansible.builtin.file:
+    path: /etc/systemd/system.conf.d/99-proxy.conf
+    state: absent
+  notify: Re-exec systemd manager
+  when: not proxy_client_configure_systemd

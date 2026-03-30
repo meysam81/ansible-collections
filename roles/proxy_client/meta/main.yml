@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: proxy_client
+  description: >-
+    System-wide HTTP/HTTPS proxy configuration for shells,
+    systemd services, and apt
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+
+allow_duplicates: false
+dependencies: []

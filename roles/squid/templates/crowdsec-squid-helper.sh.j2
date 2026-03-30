@@ -1,35 +1,60 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
 # CrowdSec external ACL helper for Squid.
-# Reads destination domain/IP from stdin, queries CrowdSec LAPI,
-# returns OK (allow) or ERR (block).
 #
-# Squid sends one line per request: "domain\n"
-# Helper must reply with "OK\n" or "ERR\n"
+# Squid external_acl_type protocol:
+#   OK  = ACL matches   → "deny crowdsec_blocked" fires → REQUEST BLOCKED
+#   ERR = ACL no match  → deny skipped → REQUEST ALLOWED
+#
+# So: blocked traffic → OK, clean traffic → ERR.
+
+set -u
 
 LAPI_URL="{{ squid_crowdsec_lapi_url }}"
 FAIL_MODE="{{ squid_crowdsec_fail_mode }}"
+KEY_FILE="/etc/squid/crowdsec-bouncer.key"
+
+API_KEY=""
+if [ -r "$KEY_FILE" ]; then
+  API_KEY=$(cat "$KEY_FILE")
+fi
 
 while read -r dst; do
   dst="${dst%% *}"
-  [ -z "$dst" ] && { echo "OK"; continue; }
 
-  status=$(curl -sf --max-time 2 \
-    "${LAPI_URL}/v1/decisions?ip=${dst}" \
-    -H "Accept: application/json" 2>/dev/null)
-  curl_rc=$?
+  if [ -z "$dst" ]; then
+    echo "ERR"
+    continue
+  fi
 
-  if [ $curl_rc -ne 0 ]; then
-    # LAPI unreachable
+  if [ -z "$API_KEY" ]; then
+    # No bouncer key — cannot query LAPI
     if [ "$FAIL_MODE" = "closed" ]; then
-      echo "ERR"
-    else
       echo "OK"
+    else
+      echo "ERR"
     fi
     continue
   fi
 
-  if [ -n "$status" ] && [ "$status" != "null" ]; then
+  status=$(curl -sf --max-time 2 \
+    "${LAPI_URL}/v1/decisions?ip=${dst}" \
+    -H "X-Api-Key: ${API_KEY}" \
+    -H "Accept: application/json" 2>/dev/null)
+  curl_rc=$?
+
+  if [ $curl_rc -ne 0 ]; then
+    # LAPI unreachable or returned HTTP error
+    if [ "$FAIL_MODE" = "closed" ]; then
+      echo "OK"
+    else
+      echo "ERR"
+    fi
+    continue
+  fi
+
+  # LAPI returns: null (no decisions), [] (no decisions), or [{...}] (has decisions)
+  if [ -z "$status" ] || [ "$status" = "null" ] || [ "$status" = "[]" ]; then
     echo "ERR"
   else
     echo "OK"
