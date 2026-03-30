@@ -11,3 +11,7 @@ crowdsec_agent_acquis_extra: []
 crowdsec_agent_acquis_filename: egress
 
 crowdsec_agent_lapi_listen: "127.0.0.1:8080"
+
+# Override apt codename when the detected release isn't available upstream.
+# e.g. set to "bookworm" on Debian Trixie where CrowdSec lacks a repo.
+crowdsec_agent_apt_codename: "{{ ansible_facts['distribution_release'] }}"

@@ -1,4 +1,4 @@
 ---
 - name: Setup UFW on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
-  when: ansible_os_family == 'Debian'
+  when: ansible_facts['os_family'] == 'Debian'

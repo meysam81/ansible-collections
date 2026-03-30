@@ -70,8 +70,6 @@ Install and configure Squid forward proxy with blocklist and CrowdSec support
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
-  - [squid_access_log_format](#squid_access_log_format)
-  - [squid_access_log_path](#squid_access_log_path)
   - [squid_allowed_sources](#squid_allowed_sources)
   - [squid_blocked_domains_file](#squid_blocked_domains_file)
   - [squid_blocked_ips_file](#squid_blocked_ips_file)
@@ -98,22 +96,6 @@ Install and configure Squid forward proxy with blocklist and CrowdSec support
 - Minimum Ansible version: `2.15`
 
 ## Default Variables
-
-### squid_access_log_format
-
-#### Default value
-
-```YAML
-squid_access_log_format: json
-```
-
-### squid_access_log_path
-
-#### Default value
-
-```YAML
-squid_access_log_path: /var/log/squid/access-json.log
-```
 
 ### squid_allowed_sources
 

@@ -56,7 +56,6 @@ collections:
     - name: meysam81.general.crowdsec_agent
       vars:
         crowdsec_agent_collections:
-          - crowdsecurity/http-probing
           - crowdsecurity/iptables
           - crowdsecurity/linux
 ```

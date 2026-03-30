@@ -38,12 +38,7 @@ http_access allow wg_clients
 http_access deny all
 
 # Logging
-{% if squid_access_log_format == 'json' %}
-logformat json_egress {"timestamp":"%{%Y-%m-%dT%H:%M:%S}tl","source":"%>a","method":"%rm","url":"%ru","host":"%{Host}>h","status":%>Hs,"bytes":%<st,"duration_ms":%tr,"peer":"%<a"}
-access_log stdio:{{ squid_access_log_path }} json_egress
-{% else %}
-access_log stdio:{{ squid_access_log_path }}
-{% endif %}
+access_log syslog:daemon
 
 # Cache
 {% if not squid_cache_enabled %}

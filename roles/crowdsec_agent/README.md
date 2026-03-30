@@ -56,7 +56,6 @@ collections:
     - name: meysam81.general.crowdsec_agent
       vars:
         crowdsec_agent_collections:
-          - crowdsecurity/http-probing
           - crowdsecurity/iptables
           - crowdsecurity/linux
 ```
@@ -69,6 +68,7 @@ Install CrowdSec Security Engine agent with acquisition sources and collections
 - [Default Variables](#default-variables)
   - [crowdsec_agent_acquis_extra](#crowdsec_agent_acquis_extra)
   - [crowdsec_agent_acquis_filename](#crowdsec_agent_acquis_filename)
+  - [crowdsec_agent_apt_codename](#crowdsec_agent_apt_codename)
   - [crowdsec_agent_collections](#crowdsec_agent_collections)
   - [crowdsec_agent_enrollment_key](#crowdsec_agent_enrollment_key)
   - [crowdsec_agent_lapi_listen](#crowdsec_agent_lapi_listen)
@@ -98,6 +98,14 @@ crowdsec_agent_acquis_extra: []
 
 ```YAML
 crowdsec_agent_acquis_filename: egress
+```
+
+### crowdsec_agent_apt_codename
+
+#### Default value
+
+```YAML
+crowdsec_agent_apt_codename: "{{ ansible_facts['distribution_release'] }}"
 ```
 
 ### crowdsec_agent_collections

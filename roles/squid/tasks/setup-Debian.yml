@@ -6,14 +6,6 @@
     update_cache: true
     cache_valid_time: 3600
 
-- name: Create squid log directory
-  ansible.builtin.file:
-    path: "{{ squid_access_log_path | dirname }}"
-    state: directory
-    owner: proxy
-    group: proxy
-    mode: "0750"
-
 - name: Deploy CrowdSec squid helper script
   ansible.builtin.template:
     src: crowdsec-squid-helper.sh.j2
@@ -33,15 +25,6 @@
     mode: "0644"
     validate: squid -k parse -f %s
   notify: Restart squid
-
-- name: Deploy log rotation for squid JSON log
-  ansible.builtin.template:
-    src: squid-json-log.logrotate.j2
-    dest: /etc/logrotate.d/squid-json
-    owner: root
-    group: root
-    mode: "0644"
-  when: squid_access_log_format == 'json'
 
 - name: Enable and start squid
   ansible.builtin.systemd:

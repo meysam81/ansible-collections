@@ -29,8 +29,8 @@
   ansible.builtin.apt_repository:
     repo: >-
       deb [signed-by=/usr/share/keyrings/crowdsec-archive-keyring.gpg]
-      https://packagecloud.io/crowdsec/crowdsec/{{ ansible_distribution | lower }}
-      {{ ansible_distribution_release }} main
+      https://packagecloud.io/crowdsec/crowdsec/{{ ansible_facts['distribution'] | lower }}
+      {{ crowdsec_agent_apt_codename }} main
     filename: crowdsec
     state: present
 

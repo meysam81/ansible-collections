@@ -13,8 +13,6 @@ squid_blocked_ips_file: ""
 squid_workers: 2
 squid_cache_enabled: false
 
-squid_access_log_format: json
-squid_access_log_path: /var/log/squid/access-json.log
 
 squid_crowdsec_enabled: false
 squid_crowdsec_lapi_url: "http://127.0.0.1:8080"
