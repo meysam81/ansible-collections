@@ -113,20 +113,29 @@ wireguard_private_key: "{{ lookup('file', '/path/to/wg-private.key') }}"
         wireguard_health_check_interval: 300
 ```
 
-### IPv6
-
-This role enables only IPv4 forwarding (`net.ipv4.ip_forward`). For IPv6
-tunnel traffic, add the IPv6 forwarding parameter via the `sysctl` role or
-the escape hatches:
+### Server (dual-stack exit node)
 
 ```yaml
-wireguard_post_up_extra:
-  - "sysctl -w net.ipv6.conf.all.forwarding=1"
+        wireguard_role: server
+        wireguard_address: "10.99.0.1/24, fd00:99::1/64"
+        wireguard_private_key: "{{ vault_wg_server_private_key }}"
+        wireguard_nat_interface: eth0
+        wireguard_nat_source: "10.99.0.0/24"
+        wireguard_nat_source_ipv6: "fd00:99::/64"
+        wireguard_peers:
+          - public_key: "CLIENT_PUBLIC_KEY_HERE"
+            allowed_ips: "10.99.0.2/32, fd00:99::2/128"
 ```
 
-Or use the `meysam81.general.sysctl` role alongside:
+### Client (dual-stack full tunnel)
 
 ```yaml
-sysctl_params:
-  net.ipv6.conf.all.forwarding: 1
+        wireguard_role: client
+        wireguard_address: "10.99.0.2/24, fd00:99::2/64"
+        wireguard_private_key: "{{ vault_wg_client_private_key }}"
+        wireguard_peers:
+          - public_key: "SERVER_PUBLIC_KEY_HERE"
+            endpoint: "203.0.113.50:51820"
+            allowed_ips: "0.0.0.0/0, ::/0"
+            persistent_keepalive: 25
 ```

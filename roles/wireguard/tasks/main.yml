@@ -37,6 +37,16 @@
     - wireguard_role == 'server'
     - wireguard_nat_enabled
 
+- name: Assert wireguard_nat_source_ipv6 is valid when set
+  ansible.builtin.assert:
+    that:
+      - wireguard_nat_source_ipv6 is regex('^[0-9a-fA-F:]+/[0-9]+$')
+    fail_msg: "wireguard_nat_source_ipv6 must be a valid IPv6 CIDR"
+  when:
+    - wireguard_role == 'server'
+    - wireguard_nat_enabled
+    - wireguard_nat_source_ipv6 | length > 0
+
 - name: Setup WireGuard on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_facts['os_family'] == 'Debian'

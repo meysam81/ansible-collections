@@ -36,6 +36,13 @@ wireguard_post_down_extra: []
 # ── Kernel parameters ────────────────────────────────────────────────
 wireguard_ip_forward: true
 
+# ── IPv6 ─────────────────────────────────────────────────────────────
+wireguard_ipv6_forward: true
+# IPv6 CIDR for NAT masquerade (server mode). Leave empty to skip v6 NAT.
+wireguard_nat_source_ipv6: ""
+# Optional IPv6 egress IP to verify in health check
+wireguard_health_check_expected_ipv6: ""
+
 # ── Health check (verifies egress IP through tunnel) ─────────────────
 wireguard_health_check_enabled: false
 wireguard_health_check_expected_ip: ""

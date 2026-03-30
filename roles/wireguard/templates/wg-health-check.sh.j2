@@ -42,6 +42,28 @@ if [ "$CURRENT_IP" != "$EXPECTED_IP" ]; then
   exit 1
 fi
 
+{% if wireguard_health_check_expected_ipv6 %}
+# IPv6 egress check
+EXPECTED_IPV6="{{ wireguard_health_check_expected_ipv6 }}"
+CURRENT_IPV6=$(curl -6 -s --max-time 10 https://ifconfig.me || true)
+
+if [ -z "$CURRENT_IPV6" ]; then
+  FAILURES=$((FAILURES + 1))
+  echo "$FAILURES" > "$STATE_FILE"
+  echo "ERROR: Could not determine current IPv6 egress IP (failure $FAILURES/$MAX_FAILURES)" >&2
+  systemctl restart "wg-quick@${INTERFACE}"
+  exit 1
+fi
+
+if [ "$CURRENT_IPV6" != "$EXPECTED_IPV6" ]; then
+  FAILURES=$((FAILURES + 1))
+  echo "$FAILURES" > "$STATE_FILE"
+  echo "MISMATCH: IPv6 egress IP is ${CURRENT_IPV6}, expected ${EXPECTED_IPV6} (failure $FAILURES/$MAX_FAILURES)" >&2
+  systemctl restart "wg-quick@${INTERFACE}"
+  exit 1
+fi
+{% endif %}
+
 # Success — reset failure counter
 if [ "$FAILURES" -gt 0 ]; then
   rm -f "$STATE_FILE"
