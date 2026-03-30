@@ -13,11 +13,9 @@ HAProxy shared infrastructure (user, dirs, error pages, systemd service)
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [haproxy_bin_path](#haproxy_bin_path)
-  - [haproxy_cert_dir](#haproxy_cert_dir)
+  - [haproxy_certs_dir](#haproxy_certs_dir)
   - [haproxy_config_dir](#haproxy_config_dir)
   - [haproxy_errors_dir](#haproxy_errors_dir)
-  - [haproxy_start_systemd_service](#haproxy_start_systemd_service)
-  - [haproxy_version](#haproxy_version)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -38,12 +36,12 @@ HAProxy shared infrastructure (user, dirs, error pages, systemd service)
 haproxy_bin_path: /usr/local/sbin/haproxy
 ```
 
-### haproxy_cert_dir
+### haproxy_certs_dir
 
 #### Default value
 
 ```YAML
-haproxy_cert_dir: /etc/haproxy/certs
+haproxy_certs_dir: /etc/haproxy/certs
 ```
 
 ### haproxy_config_dir
@@ -60,22 +58,6 @@ haproxy_config_dir: /etc/haproxy
 
 ```YAML
 haproxy_errors_dir: /etc/haproxy/errors
-```
-
-### haproxy_start_systemd_service
-
-#### Default value
-
-```YAML
-haproxy_start_systemd_service: false
-```
-
-### haproxy_version
-
-#### Default value
-
-```YAML
-haproxy_version: 3.3.6
 ```
 
 

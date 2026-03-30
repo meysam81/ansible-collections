@@ -28,7 +28,7 @@
 - name: Create HAProxy compatible TLS cert
   ansible.builtin.copy:
     content: "{{ _tls_cert.content | b64decode }}{{ _tls_key.content | b64decode }}"
-    dest: "{{ haproxy_tls_certificate_haproxy_cert_dir }}/{{ domain }}"
+    dest: "{{ haproxy_tls_certificate_haproxy_certs_dir }}/{{ domain }}"
     owner: haproxy
     group: haproxy
     mode: "0600"

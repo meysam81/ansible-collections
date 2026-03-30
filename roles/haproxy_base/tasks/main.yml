@@ -20,7 +20,7 @@
 
 - name: Create HAProxy certificate directory
   ansible.builtin.file:
-    path: "{{ haproxy_cert_dir }}"
+    path: "{{ haproxy_certs_dir }}"
     state: directory
     owner: haproxy
     group: haproxy

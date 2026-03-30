@@ -103,9 +103,9 @@ HAProxy with full config management, TLS, and security headers
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
+  - [haproxy_allow_options_all_origins](#haproxy_allow_options_all_origins)
   - [haproxy_alt_svc_enabled](#haproxy_alt_svc_enabled)
   - [haproxy_backends](#haproxy_backends)
-  - [haproxy_bin_path](#haproxy_bin_path)
   - [haproxy_blocked_extensions](#haproxy_blocked_extensions)
   - [haproxy_blocked_user_agents](#haproxy_blocked_user_agents)
   - [haproxy_bufsize](#haproxy_bufsize)
@@ -114,13 +114,11 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cache_control_hashed](#haproxy_cache_control_hashed)
   - [haproxy_cache_control_static](#haproxy_cache_control_static)
   - [haproxy_cdn_domains](#haproxy_cdn_domains)
-  - [haproxy_cert_dir](#haproxy_cert_dir)
   - [haproxy_cloudflare_bypass_hosts](#haproxy_cloudflare_bypass_hosts)
   - [haproxy_cloudflare_enabled](#haproxy_cloudflare_enabled)
   - [haproxy_cloudflare_ips_file](#haproxy_cloudflare_ips_file)
   - [haproxy_coep](#haproxy_coep)
   - [haproxy_compression_types](#haproxy_compression_types)
-  - [haproxy_config_dir](#haproxy_config_dir)
   - [haproxy_coop](#haproxy_coop)
   - [haproxy_coraza_enabled](#haproxy_coraza_enabled)
   - [haproxy_coraza_spoa_addr](#haproxy_coraza_spoa_addr)
@@ -136,7 +134,6 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_csp](#haproxy_csp)
   - [haproxy_defaults_extra](#haproxy_defaults_extra)
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
-  - [haproxy_errors_dir](#haproxy_errors_dir)
   - [haproxy_frontend_extra_acls](#haproxy_frontend_extra_acls)
   - [haproxy_frontend_extra_rules](#haproxy_frontend_extra_rules)
   - [haproxy_global_extra](#haproxy_global_extra)
@@ -182,7 +179,6 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_tls_ciphersuites](#haproxy_tls_ciphersuites)
   - [haproxy_tls_min_version](#haproxy_tls_min_version)
   - [haproxy_tls_options](#haproxy_tls_options)
-  - [haproxy_version](#haproxy_version)
   - [haproxy_x_frame_options](#haproxy_x_frame_options)
   - [haproxy_x_xss_protection](#haproxy_x_xss_protection)
 - [Dependencies](#dependencies)
@@ -196,6 +192,14 @@ HAProxy with full config management, TLS, and security headers
 - Minimum Ansible version: `2.17`
 
 ## Default Variables
+
+### haproxy_allow_options_all_origins
+
+#### Default value
+
+```YAML
+haproxy_allow_options_all_origins: false
+```
 
 ### haproxy_alt_svc_enabled
 
@@ -211,14 +215,6 @@ haproxy_alt_svc_enabled: true
 
 ```YAML
 haproxy_backends: []
-```
-
-### haproxy_bin_path
-
-#### Default value
-
-```YAML
-haproxy_bin_path: /usr/local/sbin/haproxy
 ```
 
 ### haproxy_blocked_extensions
@@ -294,14 +290,6 @@ haproxy_cache_control_static: public, max-age=86400, must-revalidate
 haproxy_cdn_domains: []
 ```
 
-### haproxy_cert_dir
-
-#### Default value
-
-```YAML
-haproxy_cert_dir: /etc/haproxy/certs
-```
-
 ### haproxy_cloudflare_bypass_hosts
 
 #### Default value
@@ -350,14 +338,6 @@ haproxy_compression_types:
   - image/svg+xml
   - application/wasm
   - application/manifest+json
-```
-
-### haproxy_config_dir
-
-#### Default value
-
-```YAML
-haproxy_config_dir: /etc/haproxy
 ```
 
 ### haproxy_coop
@@ -486,14 +466,6 @@ haproxy_defaults_extra: []
 
 ```YAML
 haproxy_dh_param_bits: 4096
-```
-
-### haproxy_errors_dir
-
-#### Default value
-
-```YAML
-haproxy_errors_dir: /etc/haproxy/errors
 ```
 
 ### haproxy_frontend_extra_acls
@@ -873,14 +845,6 @@ haproxy_tls_min_version: TLSv1.2
 
 ```YAML
 haproxy_tls_options: no-tls-tickets
-```
-
-### haproxy_version
-
-#### Default value
-
-```YAML
-haproxy_version: 3.3.6
 ```
 
 ### haproxy_x_frame_options

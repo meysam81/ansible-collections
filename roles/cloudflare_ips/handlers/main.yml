@@ -2,3 +2,8 @@
 - name: Reload systemd daemon
   ansible.builtin.systemd:
     daemon_reload: true
+
+- name: Run initial Cloudflare IP update
+  ansible.builtin.command:
+    cmd: /usr/local/bin/update-cloudflare-ips.sh
+    creates: "{{ cloudflare_ips_file }}"

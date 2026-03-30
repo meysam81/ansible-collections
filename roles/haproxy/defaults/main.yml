@@ -79,6 +79,7 @@ haproxy_cors_allowed_headers: "Content-Type, Authorization, X-Requested-With, Ac
 haproxy_cors_expose_headers: "X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date"
 haproxy_cors_max_age: "3600"
 haproxy_cors_allow_credentials: true
+haproxy_allow_options_all_origins: false
 
 # ── Rate limiting (only when haproxy_rate_limiting_enabled) ─────────
 haproxy_rate_limit_http_req_period: 10

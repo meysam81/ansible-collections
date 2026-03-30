@@ -33,7 +33,7 @@
 - name: Deploy Cloudflare API token environment file
   ansible.builtin.copy:
     content: "CLOUDFLARE_DNS_API_TOKEN={{ haproxy_tls_certificate_cloudflare_dns_api_token }}\n"
-    dest: "{{ haproxy_tls_certificate_haproxy_cert_dir }}/.env"
+    dest: "{{ haproxy_tls_certificate_haproxy_certs_dir }}/.env"
     owner: root
     group: root
     mode: "0600"

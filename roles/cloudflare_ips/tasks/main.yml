@@ -6,6 +6,7 @@
     mode: "0755"
     owner: root
     group: root
+  notify: Run initial Cloudflare IP update
 
 - name: Deploy Cloudflare IP update systemd service
   ansible.builtin.copy:
@@ -31,8 +32,3 @@
     state: started
     enabled: true
     daemon_reload: true
-
-- name: Run initial Cloudflare IP update
-  ansible.builtin.command:
-    cmd: /usr/local/bin/update-cloudflare-ips.sh
-    creates: "{{ cloudflare_ips_file }}"

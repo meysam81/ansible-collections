@@ -28,6 +28,8 @@ collections:
         cloudflare_ips_file: /etc/haproxy/cloudflare-ips.txt
 ```
 
+Fetch Cloudflare IP ranges for HAProxy src ACLs
+
 ## Table of content
 
 - [Requirements](#requirements)
@@ -42,7 +44,7 @@ collections:
 
 ## Requirements
 
-None.
+- Minimum Ansible version: `2.15`
 
 ## Default Variables
 
@@ -66,4 +68,12 @@ cloudflare_ips_haproxy_config_dir: /etc/haproxy
 
 ## Dependencies
 
-None.
+- haproxy_base
+
+## License
+
+Apache-2.0
+
+## Author
+
+Meysam Azad

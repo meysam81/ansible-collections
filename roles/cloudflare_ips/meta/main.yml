@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: cloudflare_ips
+  description: Fetch Cloudflare IP ranges for HAProxy src ACLs
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
+
+dependencies:
+  - role: haproxy_base

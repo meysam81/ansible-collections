@@ -94,7 +94,7 @@ frontend stats
 # ── Main web frontend ──────────────────────────────────────────────
 frontend web
     bind *:80
-    bind *:443 ssl crt {{ haproxy_cert_dir }}/ alpn h2,http/1.1
+    bind *:443 ssl crt {{ haproxy_certs_dir }}/ alpn h2,http/1.1
 
     http-request set-var(txn.req_hdrs) req.hdrs
 {% if haproxy_coraza_enabled %}
@@ -170,7 +170,6 @@ frontend web
 {% if haproxy_coraza_enabled %}
     filter spoe engine coraza config {{ haproxy_config_dir }}/coraza.cfg
 {% endif %}
-
 {% if haproxy_coraza_enabled %}
     http-request set-var(txn.coraza.app) str(app)
     http-request return status 403 if { var(txn.coraza.fail) -m int eq 1 }
@@ -187,7 +186,7 @@ frontend web
     acl is_options method OPTIONS
 {% if haproxy_cdn_domains %}
     http-request return status 204 if is_options { var(txn.origin) -m found } or is_options cdn
-{% else %}
+{% elif haproxy_allow_options_all_origins %}
     http-request return status 204 if is_options { var(txn.origin) -m found }
 {% endif %}
 

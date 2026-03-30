@@ -41,7 +41,7 @@ TLS certificates for HAProxy via lego with Cloudflare DNS-01
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [haproxy_tls_certificate_email](#haproxy_tls_certificate_email)
-  - [haproxy_tls_certificate_haproxy_cert_dir](#haproxy_tls_certificate_haproxy_cert_dir)
+  - [haproxy_tls_certificate_haproxy_certs_dir](#haproxy_tls_certificate_haproxy_certs_dir)
   - [haproxy_tls_certificate_lego_cert_dir](#haproxy_tls_certificate_lego_cert_dir)
   - [haproxy_tls_certificate_served_domains](#haproxy_tls_certificate_served_domains)
 - [Dependencies](#dependencies)
@@ -64,12 +64,12 @@ TLS certificates for HAProxy via lego with Cloudflare DNS-01
 haproxy_tls_certificate_email: ''
 ```
 
-### haproxy_tls_certificate_haproxy_cert_dir
+### haproxy_tls_certificate_haproxy_certs_dir
 
 #### Default value
 
 ```YAML
-haproxy_tls_certificate_haproxy_cert_dir: /etc/haproxy/certs
+haproxy_tls_certificate_haproxy_certs_dir: /etc/haproxy/certs
 ```
 
 ### haproxy_tls_certificate_lego_cert_dir
