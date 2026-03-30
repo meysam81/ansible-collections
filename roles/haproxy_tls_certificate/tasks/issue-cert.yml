@@ -1,0 +1,34 @@
+---
+- name: Issue wildcard TLS certificates via lego
+  ansible.builtin.shell:
+    cmd: >
+      lego
+      --accept-tos
+      --email "{{ haproxy_tls_certificate_email }}"
+      --dns cloudflare
+      --path /etc/lego
+      -d '{{ domain }}'
+      run
+    creates: "{{ haproxy_tls_certificate_lego_cert_dir }}/_.{{ domain }}.crt"
+  environment:
+    CLOUDFLARE_DNS_API_TOKEN: "{{ haproxy_tls_certificate_cloudflare_dns_api_token }}"
+  no_log: true
+
+- name: Read TLS certificate
+  ansible.builtin.slurp:
+    src: "{{ haproxy_tls_certificate_lego_cert_dir }}/_.{{ domain }}.crt"
+  register: _tls_cert
+
+- name: Read TLS key
+  ansible.builtin.slurp:
+    src: "{{ haproxy_tls_certificate_lego_cert_dir }}/_.{{ domain }}.key"
+  register: _tls_key
+  no_log: true
+
+- name: Create HAProxy compatible TLS cert
+  ansible.builtin.copy:
+    content: "{{ _tls_cert.content | b64decode }}{{ _tls_key.content | b64decode }}"
+    dest: "{{ haproxy_tls_certificate_haproxy_cert_dir }}/{{ domain }}"
+    owner: haproxy
+    group: haproxy
+    mode: "0600"

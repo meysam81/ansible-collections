@@ -4,8 +4,8 @@
 set -euo pipefail
 umask 0077
 
-CERT_DIR="{{ tls_certificate_haproxy_cert_dir }}"
-LEGO_DIR="{{ tls_certificate_lego_cert_dir }}"
+CERT_DIR="{{ haproxy_tls_certificate_haproxy_cert_dir }}"
+LEGO_DIR="{{ haproxy_tls_certificate_lego_cert_dir }}"
 RELOAD_NEEDED=false
 TEMP_FILES=()
 
@@ -16,10 +16,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-{% for domain in tls_certificate_served_domains %}
+{% for domain in haproxy_tls_certificate_served_domains %}
 # Renew *.{{ domain }}
-lego --accept-tos --email "{{ tls_certificate_email }}" --dns cloudflare \
-  --path /etc/lego -d '*.{{ domain }}' renew --days 30 \
+lego --accept-tos --email "{{ haproxy_tls_certificate_email }}" --dns cloudflare \
+  --path /etc/lego -d '{{ domain }}' renew \
   || logger -t haproxy-certs "lego renewal returned non-zero for {{ domain }}"
 {% endfor %}
 
@@ -36,6 +36,7 @@ for crt_file in "$LEGO_DIR"/_.*\.crt; do
   TEMP_FILES+=("$temp_cert")
 
   cat "$crt_file" "$key_file" > "$temp_cert"
+  chown haproxy:haproxy "$temp_cert"
 
   if ! openssl x509 -in "$temp_cert" -noout 2>/dev/null; then
     logger -t haproxy-certs "Invalid certificate for $domain, skipping"

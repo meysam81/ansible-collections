@@ -1,0 +1,43 @@
+---
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: lego_
+  register: lego_tmp_dir
+
+- name: Download lego checksums
+  ansible.builtin.get_url:
+    url: "{{ lego_checksums_url }}"
+    dest: "{{ lego_tmp_dir.path }}/lego_{{ lego_version }}_checksums.txt"
+    mode: "0644"
+
+- name: Extract lego SHA256 checksum
+  ansible.builtin.shell:
+    cmd: >
+      set -o pipefail &&
+      grep -F "lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+      {{ lego_tmp_dir.path }}/lego_{{ lego_version }}_checksums.txt | awk '{print $1}'
+    executable: /bin/bash
+  register: lego_sha256
+  changed_when: false
+
+- name: Download lego binary
+  ansible.builtin.get_url:
+    url: "{{ lego_download_url }}"
+    dest: "{{ lego_tmp_dir.path }}/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+    checksum: "sha256:{{ lego_sha256.stdout }}"
+    mode: "0644"
+
+- name: Extract lego binary
+  ansible.builtin.unarchive:
+    src: "{{ lego_tmp_dir.path }}/lego_v{{ lego_version }}_{{ lego_os }}_{{ lego_arch }}.tar.gz"
+    dest: "{{ lego_bin_dir }}"
+    remote_src: true
+    extra_opts:
+      - lego
+    mode: "0755"
+
+- name: Clean up lego temp files
+  ansible.builtin.file:
+    path: "{{ lego_tmp_dir.path }}"
+    state: absent

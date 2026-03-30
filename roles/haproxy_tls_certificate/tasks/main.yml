@@ -1,0 +1,73 @@
+---
+- name: Assert required TLS certificate variables
+  ansible.builtin.assert:
+    that:
+      - haproxy_tls_certificate_email | length > 0
+      - haproxy_tls_certificate_email is regex('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+      - haproxy_tls_certificate_cloudflare_dns_api_token is defined
+      - haproxy_tls_certificate_cloudflare_dns_api_token | length > 0
+      - haproxy_tls_certificate_served_domains | length > 0
+    fail_msg: "haproxy_tls_certificate_email must be a valid email, haproxy_tls_certificate_cloudflare_dns_api_token and haproxy_tls_certificate_served_domains are required"
+
+- name: Assert haproxy_tls_certificate_served_domains contain valid domain names
+  ansible.builtin.assert:
+    that:
+      - (item | regex_replace('^\\*\\.', '') ) is regex('^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
+    fail_msg: "Invalid domain name: {{ item }}"
+  loop: "{{ haproxy_tls_certificate_served_domains }}"
+
+- name: Create lego certificate directory
+  ansible.builtin.file:
+    path: "{{ haproxy_tls_certificate_lego_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Issue cert for domain
+  ansible.builtin.include_tasks: issue-cert.yml
+  loop: "{{ haproxy_tls_certificate_served_domains }}"
+  vars:
+    domain: "{{ item | regex_replace('^\\*\\.', '') }}"
+
+- name: Deploy Cloudflare API token environment file
+  ansible.builtin.copy:
+    content: "CLOUDFLARE_DNS_API_TOKEN={{ haproxy_tls_certificate_cloudflare_dns_api_token }}\n"
+    dest: "{{ haproxy_tls_certificate_haproxy_cert_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Deploy cert renewal script
+  ansible.builtin.template:
+    src: prepare-haproxy-certs.sh.j2
+    dest: /usr/local/bin/prepare-haproxy-certs.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy cert renewal systemd service
+  ansible.builtin.template:
+    src: haproxy-certs-renew.service.j2
+    dest: /etc/systemd/system/haproxy-certs-renew.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Deploy cert renewal systemd timer
+  ansible.builtin.copy:
+    src: haproxy-certs-renew.timer
+    dest: /etc/systemd/system/haproxy-certs-renew.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Enable and start cert renewal timer
+  ansible.builtin.systemd:
+    name: haproxy-certs-renew.timer
+    state: started
+    enabled: true
+    daemon_reload: true
