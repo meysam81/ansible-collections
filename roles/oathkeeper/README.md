@@ -48,7 +48,7 @@ SERVE_API_PORT: 4456
 
 Ansible role for deploying Ory Oathkeeper Access Proxy
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -84,8 +84,7 @@ Ansible role for deploying Ory Oathkeeper Access Proxy
 #### Default value
 
 ```YAML
-oathkeeper_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64',
-  '64bit') | replace('aarch64', 'arm64') }}"
+oathkeeper_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '64bit') | replace('aarch64', 'arm64') }}"
 ```
 
 ### oathkeeper_checksum_sig_url
@@ -93,8 +92,7 @@ oathkeeper_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64
 #### Default value
 
 ```YAML
-oathkeeper_checksum_sig_url: https://github.com/ory/oathkeeper/releases/download/v{{
-  oathkeeper_version | regex_replace('^v', '') }}/checksums.txt.sig
+oathkeeper_checksum_sig_url: https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v', '') }}/checksums.txt.sig
 ```
 
 ### oathkeeper_checksum_url
@@ -102,8 +100,7 @@ oathkeeper_checksum_sig_url: https://github.com/ory/oathkeeper/releases/download
 #### Default value
 
 ```YAML
-oathkeeper_checksum_url: https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version
-  | regex_replace('^v', '') }}/checksums.txt
+oathkeeper_checksum_url: https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v', '') }}/checksums.txt
 ```
 
 ### oathkeeper_configuration
@@ -127,10 +124,7 @@ oathkeeper_configuration: |
 
 ```YAML
 oathkeeper_download_url: >-
-  https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v',
-  '') }}/oathkeeper_{{ oathkeeper_version | regex_replace('^v', '') }}-{{ oathkeeper_os
-  }}{{ oathkeeper_sqlite | ternary('_sqlite', '') }}{{ oathkeeper_libmusl | ternary('_libmusl',
-  '') }}_{{ oathkeeper_arch }}.tar.gz
+  https://github.com/ory/oathkeeper/releases/download/v{{ oathkeeper_version | regex_replace('^v', '') }}/oathkeeper_{{ oathkeeper_version | regex_replace('^v', '') }}-{{ oathkeeper_os }}{{ oathkeeper_sqlite | ternary('_sqlite', '') }}{{ oathkeeper_libmusl | ternary('_libmusl', '') }}_{{ oathkeeper_arch }}.tar.gz
 ```
 
 ### oathkeeper_envs
@@ -212,8 +206,6 @@ oathkeeper_user: oathkeeper
 ```YAML
 oathkeeper_version: 0.40.7
 ```
-
-
 
 ## Dependencies
 

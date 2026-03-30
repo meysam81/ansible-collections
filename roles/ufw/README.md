@@ -71,7 +71,7 @@ on hosts where you can recover access through an out-of-band console.
 
 Declarative UFW firewall management with default policies and rule sets
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -140,8 +140,6 @@ ufw_reset_before_apply: false
 ```YAML
 ufw_rules: []
 ```
-
-
 
 ## Dependencies
 

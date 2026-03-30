@@ -30,7 +30,7 @@ collections:
 
 Install Go from go.dev/dl
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -73,8 +73,7 @@ golang_checksum_url: '{{ golang_download_url }}.sha256'
 #### Default value
 
 ```YAML
-golang_download_url: https://go.dev/dl/go{{ golang_version }}.{{ golang_os }}-{{ golang_arch
-  }}.tar.gz
+golang_download_url: https://go.dev/dl/go{{ golang_version }}.{{ golang_os }}-{{ golang_arch }}.tar.gz
 ```
 
 ### golang_install_dir
@@ -100,8 +99,6 @@ golang_os: linux
 ```YAML
 golang_version: 1.26.0
 ```
-
-
 
 ## Dependencies
 

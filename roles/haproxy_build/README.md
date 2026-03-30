@@ -30,7 +30,7 @@ collections:
 
 Build HAProxy from source
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -72,8 +72,6 @@ haproxy_build_source_checksum: ''
 ```YAML
 haproxy_build_version: 3.3.6
 ```
-
-
 
 ## Dependencies
 

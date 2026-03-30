@@ -32,7 +32,7 @@ collections:
 
 CrowdSec HAProxy bouncer (Lua-based SPOE)
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -101,8 +101,6 @@ crowdsec_haproxy_bouncer_spoa_addr: 127.0.0.1
 ```YAML
 crowdsec_haproxy_bouncer_spoa_port: 9001
 ```
-
-
 
 ## Dependencies
 

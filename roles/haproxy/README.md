@@ -99,7 +99,7 @@ Inject raw HAProxy config lines into specific sections:
 
 HAProxy with full config management, TLS, and security headers
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -401,8 +401,7 @@ haproxy_cors_allowed_domains: []
 #### Default value
 
 ```YAML
-haproxy_cors_allowed_headers: Content-Type, Authorization, X-Requested-With, Accept,
-  Origin, X-CSRF-Token, X-Unique-ID
+haproxy_cors_allowed_headers: Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, X-Unique-ID
 ```
 
 ### haproxy_cors_allowed_methods
@@ -418,8 +417,7 @@ haproxy_cors_allowed_methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
 #### Default value
 
 ```YAML
-haproxy_cors_expose_headers: X-Unique-ID, X-Request-ID, Content-Length, Content-Type,
-  Date
+haproxy_cors_expose_headers: X-Unique-ID, X-Request-ID, Content-Length, Content-Type, Date
 ```
 
 ### haproxy_cors_max_age
@@ -580,8 +578,7 @@ haproxy_option_forwardfor: true
 #### Default value
 
 ```YAML
-haproxy_permissions_policy: geolocation=(), microphone=(), camera=(), payment=(),
-  usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()
+haproxy_permissions_policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()
 ```
 
 ### haproxy_rate_limit_api_count
@@ -819,8 +816,7 @@ haproxy_tls_allow_dhe: true
 #### Default value
 
 ```YAML
-haproxy_tls_ciphers: 
-  ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+haproxy_tls_ciphers: ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
 ```
 
 ### haproxy_tls_ciphersuites
@@ -862,8 +858,6 @@ haproxy_x_frame_options: SAMEORIGIN
 ```YAML
 haproxy_x_xss_protection: '0'
 ```
-
-
 
 ## Dependencies
 

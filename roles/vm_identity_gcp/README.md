@@ -31,7 +31,7 @@ collections:
 
 Retrive GCP VM identity token and store it in a file. Best for using in OpenID Connect authentication.
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -91,8 +91,6 @@ vm_identity_gcp_token_audience: https://accounts.google.com
 ```YAML
 vm_identity_gcp_token_file_path: /var/lib/vm-identity/token
 ```
-
-
 
 ## Dependencies
 

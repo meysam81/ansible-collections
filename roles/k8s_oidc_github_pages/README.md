@@ -31,22 +31,18 @@ collections:
 ```
 
 Fetch Kubernetes OpenID Configuration and JWKs keys and push and deploy them to GitHub Pages as static files.
-
 Grab the OIDC configuration file from K8s API server and push it into a
 GitHub repository with Pages enabled.
-
 This will ultimately result in serving static files from a public URL with TLS
 enabled.
-
 As a result, the administrator can set up trust relationship with other
 service providers, such as AWS, to allow pods inside the Kubernetes cluster
 access to third-party cloud services.
-
 Although this is tailored for K3d Kubernetes cluster, there is nothing stopping
 it from being used on other Kubernetes clusters.
 
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -154,8 +150,7 @@ k8s_oidc_github_pages_repository_owner:
 #### Default value
 
 ```YAML
-k8s_oidc_github_pages_repository_ssh_url: git@github.com:{{ k8s_oidc_github_pages_repository_owner
-  }}/{{ k8s_oidc_github_pages_repository_name }}.git
+k8s_oidc_github_pages_repository_ssh_url: git@github.com:{{ k8s_oidc_github_pages_repository_owner }}/{{ k8s_oidc_github_pages_repository_name }}.git
 ```
 
 ### k8s_oidc_github_pages_ssh_config_host
@@ -189,8 +184,6 @@ k8s_oidc_github_pages_ssh_private_key_path: .ssh/github-deploy-key
 ```YAML
 k8s_oidc_github_pages_timer_calendar: '*:0/5'
 ```
-
-
 
 ## Dependencies
 

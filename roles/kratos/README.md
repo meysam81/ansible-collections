@@ -63,7 +63,7 @@ SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET: "{{ kratos_oidc_micro
 
 Ansible role for deploying Ory Kratos Identity Server
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -99,8 +99,7 @@ Ansible role for deploying Ory Kratos Identity Server
 #### Default value
 
 ```YAML
-kratos_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '64bit')
-  | replace('aarch64', 'arm64') }}"
+kratos_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '64bit') | replace('aarch64', 'arm64') }}"
 ```
 
 ### kratos_checksum_sig_url
@@ -108,8 +107,7 @@ kratos_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', '
 #### Default value
 
 ```YAML
-kratos_checksum_sig_url: https://github.com/ory/kratos/releases/download/v{{ kratos_version
-  | regex_replace('^v', '') }}/checksums.txt.sig
+kratos_checksum_sig_url: https://github.com/ory/kratos/releases/download/v{{ kratos_version | regex_replace('^v', '') }}/checksums.txt.sig
 ```
 
 ### kratos_checksum_url
@@ -117,8 +115,7 @@ kratos_checksum_sig_url: https://github.com/ory/kratos/releases/download/v{{ kra
 #### Default value
 
 ```YAML
-kratos_checksum_url: https://github.com/ory/kratos/releases/download/v{{ kratos_version
-  | regex_replace('^v', '') }}/checksums.txt
+kratos_checksum_url: https://github.com/ory/kratos/releases/download/v{{ kratos_version | regex_replace('^v', '') }}/checksums.txt
 ```
 
 ### kratos_configuration
@@ -149,10 +146,7 @@ kratos_configuration: |
 
 ```YAML
 kratos_download_url: >-
-  https://github.com/ory/kratos/releases/download/v{{ kratos_version | regex_replace('^v',
-  '') }}/kratos_{{ kratos_version | regex_replace('^v', '') }}-{{ kratos_os }}{{ kratos_sqlite
-  | ternary('_sqlite', '') }}{{ kratos_libmusl | ternary('_libmusl', '') }}_{{ kratos_arch
-  }}.tar.gz
+  https://github.com/ory/kratos/releases/download/v{{ kratos_version | regex_replace('^v', '') }}/kratos_{{ kratos_version | regex_replace('^v', '') }}-{{ kratos_os }}{{ kratos_sqlite | ternary('_sqlite', '') }}{{ kratos_libmusl | ternary('_libmusl', '') }}_{{ kratos_arch }}.tar.gz
 ```
 
 ### kratos_envs
@@ -234,8 +228,6 @@ kratos_user: kratos
 ```YAML
 kratos_version: 1.3.1
 ```
-
-
 
 ## Dependencies
 

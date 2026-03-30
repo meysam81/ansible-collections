@@ -62,7 +62,7 @@ collections:
 
 Systemd timer to fetch threat intelligence blocklist feeds
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -131,8 +131,6 @@ blocklist_updater_interval: '*:0/15'
 ```YAML
 blocklist_updater_signal_process: ''
 ```
-
-
 
 ## Dependencies
 

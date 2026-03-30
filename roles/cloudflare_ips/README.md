@@ -30,7 +30,7 @@ collections:
 
 Fetch Cloudflare IP ranges for HAProxy src ACLs
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -63,8 +63,6 @@ cloudflare_ips_file: /etc/haproxy/cloudflare-ips.txt
 ```YAML
 cloudflare_ips_haproxy_config_dir: /etc/haproxy
 ```
-
-
 
 ## Dependencies
 

@@ -49,7 +49,7 @@ collections:
 
 Manage sysctl kernel parameters via drop-in configuration files
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -91,8 +91,6 @@ sysctl_params: {}
 ```YAML
 sysctl_reload: true
 ```
-
-
 
 ## Dependencies
 

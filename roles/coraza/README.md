@@ -31,7 +31,7 @@ collections:
         coraza_coreruleset_version: "4.17.1"
 ```
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -136,8 +136,6 @@ coraza_spoa_port: 9000
 ```YAML
 coraza_spoa_version: 0.3.0
 ```
-
-
 
 ## Dependencies
 
