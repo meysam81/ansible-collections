@@ -4,7 +4,7 @@ Deploy HAProxy with full config management, TLS termination, security headers,
 CORS, rate limiting, and compression. Generic backend/route system — not tied
 to any specific backend technology.
 
-Depends on `haproxy_build` (builds from source automatically).
+Depends on `haproxy_base` (user, dirs, error pages, systemd service).
 
 ## Install
 

@@ -1,10 +1,4 @@
 ---
-haproxy_version: "3.3.6"
-
-haproxy_config_dir: "/etc/haproxy"
-haproxy_errors_dir: "/etc/haproxy/errors"
-haproxy_cert_dir: "/etc/haproxy/certs"
-
 # Performance
 haproxy_maxconn: 4096
 haproxy_threads: "{{ ansible_facts['processor_vcpus'] }}"
@@ -174,7 +168,6 @@ haproxy_compression_types:
 
 # ── Misc ────────────────────────────────────────────────────────────
 haproxy_alt_svc_enabled: true
-haproxy_bin_path: "/usr/local/sbin/haproxy"
 haproxy_option_forwardfor: true
 
 # ── Escape hatches (raw lines injected into sections) ───────────────

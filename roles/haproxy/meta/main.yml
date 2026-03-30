@@ -30,4 +30,4 @@ galaxy_info:
     - web
 
 dependencies:
-  - role: haproxy_build
+  - role: haproxy_base

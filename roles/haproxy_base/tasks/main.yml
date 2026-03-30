@@ -1,0 +1,55 @@
+---
+- name: Create haproxy user
+  ansible.builtin.user:
+    name: haproxy
+    system: true
+    shell: /bin/false
+    home: /var/lib/haproxy
+    create_home: false
+
+- name: Create HAProxy directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: haproxy
+    group: haproxy
+    mode: "0755"
+  loop:
+    - "{{ haproxy_config_dir }}"
+    - "{{ haproxy_errors_dir }}"
+
+- name: Create HAProxy certificate directory
+  ansible.builtin.file:
+    path: "{{ haproxy_cert_dir }}"
+    state: directory
+    owner: haproxy
+    group: haproxy
+    mode: "0750"
+
+- name: Copy HAProxy error files from build
+  ansible.builtin.copy:
+    src: /usr/local/share/haproxy/errors/
+    dest: "{{ haproxy_errors_dir }}/"
+    owner: haproxy
+    group: haproxy
+    mode: "0644"
+    remote_src: true
+  failed_when: false
+
+- name: Copy custom error pages
+  ansible.builtin.copy:
+    src: "errors/"
+    dest: "{{ haproxy_errors_dir }}/"
+    owner: haproxy
+    group: haproxy
+    mode: "0644"
+
+- name: Deploy haproxy systemd service
+  ansible.builtin.template:
+    src: haproxy.service.j2
+    dest: /etc/systemd/system/haproxy.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Start haproxy service
+  when: haproxy_start_systemd_service
