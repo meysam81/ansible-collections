@@ -1,0 +1,7 @@
+---
+- name: Reload egress firewall
+  ansible.builtin.systemd:
+    name: egress-firewall
+    state: restarted
+    daemon_reload: true
+    enabled: true

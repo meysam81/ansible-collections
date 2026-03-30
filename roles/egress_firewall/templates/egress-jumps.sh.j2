@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# Idempotently insert jump rules from built-in chains to custom
+# EGRESS-WG-* chains. Uses iptables -C (check) before -I (insert)
+# to avoid duplicates.
+set -euo pipefail
+
+# IPv4 jumps
+iptables -C INPUT -i {{ egress_firewall_tunnel_interface }} -j EGRESS-WG-INPUT 2>/dev/null || \
+  iptables -I INPUT -i {{ egress_firewall_tunnel_interface }} -j EGRESS-WG-INPUT
+
+iptables -C FORWARD -i {{ egress_firewall_tunnel_interface }} -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-FORWARD 2>/dev/null || \
+  iptables -I FORWARD -i {{ egress_firewall_tunnel_interface }} -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-FORWARD
+
+iptables -t nat -C POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT 2>/dev/null || \
+  iptables -t nat -I POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT
+{% if egress_firewall_ipv6_enabled %}
+
+# IPv6 jumps
+ip6tables -C INPUT -i {{ egress_firewall_tunnel_interface }} -j EGRESS-WG-INPUT 2>/dev/null || \
+  ip6tables -I INPUT -i {{ egress_firewall_tunnel_interface }} -j EGRESS-WG-INPUT
+
+ip6tables -C FORWARD -i {{ egress_firewall_tunnel_interface }} -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-FORWARD 2>/dev/null || \
+  ip6tables -I FORWARD -i {{ egress_firewall_tunnel_interface }} -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-FORWARD
+
+ip6tables -t nat -C POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT 2>/dev/null || \
+  ip6tables -t nat -I POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT
+{% endif %}

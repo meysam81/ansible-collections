@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+*filter
+:EGRESS-WG-INPUT - [0:0]
+:EGRESS-WG-FORWARD - [0:0]
+-F EGRESS-WG-INPUT
+-F EGRESS-WG-FORWARD
+-A EGRESS-WG-INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A EGRESS-WG-INPUT -p tcp --dport {{ egress_firewall_proxy_port }} -j ACCEPT
+-A EGRESS-WG-INPUT -p tcp --dport {{ egress_firewall_dns_port }} -j ACCEPT
+-A EGRESS-WG-INPUT -p udp --dport {{ egress_firewall_dns_port }} -j ACCEPT
+{% for exc in egress_firewall_input_exceptions %}
+# {{ exc.comment | default('input exception') }}
+-A EGRESS-WG-INPUT -p {{ exc.proto }} --dport {{ exc.dport }} -j ACCEPT
+{% endfor %}
+-A EGRESS-WG-INPUT -j DROP
+{% for exc in egress_firewall_forward_exceptions %}
+# {{ exc.comment | default('forward exception') }}
+-A EGRESS-WG-FORWARD -p {{ exc.proto }}{% if exc.dest is defined %} -d {{ exc.dest }}{% endif %} --dport {{ exc.dport }} -j ACCEPT
+{% endfor %}
+-A EGRESS-WG-FORWARD -j DROP
+COMMIT
+
+*nat
+:EGRESS-WG-NAT - [0:0]
+-F EGRESS-WG-NAT
+# Squid's own outbound connections
+-A EGRESS-WG-NAT -m owner --uid-owner {{ egress_firewall_proxy_user }} -j MASQUERADE
+{% for exc in egress_firewall_forward_exceptions %}
+# {{ exc.comment | default('forward exception') }}
+-A EGRESS-WG-NAT -p {{ exc.proto }}{% if exc.dest is defined %} -d {{ exc.dest }}{% endif %} --dport {{ exc.dport }} -j MASQUERADE
+{% endfor %}
+COMMIT

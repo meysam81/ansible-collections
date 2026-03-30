@@ -1,0 +1,25 @@
+---
+# ── Interfaces ─────────────────────────────────────────────────────────
+egress_firewall_tunnel_interface: wg0
+egress_firewall_nat_interface: eth0
+
+# ── Proxy ──────────────────────────────────────────────────────────────
+egress_firewall_proxy_port: 3128
+egress_firewall_proxy_user: proxy
+
+# ── DNS ────────────────────────────────────────────────────────────────
+egress_firewall_dns_port: 53
+
+# ── IPv6 ───────────────────────────────────────────────────────────────
+egress_firewall_ipv6_enabled: false
+
+# ── Exceptions ─────────────────────────────────────────────────────────
+# INPUT exceptions: extra services on the gateway reachable from tunnel.
+# Each entry: { proto: tcp|udp, dport: <int>, comment: "..." }
+egress_firewall_input_exceptions: []
+
+# FORWARD exceptions: traffic that bypasses the proxy entirely.
+# Each entry: { proto: tcp|udp, dport: <int>, comment: "..." }
+# Optional: dest: "<CIDR>" to restrict to specific destination (omit for any).
+# Use sparingly — each entry punches a hole in the enforcement.
+egress_firewall_forward_exceptions: []

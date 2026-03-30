@@ -139,3 +139,30 @@ wireguard_private_key: "{{ lookup('file', '/path/to/wg-private.key') }}"
             allowed_ips: "0.0.0.0/0, ::/0"
             persistent_keepalive: 25
 ```
+
+## Related Roles
+
+These roles compose on a WireGuard exit node — each is independently deployable:
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌───────────┐
+│  wireguard   │────▶│  egress_firewall  │────▶│   squid    │
+│  (tunnel)    │     │  (enforcement)    │     │  (proxy)   │
+└─────────────┘     └──────────────────┘     └───────────┘
+                            │
+                    ┌───────┴────────┐
+                    │blocklist_updater│
+                    │ (threat feeds)  │
+                    └────────────────┘
+```
+
+| Role | Purpose | Standalone? |
+|------|---------|-------------|
+| `wireguard` | VPN tunnel (server or client) | Yes — works as plain VPN with its own NAT |
+| `squid` | Forward proxy with ACL blocklists | Yes — works as localhost proxy |
+| `egress_firewall` | iptables enforcement: tunnel → proxy only | No — requires wireguard + squid |
+| `blocklist_updater` | Fetches threat intelligence feeds to disk | Yes — any consumer can read the files |
+
+When composing all roles, set `wireguard_nat_enabled: false` on the
+wireguard role — the `egress_firewall` role handles NAT (restricted to
+the proxy user only).

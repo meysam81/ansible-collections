@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: egress_firewall
+  description: >-
+    iptables enforcement ensuring WireGuard tunnel traffic
+    passes through Squid proxy — no direct egress possible
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+
+allow_duplicates: false
+dependencies: []

@@ -1,0 +1,7 @@
+---
+- name: Install iptables
+  ansible.builtin.apt:
+    name: iptables
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

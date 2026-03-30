@@ -1,0 +1,92 @@
+---
+- name: Assert egress_firewall_proxy_user is safe
+  ansible.builtin.assert:
+    that:
+      - egress_firewall_proxy_user is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "egress_firewall_proxy_user must be a simple name (alphanumeric, dash, underscore)"
+
+- name: Assert egress_firewall_tunnel_interface is safe
+  ansible.builtin.assert:
+    that:
+      - egress_firewall_tunnel_interface is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "egress_firewall_tunnel_interface must be a simple interface name"
+
+- name: Assert egress_firewall_nat_interface is safe
+  ansible.builtin.assert:
+    that:
+      - egress_firewall_nat_interface is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "egress_firewall_nat_interface must be a simple interface name"
+
+- name: Assert egress_firewall_proxy_port is valid
+  ansible.builtin.assert:
+    that:
+      - egress_firewall_proxy_port | int > 0
+      - egress_firewall_proxy_port | int < 65536
+    fail_msg: "egress_firewall_proxy_port must be between 1 and 65535"
+
+- name: Verify proxy user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ egress_firewall_proxy_user }}"
+
+- name: Setup egress firewall dependencies on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Create iptables rules directory
+  ansible.builtin.file:
+    path: /etc/iptables
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy egress firewall rules (IPv4)
+  ansible.builtin.template:
+    src: egress-rules.v4.j2
+    dest: /etc/iptables/egress-rules.v4
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload egress firewall
+
+- name: Deploy egress firewall rules (IPv6)
+  ansible.builtin.template:
+    src: egress-rules.v6.j2
+    dest: /etc/iptables/egress-rules.v6
+    owner: root
+    group: root
+    mode: "0600"
+  when: egress_firewall_ipv6_enabled
+  notify: Reload egress firewall
+
+- name: Remove IPv6 rules file when disabled
+  ansible.builtin.file:
+    path: /etc/iptables/egress-rules.v6
+    state: absent
+  when: not egress_firewall_ipv6_enabled
+
+- name: Deploy egress jump rules script
+  ansible.builtin.template:
+    src: egress-jumps.sh.j2
+    dest: /usr/local/bin/egress-jumps.sh
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Reload egress firewall
+
+- name: Deploy egress-firewall systemd service
+  ansible.builtin.template:
+    src: egress-firewall.service.j2
+    dest: /etc/systemd/system/egress-firewall.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload egress firewall
+
+- name: Enable and start egress-firewall service
+  ansible.builtin.systemd:
+    name: egress-firewall
+    state: started
+    enabled: true
+    daemon_reload: true
