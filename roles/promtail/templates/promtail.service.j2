@@ -12,6 +12,10 @@ RestartSec=5
 User={{ promtail_user }}
 Group={{ promtail_group }}
 ReadWritePaths=/var/lib/promtail
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=promtail
+
 ProtectSystem=full
 PrivateTmp=true
 NoNewPrivileges=true

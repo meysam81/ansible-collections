@@ -60,7 +60,6 @@
     mode: "0755"
   loop:
     - /var/lib/vmagent
-    - /var/log/vmagent
     - /etc/vmagent
 - name: Place the password file
   ansible.builtin.copy:

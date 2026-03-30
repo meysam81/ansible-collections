@@ -73,9 +73,7 @@ ReadWritePaths=
 # StateDirectory creates /var/lib/private/dnsproxy owned by the
 # dynamic user. Currently unused but ready for --output if needed.
 StateDirectory=dnsproxy
-LogsDirectory=dnsproxy
 StateDirectoryMode=0750
-LogsDirectoryMode=0750
 
 # ── Kernel isolation ─────────────────────────────────────────────────
 ProtectKernelTunables=yes
@@ -97,6 +95,11 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dnsproxy
 
 # ── Misc hardening ──────────────────────────────────────────────────
 RestrictNamespaces=yes

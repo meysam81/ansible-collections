@@ -18,6 +18,10 @@ Restart=always
 RestartSec=5
 SuccessExitStatus=143
 
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=haproxy
+
 ProtectSystem=full
 PrivateTmp=true
 NoNewPrivileges=true

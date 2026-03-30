@@ -21,6 +21,10 @@ RestartSec=5
 User=node-exporter
 Group=node-exporter
 
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=node-exporter
+
 ProtectSystem=full
 PrivateTmp=true
 NoNewPrivileges=true

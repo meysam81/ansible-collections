@@ -26,6 +26,9 @@ ExecStart=/usr/local/bin/pushgateway \
 {% endif %}
   --log.level={{ pushgateway_log_level }} \
   --log.format={{ pushgateway_log_format }}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pushgateway
 Restart=on-failure
 RestartSec=5
 User={{ pushgateway_user }}
