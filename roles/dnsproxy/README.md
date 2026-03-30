@@ -96,7 +96,8 @@ Install and configure AdguardTeam/dnsproxy as a local encrypted DNS forwarder
 #### Default value
 
 ```YAML
-dnsproxy_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+dnsproxy_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64'
+  }}"
 ```
 
 ### dnsproxy_cache

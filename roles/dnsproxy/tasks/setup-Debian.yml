@@ -53,11 +53,17 @@
     mode: "0644"
     owner: root
     group: root
-  notify: Restart dnsproxy
+  notify:
+    - Enable and start dnsproxy
+    - Restart dnsproxy
 
-- name: Enable and start dnsproxy
-  ansible.builtin.systemd:
-    name: dnsproxy
-    state: started
-    enabled: true
-    daemon_reload: true
+- name: Configure sysctl RW memory
+  ansible.builtin.template:
+    backup: true
+    src: dnsproxy-sysctl.conf
+    dest: /etc/sysctl.d/50-dnsproxy.conf
+    owner: root
+    group: root
+    mode: "0755"
+  notify:
+    - Enable and start dnsproxy

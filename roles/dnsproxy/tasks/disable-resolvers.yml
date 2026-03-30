@@ -11,13 +11,13 @@
     enabled: false
     masked: true
   loop:
-    - systemd-resolved
-    - dnsmasq
     - bind9
-    - named
-    - unbound
     - dnscrypt-proxy
+    - dnsmasq
+    - named
     - stubby
+    - systemd-resolved
+    - unbound
   failed_when: false
 
 - name: Stop and mask dnscrypt-proxy socket

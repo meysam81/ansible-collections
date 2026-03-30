@@ -1,8 +1,8 @@
 ---
-- name: Disable conflicting DNS resolvers
-  ansible.builtin.include_tasks: disable-resolvers.yml
-  when: dnsproxy_disable_resolvers
-
 - name: Setup dnsproxy on Debian/Ubuntu
-  ansible.builtin.include_tasks: setup-Debian.yml
-  when: ansible_os_family == 'Debian'
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Disable conflicting DNS resolvers
+  ansible.builtin.import_tasks: disable-resolvers.yml
+  when: dnsproxy_disable_resolvers

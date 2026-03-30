@@ -1,4 +1,11 @@
 ---
+- name: Enable and start dnsproxy
+  ansible.builtin.systemd:
+    name: dnsproxy
+    state: started
+    enabled: true
+    daemon_reload: true
+
 - name: Restart dnsproxy
   ansible.builtin.systemd:
     name: dnsproxy

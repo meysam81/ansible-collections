@@ -1,6 +1,6 @@
 ---
 dnsproxy_version: "0.81.0"
-dnsproxy_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+dnsproxy_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
 dnsproxy_download_url: >-
   https://github.com/AdguardTeam/dnsproxy/releases/download/v{{ dnsproxy_version
   }}/dnsproxy-linux-{{ dnsproxy_arch }}-v{{ dnsproxy_version }}.tar.gz
