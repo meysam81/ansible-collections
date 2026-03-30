@@ -94,3 +94,4 @@
         path: "{{ haproxy_build_tmpdir.path }}"
         state: absent
       when: haproxy_build_tmpdir.path is defined
+      failed_when: false

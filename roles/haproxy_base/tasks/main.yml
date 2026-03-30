@@ -43,13 +43,3 @@
     owner: haproxy
     group: haproxy
     mode: "0644"
-
-- name: Deploy haproxy systemd service
-  ansible.builtin.template:
-    src: haproxy.service.j2
-    dest: /etc/systemd/system/haproxy.service
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Start haproxy service
-  when: haproxy_start_systemd_service

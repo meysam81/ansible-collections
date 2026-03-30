@@ -47,3 +47,12 @@
     mode: "0640"
     validate: "haproxy -f %s -c -q"
   notify: Reload haproxy service
+
+- name: Deploy haproxy systemd service
+  ansible.builtin.template:
+    src: haproxy.service.j2
+    dest: /etc/systemd/system/haproxy.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Start haproxy service
