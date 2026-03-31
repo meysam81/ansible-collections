@@ -7,13 +7,46 @@ squid_listen_port: 3128
 squid_allowed_sources:
   - "10.99.0.0/24"
 
-squid_blocked_domains_file: ""
-squid_blocked_ips_file: ""
+squid_blocked_domains_files: []
+squid_blocked_ips_files: []
 
 squid_workers: 2
 squid_cache_enabled: false
 
+# Security
+squid_visible_hostname: "proxy"
+squid_request_body_max_size: "64 MB"
 
+# Timeouts
+squid_connect_timeout: "30 seconds"
+squid_forward_timeout: "2 minutes"
+squid_request_timeout: "2 minutes"
+squid_request_start_timeout: "30 seconds"
+squid_read_timeout: "5 minutes"
+squid_client_lifetime: "8 hours"
+squid_client_idle_pconn_timeout: "1 minute"
+squid_server_idle_pconn_timeout: "30 seconds"
+squid_pconn_lifetime: "1 hour"
+squid_shutdown_lifetime: "10 seconds"
+squid_connect_retries: 2
+
+# Cache (only effective when squid_cache_enabled: true)
+squid_cache_mem: "256 MB"
+squid_max_object_size_in_memory: "1 MB"
+
+# Performance
+squid_max_filedescriptors: 65535
+squid_client_ip_max_connections: 200
+
+# DNS
+squid_dns_nameservers: "127.0.0.1"
+squid_dns_timeout: "10 seconds"
+squid_positive_dns_ttl: "6 hours"
+squid_negative_dns_ttl: "30 seconds"
+squid_ipcache_size: 4096
+squid_fqdncache_size: 4096
+
+# CrowdSec integration
 squid_crowdsec_enabled: false
 squid_crowdsec_lapi_url: "http://127.0.0.1:8080"
 squid_crowdsec_ttl: 60
@@ -22,6 +55,7 @@ squid_crowdsec_fail_mode: "open"
 squid_crowdsec_children_max: 10
 squid_crowdsec_children_startup: 2
 
+# Escape hatches
 squid_extra_acls: []
 # NOTE: extra_rules are injected AFTER blocklist/CrowdSec denies but BEFORE
 # the final "allow wg_clients / deny all". Order matters for http_access.

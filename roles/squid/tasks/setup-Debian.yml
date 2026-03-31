@@ -6,6 +6,14 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Ensure squid log directory exists
+  ansible.builtin.file:
+    path: /var/log/squid
+    state: directory
+    owner: proxy
+    group: proxy
+    mode: "0750"
+
 - name: Check for existing CrowdSec bouncer key
   ansible.builtin.stat:
     path: /etc/squid/crowdsec-bouncer.key

@@ -1,49 +1,126 @@
 # {{ ansible_managed }}
+
+# --- 1. Network ---
 http_port {{ squid_listen_address }}:{{ squid_listen_port }}
 
-# Source ACLs
-{% for src in squid_allowed_sources %}
-acl wg_clients src {{ src }}
-{% endfor %}
+# --- 2. Identity / Stealth ---
+visible_hostname {{ squid_visible_hostname }}
+via off
+forwarded_for delete
+httpd_suppress_version_string on
 
-# Blocklist ACLs
-{% if squid_blocked_domains_file %}
-acl blocked_domains dstdomain "{{ squid_blocked_domains_file }}"
-http_access deny blocked_domains
-{% endif %}
-{% if squid_blocked_ips_file %}
-acl blocked_ips dst "{{ squid_blocked_ips_file }}"
-http_access deny blocked_ips
-{% endif %}
+# --- 3. Header Access Controls ---
+request_header_access From deny all
+request_header_access Referer deny all
+request_header_access X-Forwarded-For deny all
+request_header_access Via deny all
 
-# CrowdSec external ACL
-{% if squid_crowdsec_enabled %}
-external_acl_type crowdsec_check ttl={{ squid_crowdsec_ttl }} children-max={{ squid_crowdsec_children_max }} children-startup={{ squid_crowdsec_children_startup }} %DST /usr/local/bin/crowdsec-squid-helper
-acl crowdsec_blocked external crowdsec_check
-http_access deny crowdsec_blocked
-{% endif %}
+reply_header_access X-Squid-Error deny all
+reply_header_access X-Cache deny all
+reply_header_access X-Cache-Lookup deny all
 
-# Extra ACLs (injected before extra rules)
-{% for line in squid_extra_acls %}
-{{ line | regex_replace('^\s+', '') }}
-{% endfor %}
+# --- 4. TLS Outbound ---
+tls_outgoing_options min-version=1.2
 
-# Extra rules (between deny blocklists and allow wg_clients — order matters)
-{% for line in squid_extra_rules %}
-{{ line | regex_replace('^\s+', '') }}
-{% endfor %}
+# --- 5. DNS ---
+dns_nameservers {{ squid_dns_nameservers }}
+dns_timeout {{ squid_dns_timeout }}
+positive_dns_ttl {{ squid_positive_dns_ttl }}
+negative_dns_ttl {{ squid_negative_dns_ttl }}
+ipcache_size {{ squid_ipcache_size }}
+fqdncache_size {{ squid_fqdncache_size }}
 
-# Allow tunnel clients, deny all else
-http_access allow wg_clients
-http_access deny all
+# --- 6. Timeouts ---
+connect_timeout {{ squid_connect_timeout }}
+forward_timeout {{ squid_forward_timeout }}
+request_timeout {{ squid_request_timeout }}
+request_start_timeout {{ squid_request_start_timeout }}
+read_timeout {{ squid_read_timeout }}
+client_lifetime {{ squid_client_lifetime }}
+client_idle_pconn_timeout {{ squid_client_idle_pconn_timeout }}
+server_idle_pconn_timeout {{ squid_server_idle_pconn_timeout }}
+pconn_lifetime {{ squid_pconn_lifetime }}
+shutdown_lifetime {{ squid_shutdown_lifetime }}
+connect_retries {{ squid_connect_retries }}
+retry_on_error on
 
-# Logging
-access_log syslog:daemon
-
-# Cache
-{% if not squid_cache_enabled %}
+# --- 7. Cache ---
+{% if squid_cache_enabled %}
+cache_mem {{ squid_cache_mem }}
+maximum_object_size_in_memory {{ squid_max_object_size_in_memory }}
+memory_replacement_policy heap GDSF
+maximum_object_size 0 KB
+{% else %}
 maximum_object_size 0 KB
 cache deny all
 {% endif %}
 
+# --- 8. Performance ---
 workers {{ squid_workers }}
+max_filedescriptors {{ squid_max_filedescriptors }}
+client_ip_max_connections {{ squid_client_ip_max_connections }}
+half_closed_clients off
+detect_broken_pconn on
+buffered_logs on
+
+# --- 9. Logging ---
+{% raw %}
+logformat json_access {"time":"%ts.%03tu","client":"%>a","method":"%rm","url":"%ru","status":%>Hs,"size":%<st,"response_time":%tr,"result":"%Ss","hierarchy":"%Sh","peer":"%<a","mime":"%mt"}
+{% endraw %}
+access_log daemon:/var/log/squid/access-json.log logformat=json_access buffer-size=64KB rotate=10
+access_log syslog:daemon
+strip_query_terms on
+
+# --- 10. ACL Definitions ---
+acl SSL_ports port 443
+acl Safe_ports port 80 21 443 70 210 1025-65535 280 488 591 777
+acl CONNECT method CONNECT
+
+{% for src in squid_allowed_sources %}
+acl wg_clients src {{ src }}
+{% endfor %}
+
+{% for f in squid_blocked_domains_files %}
+acl blocked_domains dstdomain "{{ f }}"
+{% endfor %}
+{% for f in squid_blocked_ips_files %}
+acl blocked_ips dst "{{ f }}"
+{% endfor %}
+
+{% if squid_crowdsec_enabled %}
+external_acl_type crowdsec_check ttl={{ squid_crowdsec_ttl }} children-max={{ squid_crowdsec_children_max }} children-startup={{ squid_crowdsec_children_startup }} %DST /usr/local/bin/crowdsec-squid-helper
+acl crowdsec_blocked external crowdsec_check
+{% endif %}
+
+{% for line in squid_extra_acls %}
+{{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+
+# --- 11. Access Rules (order matters: first match wins) ---
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+{% if squid_blocked_domains_files %}
+http_access deny blocked_domains
+{% endif %}
+{% if squid_blocked_ips_files %}
+http_access deny blocked_ips
+{% endif %}
+{% if squid_crowdsec_enabled %}
+http_access deny crowdsec_blocked
+{% endif %}
+
+{% for line in squid_extra_rules %}
+{{ line | regex_replace('^\s+', '') }}
+{% endfor %}
+
+http_access allow wg_clients
+http_access deny all
+
+# --- 12. Admin ---
+cachemgr_passwd disable all
+
+# --- 13. Body Limits ---
+request_body_max_size {{ squid_request_body_max_size }}
+
+# --- 14. URI Handling ---
+uri_whitespace encode

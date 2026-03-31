@@ -18,6 +18,31 @@
       - squid_allowed_sources | length > 0
     fail_msg: "squid_allowed_sources must contain at least one CIDR"
 
+- name: Assert squid_visible_hostname is non-empty
+  ansible.builtin.assert:
+    that:
+      - squid_visible_hostname | length > 0
+    fail_msg: "squid_visible_hostname must not be empty"
+
+- name: Assert squid_connect_retries is valid
+  ansible.builtin.assert:
+    that:
+      - squid_connect_retries | int >= 0
+      - squid_connect_retries | int <= 10
+    fail_msg: "squid_connect_retries must be 0-10 (got: {{ squid_connect_retries }})"
+
+- name: Assert squid_max_filedescriptors is positive
+  ansible.builtin.assert:
+    that:
+      - squid_max_filedescriptors | int > 0
+    fail_msg: "squid_max_filedescriptors must be positive (got: {{ squid_max_filedescriptors }})"
+
+- name: Assert squid_client_ip_max_connections is positive
+  ansible.builtin.assert:
+    that:
+      - squid_client_ip_max_connections | int > 0
+    fail_msg: "squid_client_ip_max_connections must be positive (got: {{ squid_client_ip_max_connections }})"
+
 - name: Assert CrowdSec LAPI URL when enabled
   ansible.builtin.assert:
     that:
