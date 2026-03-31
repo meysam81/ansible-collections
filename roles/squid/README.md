@@ -114,8 +114,9 @@ collections:
 | `squid_blocked_domains_files` | `[]` | List of domain blocklist file paths |
 | `squid_blocked_ips_files` | `[]` | List of IP/CIDR blocklist file paths |
 
-Multiple files are merged into a single ACL — Squid evaluates all files under
-the same `blocked_domains` or `blocked_ips` ACL name.
+Domain files are merged into a single `blocked_domains` ACL. IP/CIDR files get
+per-file ACLs (`blocked_ips_1`, `blocked_ips_2`, ...) to avoid Squid's splay
+tree CIDR overlap warnings when multiple feeds contain overlapping networks.
 
 ### Security
 
@@ -206,9 +207,9 @@ Query strings are stripped from logged URLs (`strip_query_terms on`).
 ```
 1. deny !Safe_ports
 2. deny CONNECT !SSL_ports
-3. deny blocked_domains      (if squid_blocked_domains_files is non-empty)
-4. deny blocked_ips           (if squid_blocked_ips_files is non-empty)
-5. deny crowdsec_blocked      (if squid_crowdsec_enabled)
+3. deny blocked_domains          (if squid_blocked_domains_files is non-empty)
+4. deny blocked_ips_1..N         (one per IP/CIDR blocklist file)
+5. deny crowdsec_blocked         (if squid_crowdsec_enabled)
 6. <squid_extra_rules>
 7. allow wg_clients
 8. deny all
@@ -270,7 +271,7 @@ Install and configure Squid forward proxy with blocklist and CrowdSec support
   - [squid_forward_timeout](#squid_forward_timeout)
   - [squid_fqdncache_size](#squid_fqdncache_size)
   - [squid_ipcache_size](#squid_ipcache_size)
-  - [squid_listen_address](#squid_listen_address)
+  - [squid_listen_addresses](#squid_listen_addresses)
   - [squid_listen_port](#squid_listen_port)
   - [squid_max_filedescriptors](#squid_max_filedescriptors)
   - [squid_max_object_size_in_memory](#squid_max_object_size_in_memory)
@@ -482,12 +483,13 @@ squid_fqdncache_size: 4096
 squid_ipcache_size: 4096
 ```
 
-### squid_listen_address
+### squid_listen_addresses
 
 #### Default value
 
 ```YAML
-squid_listen_address: 127.0.0.1
+squid_listen_addresses:
+  - 127.0.0.1
 ```
 
 ### squid_listen_port

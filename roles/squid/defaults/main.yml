@@ -1,5 +1,6 @@
 ---
-squid_listen_address: "127.0.0.1"
+squid_listen_addresses:
+  - "127.0.0.1"
 squid_listen_port: 3128
 
 # CIDR list of allowed source networks. Change this for your environment.

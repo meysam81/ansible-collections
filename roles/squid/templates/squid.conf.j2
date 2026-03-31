@@ -1,7 +1,9 @@
 # {{ ansible_managed }}
 
 # --- 1. Network ---
-http_port {{ squid_listen_address }}:{{ squid_listen_port }}
+{% for addr in squid_listen_addresses %}
+http_port {{ addr }}:{{ squid_listen_port }}
+{% endfor %}
 
 # --- 2. Identity / Stealth ---
 visible_hostname {{ squid_visible_hostname }}
@@ -84,7 +86,7 @@ acl wg_clients src {{ src }}
 acl blocked_domains dstdomain "{{ f }}"
 {% endfor %}
 {% for f in squid_blocked_ips_files %}
-acl blocked_ips dst "{{ f }}"
+acl blocked_ips_{{ loop.index }} dst "{{ f }}"
 {% endfor %}
 
 {% if squid_crowdsec_enabled %}
@@ -102,9 +104,9 @@ http_access deny CONNECT !SSL_ports
 {% if squid_blocked_domains_files %}
 http_access deny blocked_domains
 {% endif %}
-{% if squid_blocked_ips_files %}
-http_access deny blocked_ips
-{% endif %}
+{% for f in squid_blocked_ips_files %}
+http_access deny blocked_ips_{{ loop.index }}
+{% endfor %}
 {% if squid_crowdsec_enabled %}
 http_access deny crowdsec_blocked
 {% endif %}

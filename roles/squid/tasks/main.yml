@@ -1,4 +1,10 @@
 ---
+- name: Assert squid_listen_addresses is non-empty
+  ansible.builtin.assert:
+    that:
+      - squid_listen_addresses | length > 0
+    fail_msg: "squid_listen_addresses must contain at least one address"
+
 - name: Assert squid_listen_port is valid
   ansible.builtin.assert:
     that:
