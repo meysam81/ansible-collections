@@ -25,7 +25,9 @@ reply_header_access X-Cache-Lookup deny all
 tls_outgoing_options min-version=1.2
 
 # --- 5. DNS ---
+{% if squid_dns_nameservers %}
 dns_nameservers {{ squid_dns_nameservers }}
+{% endif %}
 dns_timeout {{ squid_dns_timeout }}
 positive_dns_ttl {{ squid_positive_dns_ttl }}
 negative_dns_ttl {{ squid_negative_dns_ttl }}

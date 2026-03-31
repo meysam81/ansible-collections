@@ -432,7 +432,7 @@ squid_crowdsec_ttl: 60
 #### Default value
 
 ```YAML
-squid_dns_nameservers: 127.0.0.1
+squid_dns_nameservers: ''
 ```
 
 ### squid_dns_timeout

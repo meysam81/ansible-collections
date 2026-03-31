@@ -40,7 +40,7 @@ squid_max_filedescriptors: 65535
 squid_client_ip_max_connections: 200
 
 # DNS
-squid_dns_nameservers: "127.0.0.1"
+squid_dns_nameservers: ""
 squid_dns_timeout: "10 seconds"
 squid_positive_dns_ttl: "6 hours"
 squid_negative_dns_ttl: "30 seconds"
