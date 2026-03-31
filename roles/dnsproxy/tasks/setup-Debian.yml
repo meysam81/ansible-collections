@@ -67,6 +67,6 @@
     dest: /etc/sysctl.d/50-dnsproxy.conf
     owner: root
     group: root
-    mode: "0755"
+    mode: "0644"
   notify:
     - Enable and start dnsproxy
