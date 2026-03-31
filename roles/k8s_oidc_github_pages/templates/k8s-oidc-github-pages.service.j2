@@ -1,15 +1,56 @@
+# {{ ansible_managed }}
 [Unit]
-Description=https://github.com/meysam81/ansible-collections
+Description=Kubernetes OIDC metadata publisher to GitHub Pages
 
 [Service]
+Type=oneshot
+
 EnvironmentFile=/etc/default/k8s-oidc-github-pages
 ExecStart=/usr/local/bin/k8s-oidc-github-pages
-ReadOnlyPaths=/
-ReadWritePaths=/run/k8s-oidc-github-pages
-Restart=on-failure
+
+# ── Capabilities ──────────────────────────────────────────────────────
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+# NOTE: ProtectHome intentionally omitted — SSH key lives at /root/.ssh.
+# Follow-up: move SSH key to /etc/k8s-oidc/ssh/, then add ProtectHome=yes.
+PrivateTmp=yes
+PrivateDevices=yes
 RuntimeDirectory=k8s-oidc-github-pages
-Type=oneshot
-WorkingDirectory=/run/k8s-oidc-github-pages
+ReadWritePaths=/run/k8s-oidc-github-pages
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+
+# ── Network isolation ────────────────────────────────────────────────
+# AF_UNIX: SSH agent, kubectl
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=k8s-oidc-github-pages
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

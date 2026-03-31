@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 [Unit]
 Description=Victoria Metrics - VMAgent
 Documentation=https://docs.victoriametrics.com/vmagent/
@@ -5,6 +6,8 @@ StartLimitIntervalSec=500
 StartLimitBurst=5
 
 [Service]
+Type=simple
+
 ExecStartPre={{ vmagent_bin }} \
   -promscrape.config=/etc/vmagent/vmagent.yml \
   -promscrape.config.dryRun
@@ -34,20 +37,61 @@ ExecStart={{ vmagent_bin }} \
   -httpListenAddr={{ vmagent_http_listen_addr }} \
   -influxListenAddr=""
 ExecReload=/bin/kill -SIGHUP $MAINPID
-Restart=always
-RestartSec=5
+
+# ── Identity ──────────────────────────────────────────────────────────
 User=vmagent
 Group=vmagent
-ReadOnlyPaths=/
+
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=/var/lib/vmagent
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=vmagent
-ReadWritePaths=/var/lib/vmagent
-ProtectSystem=full
-PrivateTmp=true
-NoNewPrivileges=true
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
 LimitNOFILE=65535
 LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

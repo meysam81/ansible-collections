@@ -7,3 +7,46 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/update-blocklists
+
+# ── Capabilities ──────────────────────────────────────────────────────
+# Running as root for killall -HUP squid. CapabilityBoundingSet limits
+# even root to only what's needed.
+CapabilityBoundingSet=CAP_KILL CAP_DAC_OVERRIDE
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=/etc/egress-proxy/blocklists
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+# NOTE: ProtectProc and ProcSubset intentionally omitted.
+# killall scans /proc to find Squid's PID.
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blocklist-updater
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077

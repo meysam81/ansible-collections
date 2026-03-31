@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 [Unit]
 Description=Renew TLS certificates and prepare HAProxy combined PEM files
 After=network-online.target
@@ -5,12 +6,46 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+
 EnvironmentFile={{ haproxy_tls_certificate_haproxy_certs_dir }}/.env
 ExecStart=/usr/local/bin/prepare-haproxy-certs.sh
+
+# ── Capabilities ──────────────────────────────────────────────────────
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths={{ haproxy_tls_certificate_haproxy_certs_dir }} {{ haproxy_tls_certificate_lego_cert_dir }}
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=haproxy-certs
-ProtectSystem=strict
-ReadWritePaths={{ haproxy_tls_certificate_haproxy_certs_dir }} {{ haproxy_tls_certificate_lego_cert_dir }}
-PrivateTmp=true
-NoNewPrivileges=true
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077

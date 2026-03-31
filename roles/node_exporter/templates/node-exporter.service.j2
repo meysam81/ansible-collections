@@ -1,4 +1,7 @@
+# {{ ansible_managed }}
 [Unit]
+Description=Prometheus Node Exporter
+Documentation=https://github.com/prometheus/node_exporter
 Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=500
@@ -6,6 +9,7 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
+
 ExecStart=/usr/local/bin/node_exporter \
   --web.listen-address=127.0.0.1:9110 \
 {% for collector in node_exporter_extra_collectors %}
@@ -16,20 +20,66 @@ ExecStart=/usr/local/bin/node_exporter \
   --collector.supervisord.url="{{ node_exporter_supervisord_url }}" \
 {% endif %}
   --web.disable-exporter-metrics
-Restart=on-failure
-RestartSec=5
+
+# ── Identity ──────────────────────────────────────────────────────────
 User=node-exporter
 Group=node-exporter
 
+# ── Capabilities ──────────────────────────────────────────────────────
+# /proc and /sys are world-readable — no caps needed.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+# ProtectKernelTunables=yes is safe: node_exporter only READS /proc/sys.
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+# NOTE: ProtectProc and ProcSubset intentionally omitted.
+# ProtectProc=invisible would hide other users' PIDs — breaks process metrics.
+# ProcSubset=pid would hide /proc/stat, /proc/meminfo, /proc/net/* — breaks
+# most collectors (cpu, memory, network, disk).
+
+# ── Network isolation ────────────────────────────────────────────────
+# AF_UNIX: systemd collector uses dbus
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=node-exporter
 
-ProtectSystem=full
-PrivateTmp=true
-NoNewPrivileges=true
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
 LimitNOFILE=65535
 LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

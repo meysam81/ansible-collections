@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 [Unit]
 Description=Grafana Promtail
 Documentation=https://github.com/grafana/loki
@@ -5,22 +6,71 @@ StartLimitIntervalSec=500
 StartLimitBurst=5
 
 [Service]
+Type=simple
+
 ExecStart=/usr/local/bin/promtail -config.file /etc/promtail/promtail.yml
 ExecReload=/bin/kill -SIGHUP $MAINPID
-Restart=always
-RestartSec=5
+
+# ── Identity ──────────────────────────────────────────────────────────
 User={{ promtail_user }}
 Group={{ promtail_group }}
+
+# ── Capabilities ──────────────────────────────────────────────────────
+# CAP_DAC_READ_SEARCH: read log files not owned by promtail user.
+# If adm group membership is sufficient for all log paths, this can
+# be removed — test by checking access to /var/log/auth.log etc.
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
 ReadWritePaths=/var/lib/promtail
+ReadOnlyPaths=/var/log
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+# AF_UNIX: journal socket + sd_notify
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=promtail
 
-ProtectSystem=full
-PrivateTmp=true
-NoNewPrivileges=true
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
 LimitNOFILE=65535
 LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 [Unit]
 Description=Coraza WAF SPOA Daemon https://github.com/corazawaf/coraza-spoa
 Documentation=https://www.coraza.io
@@ -5,24 +6,66 @@ StartLimitIntervalSec=500
 StartLimitBurst=5
 
 [Service]
+Type=exec
+
 ExecStartPre=/usr/local/bin/coraza-spoa -config={{ coraza_config_dir }}/config.yml -validate
 ExecStart=/usr/local/bin/coraza-spoa -config={{ coraza_config_dir }}/config.yml -autoreload -metrics-addr 127.0.0.1:3245
 WorkingDirectory={{ coraza_config_dir }}
-Restart=always
-RestartSec=5
-Type=exec
+
+# ── Identity ──────────────────────────────────────────────────────────
 User=coraza-spoa
 Group=coraza-spoa
 
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=coraza-spoa
 
-ProtectSystem=full
-PrivateTmp=true
-NoNewPrivileges=true
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
 LimitNOFILE=65535
 LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

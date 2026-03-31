@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
 [Unit]
-Description=Egress firewall enforcement (WireGuard → Squid)
+Description=Egress firewall enforcement (WireGuard -> Squid)
 Before=wg-quick@{{ egress_firewall_tunnel_interface }}.service
 After=network-pre.target
 Wants=network-pre.target
@@ -8,7 +8,51 @@ Wants=network-pre.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+
 ExecStart=/bin/bash -c 'iptables-restore --noflush < /etc/iptables/egress-rules.v4{% if egress_firewall_ipv6_enabled %} && ip6tables-restore --noflush < /etc/iptables/egress-rules.v6{% endif %} && /usr/local/bin/egress-jumps.sh'
+
+# ── Capabilities ──────────────────────────────────────────────────────
+# Even root is capped to only networking capabilities.
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+# NOTE: ProtectKernelTunables omitted — iptables reads/writes /proc/sys/net.
+# NOTE: ProtectKernelModules omitted — iptables-restore may autoload nf_conntrack etc.
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+# AF_NETLINK: iptables communicates with kernel via netlink
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=egress-firewall
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

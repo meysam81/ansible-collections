@@ -1,4 +1,7 @@
+# {{ ansible_managed }}
 [Unit]
+Description=Prometheus Pushgateway
+Documentation=https://github.com/prometheus/pushgateway
 Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=500
@@ -6,6 +9,7 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
+
 ExecStart=/usr/local/bin/pushgateway \
   --web.listen-address={{ pushgateway_web_listen_address }} \
 {% if pushgateway_web_external_url %}
@@ -26,18 +30,66 @@ ExecStart=/usr/local/bin/pushgateway \
 {% endif %}
   --log.level={{ pushgateway_log_level }} \
   --log.format={{ pushgateway_log_format }}
+
+# ── Identity ──────────────────────────────────────────────────────────
+User={{ pushgateway_user }}
+Group={{ pushgateway_group }}
+
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+{% if pushgateway_persistence_file %}
+StateDirectory=pushgateway
+StateDirectoryMode=0750
+{% endif %}
+ReadWritePaths={% if pushgateway_persistence_file %}{{ pushgateway_persistence_file | dirname }}{% endif %}
+
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=pushgateway
-Restart=on-failure
-RestartSec=5
-User={{ pushgateway_user }}
-Group={{ pushgateway_group }}
-ProtectSystem=full
-PrivateTmp=true
-NoNewPrivileges=true
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
 LimitNOFILE=65535
 LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

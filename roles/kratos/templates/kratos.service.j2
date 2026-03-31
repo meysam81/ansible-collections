@@ -1,51 +1,74 @@
+# {{ ansible_managed }}
 [Unit]
 Description=Ory Kratos Identity Server
 Documentation=https://www.ory.sh/kratos/docs/
-After=network.target network-online.target
+After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
-# Hardening: Run as non-root user
+Type=simple
+
+EnvironmentFile=/etc/kratos/kratos.env
+Environment="KRATOS_ARGS=--watch-courier --config /etc/kratos/config.yml"
+ExecStartPre=/usr/local/bin/kratos migrate sql --yes --read-from-env --config /etc/kratos/config.yml
+ExecStart={{ kratos_exec_cmd }} $KRATOS_ARGS
+
+# ── Identity ──────────────────────────────────────────────────────────
 User={{ kratos_user }}
 Group={{ kratos_group }}
 
-# Hardening: Limit system resources
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kratos
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
 LimitNOFILE=65535
 LimitNPROC=4096
 
-# Migration step
-ExecStartPre=/usr/local/bin/kratos migrate sql --yes --read-from-env --config /etc/kratos/config.yml
-
-# Environment file
-EnvironmentFile=/etc/kratos/kratos.env
-
-# Executable and configuration
-Environment="KRATOS_ARGS=--watch-courier --config /etc/kratos/config.yml"
-ExecStart={{ kratos_exec_cmd }} $KRATOS_ARGS
-
-# Restart configuration
+# ── Restart policy ───────────────────────────────────────────────────
 Restart=on-failure
 RestartSec=5s
-StartLimitIntervalSec=0
-
-# Hardening: Limit access to system resources
-PrivateTmp=true
-ProtectSystem=full
-ProtectHome=true
-NoNewPrivileges=true
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-
-# Sandboxing
-ProtectControlGroups=true
-ProtectKernelModules=true
-ProtectKernelTunables=true
-RestrictAddressFamilies=AF_INET AF_INET6
-RestrictNamespaces=true
-RestrictRealtime=true
-MemoryDenyWriteExecute=true
 
 [Install]
 WantedBy=multi-user.target

@@ -1,17 +1,60 @@
+# {{ ansible_managed }}
 [Unit]
 Description=GCP VM Identity Token Retrieval Service
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
+
 ExecStart={{ vm_identity_gcp_executable_path }}
 EnvironmentFile={{ vm_identity_gcp_env_file_path }}
-PrivateTmp=true
-ProtectSystem=full
+
+# ── Identity ──────────────────────────────────────────────────────────
+DynamicUser=yes
+
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
 ProtectHome=yes
-NoNewPrivileges=true
-ReadOnlyPaths=/
+PrivateTmp=yes
+PrivateDevices=yes
 ReadWritePaths={{ vm_identity_gcp_token_file_path | dirname }}
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vm-identity-gcp
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target
