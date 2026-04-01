@@ -1,0 +1,116 @@
+---
+- name: Validate k3s_tls_san is a list
+  ansible.builtin.assert:
+    that:
+      - k3s_tls_san is sequence
+      - k3s_tls_san is not string
+    fail_msg: "k3s_tls_san must be a list, got {{ k3s_tls_san | type_debug }}"
+
+- name: Validate each TLS SAN entry
+  ansible.builtin.assert:
+    that:
+      - item is string
+      - item | length > 0
+      - item is match('^[a-zA-Z0-9.*:_-][a-zA-Z0-9.:_-]*$')
+    fail_msg: "Invalid TLS SAN '{{ item }}' — must be a hostname or IP address"
+  loop: "{{ k3s_tls_san }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Check installed K3s version
+  ansible.builtin.command:
+    cmd: /usr/local/bin/k3s --version
+  register: k3s_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Set K3s install needed flag
+  ansible.builtin.set_fact:
+    k3s_needs_install: >-
+      {{ k3s_installed_version.rc != 0 or
+         ('v' + k3s_version) not in (k3s_installed_version.stdout | default('')) or
+         k3s_force_download }}
+
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: k3s_
+  register: k3s_tmp_dir
+  when: k3s_needs_install
+
+- name: Download K3s {{ k3s_version }}
+  ansible.builtin.get_url:
+    url: "{{ k3s_download_url }}"
+    dest: "{{ k3s_tmp_dir.path }}/k3s"
+    mode: "0755"
+  register: k3s_download
+  when: k3s_needs_install
+
+- name: Install K3s binary to /usr/local/bin
+  ansible.builtin.copy:
+    src: "{{ k3s_download.dest }}"
+    dest: /usr/local/bin/k3s
+    remote_src: true
+    mode: "0755"
+    owner: root
+    group: root
+  when: k3s_needs_install
+  notify: Restart k3s
+
+- name: Verify K3s binary works
+  ansible.builtin.command:
+    cmd: /usr/local/bin/k3s --version
+  changed_when: false
+
+- name: Clean up temp files
+  ansible.builtin.file:
+    path: "{{ k3s_tmp_dir.path }}"
+    state: absent
+  when: k3s_needs_install
+
+- name: Write K3s token file
+  ansible.builtin.copy:
+    content: "{{ k3s_token }}"
+    dest: "{{ k3s_token_file }}"
+    mode: "0600"
+    owner: root
+    group: root
+  no_log: true
+  notify: Restart k3s
+
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Deploy K3s systemd service
+  ansible.builtin.template:
+    src: k3s.service.j2
+    dest: /etc/systemd/system/k3s.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify:
+    - Restart k3s
+    - Enable and start k3s
+
+- name: Create kubectl symlink
+  ansible.builtin.file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/kubectl
+    state: link
+
+- name: Create crictl symlink
+  ansible.builtin.file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/crictl
+    state: link
+
+- name: Create ctr symlink
+  ansible.builtin.file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/ctr
+    state: link

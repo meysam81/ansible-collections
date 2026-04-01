@@ -1,0 +1,35 @@
+---
+# ── Version & download ──────────────────────────────────────────────
+k3s_version: "1.35.3+k3s1"
+k3s_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+k3s_binary_suffix: "{{ '-arm64' if k3s_arch == 'arm64' else '' }}"
+k3s_download_url: >-
+  https://github.com/k3s-io/k3s/releases/download/v{{ k3s_version }}/k3s{{ k3s_binary_suffix }}
+k3s_force_download: false
+
+# ── Token ───────────────────────────────────────────────────────────
+# Required — playbook must supply this value
+k3s_token: ""
+k3s_token_file: /var/lib/k3s-token
+
+# ── Core toggles ───────────────────────────────────────────────────
+k3s_embedded_registry: true
+k3s_secrets_encryption: true
+k3s_disable_network_policy: true
+k3s_flannel_backend: "none"
+
+# Components to disable (e.g. traefik, servicelb, local-storage)
+k3s_disable_components:
+  - traefik
+
+# ── TLS SANs ───────────────────────────────────────────────────────
+# Additional Subject Alternative Names for the API server certificate
+k3s_tls_san: []
+
+# ── kube-apiserver args ────────────────────────────────────────────
+# Each entry is a key=value string passed as --kube-apiserver-arg
+k3s_kube_apiserver_args: []
+
+# ── Escape hatch ───────────────────────────────────────────────────
+# Additional CLI flags appended verbatim to ExecStart
+k3s_extra_args: []

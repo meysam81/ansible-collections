@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: k3s
+  description: Install and configure K3s lightweight Kubernetes distribution
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - kubernetes
+    - k3s
+    - k8s
+    - container
+allow_duplicates: false
+
+dependencies: []

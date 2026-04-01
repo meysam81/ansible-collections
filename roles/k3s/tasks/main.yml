@@ -1,0 +1,4 @@
+---
+- name: Setup K3s on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'

@@ -1,0 +1,67 @@
+# {{ ansible_managed }}
+#
+# Systemd unit for K3s lightweight Kubernetes
+#
+
+[Unit]
+Description=K3s — lightweight Kubernetes
+Documentation=https://docs.k3s.io
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/default/%N
+EnvironmentFile=-/etc/sysconfig/%N
+EnvironmentFile=-/etc/systemd/system/k3s.service.env
+
+ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service 2>/dev/null'
+ExecStartPre=-/sbin/modprobe br_netfilter
+ExecStartPre=-/sbin/modprobe overlay
+
+{% set args = [] %}
+{% set _ = args.append('--token-file=' + k3s_token_file) %}
+{% if k3s_embedded_registry %}
+{% set _ = args.append('--embedded-registry') %}
+{% endif %}
+{% if k3s_secrets_encryption %}
+{% set _ = args.append('--secrets-encryption') %}
+{% endif %}
+{% if k3s_disable_network_policy %}
+{% set _ = args.append('--disable-network-policy') %}
+{% endif %}
+{% if k3s_flannel_backend is defined and k3s_flannel_backend %}
+{% set _ = args.append('--flannel-backend=' + k3s_flannel_backend) %}
+{% endif %}
+{% for component in k3s_disable_components %}
+{% set _ = args.append('--disable=' + component) %}
+{% endfor %}
+{% for san in k3s_tls_san %}
+{% set _ = args.append('--tls-san=' + san) %}
+{% endfor %}
+{% for arg in k3s_kube_apiserver_args %}
+{% set _ = args.append('--kube-apiserver-arg=' + arg) %}
+{% endfor %}
+{% for arg in k3s_extra_args %}
+{% set _ = args.append(arg) %}
+{% endfor %}
+ExecStart=/usr/local/bin/k3s server \
+{% for arg in args %}
+    {{ arg }}{{ ' \\' if not loop.last else '' }}
+{% endfor %}
+
+KillMode=process
+Delegate=yes
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
