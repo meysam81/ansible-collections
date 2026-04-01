@@ -198,8 +198,7 @@ blocklist_updater_feeds:
     url: https://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt
     filter: grep -v '^#' | grep -v '^$' | sort -u
   - name: firehol-level1
-    url: 
-      https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset
+    url: https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset
     filter: grep -v '^#' | grep -v '^$' | sort -u
 ```
 

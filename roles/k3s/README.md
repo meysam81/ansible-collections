@@ -54,7 +54,7 @@ collections:
 
 Install and configure K3s lightweight Kubernetes distribution
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -124,8 +124,7 @@ k3s_disable_network_policy: true
 
 ```YAML
 k3s_download_url: >-
-  https://github.com/k3s-io/k3s/releases/download/v{{ k3s_version }}/k3s{{ k3s_binary_suffix
-  }}
+  https://github.com/k3s-io/k3s/releases/download/v{{ k3s_version }}/k3s{{ k3s_binary_suffix }}
 ```
 
 ### k3s_embedded_registry
@@ -207,8 +206,6 @@ k3s_token_file: /var/lib/k3s-token
 ```YAML
 k3s_version: 1.35.3+k3s1
 ```
-
-
 
 ## Dependencies
 
