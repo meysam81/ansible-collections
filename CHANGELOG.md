@@ -1,5 +1,45 @@
 # Changelog
 
+## [1.11.2](https://github.com/meysam81/ansible-collections/compare/v1.11.1...v1.11.2) (2026-04-01)
+
+
+### Features
+
+* add 6 more items to blocklist updater ([975c9f1](https://github.com/meysam81/ansible-collections/commit/975c9f16a372887956ca3c35a93e603a52b96988))
+* add egress firewall for wg-squid integration ([c706c32](https://github.com/meysam81/ansible-collections/commit/c706c32527910ea032d5f5765e871759a874438d))
+* add inbound-routing role ([85790ac](https://github.com/meysam81/ansible-collections/commit/85790ac626c938e6cd37f3ed2609637517c2f7c8))
+* add k3s role ([04c7669](https://github.com/meysam81/ansible-collections/commit/04c76693c1e4cfa1754d353cba4679b4e197538f))
+* add proxy client for system-wide config ([7db8533](https://github.com/meysam81/ansible-collections/commit/7db853370bec3610c6af49038af8625c7861f505))
+* apply security hardening to systemd services ([9e5d504](https://github.com/meysam81/ansible-collections/commit/9e5d504abe9b29b5552030985ff3e600301414a3))
+* complete the dnsproxy Q/A & verification ([6674ee8](https://github.com/meysam81/ansible-collections/commit/6674ee8d4de0fbd8913120667a76f500a63d35cb))
+* complete the migration to DAG dependency setup ([ff530af](https://github.com/meysam81/ansible-collections/commit/ff530af3bc963f080f470f1c483aa612450fd520))
+* complete the review and verification of lego and tls cert ([307367d](https://github.com/meysam81/ansible-collections/commit/307367d0562b7fd2ecbed4c8ad6608f273de55f1))
+* complete the squid role with full security hardening ([4d326e9](https://github.com/meysam81/ansible-collections/commit/4d326e920cd5ee73e901a1e656d47c66594e336c))
+* finalize cloudflare-ips and the haproxy suite ([7a7dfe4](https://github.com/meysam81/ansible-collections/commit/7a7dfe49bcdf7aaf319a58fa342ab9aba74f3631))
+* log squid to journal in human-readable format ([556fd2f](https://github.com/meysam81/ansible-collections/commit/556fd2fd0cc3599a8bae509909247731f7175390))
+* **wireguard:** add ipv6 native support ([988635e](https://github.com/meysam81/ansible-collections/commit/988635e8993dbea7578ef1490fa329112448ae04))
+* **wireguard:** allow multiple clients to wg server ([4f92455](https://github.com/meysam81/ansible-collections/commit/4f9245593f2264b4bb3d11a4b12b105c34594928))
+
+
+### Bug Fixes
+
+* address missing dnsproxy binary ([328b2b0](https://github.com/meysam81/ansible-collections/commit/328b2b00ab4a544763d4f23d265cd14d76b7c4c5))
+* address syntax error ([fd4dbff](https://github.com/meysam81/ansible-collections/commit/fd4dbffe323f8636eeaaf1215807adfcdbd80e97))
+* always log to journal ([5f9fe7f](https://github.com/meysam81/ansible-collections/commit/5f9fe7fe35286168988afe7e8a242294e50a4b08))
+* **CI:** remove tags from trigger ([55d078a](https://github.com/meysam81/ansible-collections/commit/55d078a397cf7debf612dfa166565a1c237034c9))
+* **dnsproxy:** verify binary working before disabling other resolvers ([9e2b95a](https://github.com/meysam81/ansible-collections/commit/9e2b95a95dad9e52e4a8a04d64790fc3336a4a6a))
+* **dnsproxy:** write sysctl without exec permission ([543feb7](https://github.com/meysam81/ansible-collections/commit/543feb72c5aa8cdf3cebc6b8c0ef6166133ce552))
+* **squid:** create separate lists for blocklist ACLs ([94226be](https://github.com/meysam81/ansible-collections/commit/94226beb15bf3f32a243b1bc10eb7af45f546cb7))
+* **squid:** drop the breaking dns nameserver ([e6789fa](https://github.com/meysam81/ansible-collections/commit/e6789fa2e4ffdcf2d89f8deaefa35c33b8798145))
+* start haproxy after creating config ([56cb1c5](https://github.com/meysam81/ansible-collections/commit/56cb1c55c166ec3e0996c8a3c26f965d34e3c593))
+* use static import task instead ([bc1bfb5](https://github.com/meysam81/ansible-collections/commit/bc1bfb558c1448ff8b826704fefbc201c4f4d353))
+
+
+### Miscellaneous Chores
+
+* **CI:** force release ([677ec39](https://github.com/meysam81/ansible-collections/commit/677ec398d3f6bcd6a1535ba20ea8c2a8a14dd4fe))
+* **CI:** trigger another force release ([74579a6](https://github.com/meysam81/ansible-collections/commit/74579a68c2da7957254856e868a1795193c4c8c5))
+
 ## [1.12.0](https://github.com/meysam81/ansible-collections/compare/v1.11.1...v1.12.0) (2026-04-01)
 
 
