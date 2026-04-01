@@ -38,7 +38,7 @@
     owner: root
     group: root
     mode: "0600"
-  notify: Restart wireguard
+  notify: Sync wireguard config
   no_log: true
 
 - name: Deploy health check script

@@ -32,8 +32,14 @@ PostDown = {{ line | regex_replace('^\s+', '') }}
 {% endfor %}
 
 {% for peer in wireguard_peers %}
+{% if peer.name is defined %}
+# Peer: {{ peer.name }}
+{% endif %}
 [Peer]
 PublicKey = {{ peer.public_key }}
+{% if peer.preshared_key is defined %}
+PresharedKey = {{ peer.preshared_key }}
+{% endif %}
 AllowedIPs = {{ peer.allowed_ips }}
 {% if peer.endpoint is defined %}
 Endpoint = {{ peer.endpoint }}

@@ -113,6 +113,39 @@ wireguard_private_key: "{{ lookup('file', '/path/to/wg-private.key') }}"
         wireguard_health_check_interval: 300
 ```
 
+### Hub-and-spoke scaling (multiple clients)
+
+Add peers to the server's `wireguard_peers` list. Each entry gets its own
+`[Peer]` block. Config changes use `wg syncconf` to hot-reload peers without
+dropping existing tunnels.
+
+```yaml
+        wireguard_role: server
+        wireguard_address: "10.99.0.1/24"
+        wireguard_private_key: "{{ vault_wg_server_private_key }}"
+        wireguard_nat_source: "10.99.0.0/24"
+        wireguard_peers:
+          - name: "us-east-1"
+            public_key: "{{ vault_wg_peer1_pubkey }}"
+            allowed_ips: "10.99.0.2/32"
+          - name: "eu-west-1"
+            public_key: "{{ vault_wg_peer2_pubkey }}"
+            allowed_ips: "10.99.0.3/32"
+          - name: "ap-south-1"
+            public_key: "{{ vault_wg_peer3_pubkey }}"
+            allowed_ips: "10.99.0.4/32"
+            preshared_key: "{{ vault_wg_psk_ap_south }}"
+```
+
+**To add a new node:**
+
+1. Generate a keypair: `wg genkey | tee privatekey | wg pubkey > publickey`
+2. Append a peer entry with its public key and a unique IP
+3. Run the playbook against the server — `wg syncconf` applies the change live
+
+**Note:** Interface-level changes (address, listen port, NAT rules) still
+require a full service restart: `systemctl restart wg-quick@wg0`.
+
 ### Server (dual-stack exit node)
 
 ```yaml

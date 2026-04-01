@@ -1,4 +1,15 @@
 ---
+- name: Sync wireguard config
+  ansible.builtin.shell:
+    cmd: |
+      if wg show {{ wireguard_interface }} > /dev/null 2>&1; then
+        wg syncconf {{ wireguard_interface }} <(wg-quick strip {{ wireguard_interface }})
+      else
+        systemctl restart wg-quick@{{ wireguard_interface }}
+      fi
+    executable: /bin/bash
+  changed_when: true
+
 - name: Restart wireguard
   ansible.builtin.systemd:
     name: "wg-quick@{{ wireguard_interface }}"

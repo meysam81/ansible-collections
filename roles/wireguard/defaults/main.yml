@@ -14,8 +14,10 @@ wireguard_private_key: ""
 
 # ── Peers ────────────────────────────────────────────────────────────
 # List of peer definitions. Each entry:
+#   name:                 (optional) human label, renders as config comment
 #   public_key:           (required) peer's WireGuard public key
 #   allowed_ips:          (required) e.g. "10.99.0.2/32" or "0.0.0.0/0"
+#   preshared_key:        (optional) WireGuard preshared key (use vault)
 #   endpoint:             host:port of the peer (client mode needs this)
 #   persistent_keepalive: seconds between keepalive packets
 wireguard_peers: []
