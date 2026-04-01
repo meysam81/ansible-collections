@@ -1,4 +1,9 @@
 ---
+- name: Read dnsproxy sysctl config
+  ansible.builtin.command:
+    cmd: sysctl -p /etc/sysctl.d/50-dnsproxy.conf
+  changed_when: false
+
 - name: Enable and start dnsproxy
   ansible.builtin.systemd:
     name: dnsproxy

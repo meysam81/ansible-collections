@@ -43,6 +43,11 @@
   when: dnsproxy_needs_install
   notify: Restart dnsproxy
 
+- name: Verify binary works
+  ansible.builtin.command:
+    cmd: /usr/local/bin/dnsproxy --version
+  changed_when: false
+
 - name: Clean up temp files
   ansible.builtin.file:
     path: "{{ dnsproxy_tmp_dir.path }}"
@@ -58,7 +63,6 @@
     group: root
   notify:
     - Enable and start dnsproxy
-    - Restart dnsproxy
 
 - name: Configure sysctl RW memory
   ansible.builtin.template:
@@ -69,4 +73,5 @@
     group: root
     mode: "0644"
   notify:
-    - Enable and start dnsproxy
+    - Read dnsproxy sysctl config
+    - Restart dnsproxy
