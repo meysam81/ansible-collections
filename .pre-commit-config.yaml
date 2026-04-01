@@ -41,11 +41,7 @@ repos:
             roles/haproxy/README.md|
             roles/blocklist_updater/README.md
           )$
-      - id: fix-byte-order-marker
       - id: check-builtin-literals
-      - id: check-case-conflict
-      - id: check-builtin-literals
-      - id: check-byte-order-marker
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-merge-conflict
