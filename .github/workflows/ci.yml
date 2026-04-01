@@ -174,7 +174,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@e92a6eae7b28dda306db08846ac784621d01960e # main
+        uses: ansible/ansible-lint@e4d0353a3be1a39a0ce09f318fb6e99fdd7df70e # main
         with:
           setup_python: "true"
           requirements_file: requirements.yml
