@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# Ensure packets sourced from the public interface use the main routing
+# table, bypassing wg-quick's policy routing (rules 32764/32765).
+# Without this, SYN-ACK responses to inbound connections get routed
+# into the VPN tunnel instead of back out the public interface.
+#
+# Idempotent: uses `ip rule` list-check before adding.
+set -euo pipefail
+
+{% set ipv4_addr = ansible_facts[inbound_routing_interface]['ipv4']['address'] %}
+# IPv4: route responses from {{ inbound_routing_interface }} ({{ ipv4_addr }}) via main table
+ip -4 rule show | grep -qF 'from {{ ipv4_addr }} lookup main' || \
+  ip -4 rule add from {{ ipv4_addr }} table main priority {{ inbound_routing_priority }}
+{% if inbound_routing_ipv6_enabled %}
+
+{% set ipv6_addr = ansible_facts[inbound_routing_interface]['ipv6'] | selectattr('scope', 'equalto', 'global') | map(attribute='address') | first %}
+# IPv6: route responses from {{ inbound_routing_interface }} ({{ ipv6_addr }}) via main table
+ip -6 rule show | grep -qF 'from {{ ipv6_addr }} lookup main' || \
+  ip -6 rule add from {{ ipv6_addr }} table main priority {{ inbound_routing_priority }}
+{% endif %}

@@ -1,0 +1,54 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Inbound policy routing (preserve public interface reachability)
+Before=wg-quick@{{ inbound_routing_tunnel_interface }}.service
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStart=/usr/local/bin/inbound-routing.sh
+
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=inbound-routing
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

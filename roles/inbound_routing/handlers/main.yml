@@ -1,0 +1,7 @@
+---
+- name: Reload inbound routing
+  ansible.builtin.systemd:
+    name: inbound-routing
+    state: restarted
+    daemon_reload: true
+    enabled: true

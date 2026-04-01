@@ -1,0 +1,19 @@
+---
+# ── Interface ──────────────────────────────────────────────────────────
+# Public-facing interface whose IP must remain routable when a
+# full-tunnel VPN (e.g. WireGuard AllowedIPs = 0.0.0.0/0) overrides
+# the default route.
+inbound_routing_interface: eth0
+
+# ── Policy-routing priority ────────────────────────────────────────────
+# Lower number = evaluated first. Must be lower than wg-quick's rules
+# (typically 32764/32765).
+inbound_routing_priority: 10
+
+# ── IPv6 ───────────────────────────────────────────────────────────────
+inbound_routing_ipv6_enabled: false
+
+# ── Tunnel service ordering ───────────────────────────────────────────
+# The systemd service that brings up the tunnel. This service runs
+# before it so rules are in place when the tunnel starts.
+inbound_routing_tunnel_interface: wg0

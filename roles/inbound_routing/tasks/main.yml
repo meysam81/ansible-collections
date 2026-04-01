@@ -1,0 +1,58 @@
+---
+- name: Assert inbound_routing_interface is safe
+  ansible.builtin.assert:
+    that:
+      - inbound_routing_interface is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "inbound_routing_interface must be a simple interface name"
+
+- name: Assert inbound_routing_tunnel_interface is safe
+  ansible.builtin.assert:
+    that:
+      - inbound_routing_tunnel_interface is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "inbound_routing_tunnel_interface must be a simple interface name"
+
+- name: Assert inbound_routing_priority is valid
+  ansible.builtin.assert:
+    that:
+      - inbound_routing_priority | int > 0
+      - inbound_routing_priority | int < 32764
+    fail_msg: "inbound_routing_priority must be between 1 and 32763 (below wg-quick rules)"
+
+- name: Assert public interface exists
+  ansible.builtin.assert:
+    that:
+      - inbound_routing_interface in ansible_facts
+      - ansible_facts[inbound_routing_interface]['ipv4'] is defined
+    fail_msg: "Interface {{ inbound_routing_interface }} not found or has no IPv4 address"
+
+- name: Assert public interface has global IPv6 address
+  ansible.builtin.assert:
+    that:
+      - ansible_facts[inbound_routing_interface]['ipv6'] | selectattr('scope', 'equalto', 'global') | list | length > 0
+    fail_msg: "Interface {{ inbound_routing_interface }} has no global IPv6 address"
+  when: inbound_routing_ipv6_enabled
+
+- name: Deploy inbound-routing rules script
+  ansible.builtin.template:
+    src: inbound-routing.sh.j2
+    dest: /usr/local/bin/inbound-routing.sh
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Reload inbound routing
+
+- name: Deploy inbound-routing systemd service
+  ansible.builtin.template:
+    src: inbound-routing.service.j2
+    dest: /etc/systemd/system/inbound-routing.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload inbound routing
+
+- name: Enable and start inbound-routing service
+  ansible.builtin.systemd:
+    name: inbound-routing
+    state: started
+    enabled: true
+    daemon_reload: true
