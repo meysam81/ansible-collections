@@ -34,7 +34,7 @@ collections:
 
 Install vmagent from GitHub release
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -87,8 +87,7 @@ vmagent_allow_insecure_url: false
 #### Default value
 
 ```YAML
-vmagent_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64')
-  | replace('aarch64', 'arm64') }}"
+vmagent_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
 ```
 
 ### vmagent_bin
@@ -264,12 +263,8 @@ vmagent_version: 1.138.0
 #### Default value
 
 ```YAML
-vmagent_vmutils_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{
-  vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ vmagent_arch
-  }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz
+vmagent_vmutils_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ vmagent_version | regex_replace('^v', '') }}/vmutils-{{ vmagent_os }}-{{ vmagent_arch }}-v{{ vmagent_version | regex_replace('^v', '') }}.tar.gz
 ```
-
-
 
 ## Dependencies
 

@@ -36,7 +36,7 @@ collections:
 
 Install promtail from GitHub release
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -77,8 +77,7 @@ promtail_allow_insecure_url: false
 #### Default value
 
 ```YAML
-promtail_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64')
-  | replace('aarch64', 'arm64') }}"
+promtail_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
 ```
 
 ### promtail_bearer_token_file
@@ -137,8 +136,7 @@ promtail_scrape_paths:
 #### Default value
 
 ```YAML
-promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version
-  | regex_replace('^v', '') }}/SHA256SUMS
+promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version | regex_replace('^v', '') }}/SHA256SUMS
 ```
 
 ### promtail_url
@@ -146,8 +144,7 @@ promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ pr
 #### Default value
 
 ```YAML
-promtail_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version
-  | regex_replace('^v', '') }}/promtail-{{ promtail_os }}-{{ promtail_arch }}.zip
+promtail_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version | regex_replace('^v', '') }}/promtail-{{ promtail_os }}-{{ promtail_arch }}.zip
 ```
 
 ### promtail_user
@@ -165,8 +162,6 @@ promtail_user: promtail
 ```YAML
 promtail_version: 3.2.0
 ```
-
-
 
 ## Dependencies
 

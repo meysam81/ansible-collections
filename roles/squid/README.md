@@ -244,7 +244,7 @@ the proxy user only).
 
 Install and configure Squid forward proxy with blocklist and CrowdSec support
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -603,8 +603,6 @@ squid_visible_hostname: proxy
 ```YAML
 squid_workers: 2
 ```
-
-
 
 ## Dependencies
 

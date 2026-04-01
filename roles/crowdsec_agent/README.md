@@ -62,7 +62,7 @@ collections:
 
 Install CrowdSec Security Engine agent with acquisition sources and collections
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -133,8 +133,6 @@ crowdsec_agent_enrollment_key: ''
 ```YAML
 crowdsec_agent_lapi_listen: 127.0.0.1:8080
 ```
-
-
 
 ## Dependencies
 

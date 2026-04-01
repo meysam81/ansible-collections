@@ -31,7 +31,7 @@ collections:
 
 Install pushgateway from GitHub release
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -69,8 +69,7 @@ Install pushgateway from GitHub release
 #### Default value
 
 ```YAML
-pushgateway_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64',
-  'amd64') | replace('aarch64', 'arm64') }}"
+pushgateway_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
 ```
 
 ### pushgateway_create_group
@@ -94,9 +93,7 @@ pushgateway_create_user: true
 #### Default value
 
 ```YAML
-pushgateway_download_url: https://github.com/prometheus/pushgateway/releases/download/v{{
-  pushgateway_version | regex_replace('^v', '') }}/pushgateway-{{ pushgateway_version
-  | regex_replace('^v', '') }}.{{ pushgateway_os }}-{{ pushgateway_arch }}.tar.gz
+pushgateway_download_url: https://github.com/prometheus/pushgateway/releases/download/v{{ pushgateway_version | regex_replace('^v', '') }}/pushgateway-{{ pushgateway_version | regex_replace('^v', '') }}.{{ pushgateway_os }}-{{ pushgateway_arch }}.tar.gz
 ```
 
 ### pushgateway_group
@@ -152,8 +149,7 @@ pushgateway_persistence_file: ''
 #### Default value
 
 ```YAML
-pushgateway_sha256sum_url: https://github.com/prometheus/pushgateway/releases/download/v{{
-  pushgateway_version | regex_replace('^v', '') }}/sha256sums.txt
+pushgateway_sha256sum_url: https://github.com/prometheus/pushgateway/releases/download/v{{ pushgateway_version | regex_replace('^v', '') }}/sha256sums.txt
 ```
 
 ### pushgateway_user
@@ -203,8 +199,6 @@ pushgateway_web_external_url: ''
 ```YAML
 pushgateway_web_listen_address: 127.0.0.1:9091
 ```
-
-
 
 ## Dependencies
 

@@ -8,7 +8,7 @@ Satellite roles (`haproxy`, `haproxy_tls_certificate`, `cloudflare_ips`, `coraza
 
 HAProxy shared infrastructure (user, dirs, error pages, systemd service)
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -59,8 +59,6 @@ haproxy_config_dir: /etc/haproxy
 ```YAML
 haproxy_errors_dir: /etc/haproxy/errors
 ```
-
-
 
 ## Dependencies
 

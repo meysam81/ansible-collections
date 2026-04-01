@@ -36,7 +36,7 @@ collections:
 
 TLS certificates for HAProxy via lego with Cloudflare DNS-01
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -87,8 +87,6 @@ haproxy_tls_certificate_lego_cert_dir: /etc/lego/certificates
 ```YAML
 haproxy_tls_certificate_served_domains: []
 ```
-
-
 
 ## Dependencies
 

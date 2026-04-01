@@ -202,7 +202,7 @@ the proxy user only).
 
 Install and configure WireGuard VPN tunnel with server (NAT gateway) and client (policy routing) modes
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -379,8 +379,6 @@ wireguard_private_key: ''
 ```YAML
 wireguard_role: server
 ```
-
-
 
 ## Dependencies
 

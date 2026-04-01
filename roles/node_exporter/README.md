@@ -33,7 +33,7 @@ collections:
 
 Install node-exporter from GitHub release
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -66,8 +66,7 @@ Install node-exporter from GitHub release
 #### Default value
 
 ```YAML
-node_exporter_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64',
-  'amd64') | replace('aarch64', 'arm64') }}"
+node_exporter_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
 ```
 
 ### node_exporter_create_user
@@ -83,9 +82,7 @@ node_exporter_create_user: true
 #### Default value
 
 ```YAML
-node_exporter_download_url: https://github.com/prometheus/node_exporter/releases/download/v{{
-  node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ node_exporter_version
-  | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ node_exporter_arch }}.tar.gz
+node_exporter_download_url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ node_exporter_version | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ node_exporter_arch }}.tar.gz
 ```
 
 ### node_exporter_extra_collectors
@@ -139,8 +136,7 @@ node_exporter_owner: node-exporter
 #### Default value
 
 ```YAML
-node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{
-  node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
+node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
 ```
 
 ### node_exporter_supervisord_enabled
@@ -166,8 +162,6 @@ node_exporter_supervisord_url: http://localhost:9001/RPC2
 ```YAML
 node_exporter_version: 1.8.2
 ```
-
-
 
 ## Dependencies
 
