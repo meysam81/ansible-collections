@@ -47,7 +47,7 @@ collections:
 
 Policy routing to preserve inbound reachability on hosts that use a full-tunnel VPN (e.g. WireGuard AllowedIPs = 0.0.0.0/0)
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -98,8 +98,6 @@ inbound_routing_priority: 10
 ```YAML
 inbound_routing_tunnel_interface: wg0
 ```
-
-
 
 ## Dependencies
 

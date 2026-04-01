@@ -159,7 +159,7 @@ collision with UFW or other firewall tools.
 
 iptables enforcement ensuring WireGuard tunnel traffic passes through Squid proxy — no direct egress possible
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -246,8 +246,6 @@ egress_firewall_proxy_user: proxy
 ```YAML
 egress_firewall_tunnel_interface: wg0
 ```
-
-
 
 ## Dependencies
 

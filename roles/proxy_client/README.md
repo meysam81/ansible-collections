@@ -103,7 +103,7 @@ apt-config dump | grep -i proxy
 
 System-wide HTTP/HTTPS proxy configuration for shells, systemd services, and apt
 
-## Table of content
+## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
@@ -156,8 +156,6 @@ proxy_client_no_proxy:
 ```YAML
 proxy_client_proxy_url: ''
 ```
-
-
 
 ## Dependencies
 
