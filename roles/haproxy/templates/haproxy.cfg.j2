@@ -126,7 +126,7 @@ frontend web
     acl allowed_origin_exact hdr(origin) -i -m str -f {{ haproxy_config_dir }}/allowed_domains.txt
 {% endif %}
 {% if haproxy_cors_subdomain_patterns %}
-    acl allowed_origin_subdomain hdr(origin) -i -m reg ^https?://[^/]*\.({{ haproxy_cors_subdomain_patterns | map('regex_escape') | join('|') }})$
+    acl allowed_origin_subdomain hdr(origin) -m reg '^https?://[^/]*\.({{ haproxy_cors_subdomain_patterns | map('regex_escape') | join('|') }})$'
 {% endif %}
 {% if haproxy_cors_allowed_domains or haproxy_cors_subdomain_patterns %}
     acl has_valid_origin hdr(origin) -m found
