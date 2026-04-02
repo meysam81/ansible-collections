@@ -43,6 +43,8 @@ collections:
   hosts: all
   roles:
     - name: meysam81.general.dante
+      vars:
+        dante_external_interface: eth0
 ```
 
 ### WireGuard exit node
@@ -62,6 +64,7 @@ collections:
 ```yaml
     - name: meysam81.general.dante
       vars:
+        dante_external_interface: eth0
         dante_listen_addresses:
           - "10.99.0.1"
         dante_allowed_sources:
@@ -90,6 +93,7 @@ collections:
 
     - name: meysam81.general.dante
       vars:
+        dante_external_interface: eth0
         dante_listen_addresses:
           - "10.99.0.1"
         dante_allowed_sources:
@@ -312,7 +316,7 @@ dante_error_log: syslog/daemon
 #### Default value
 
 ```YAML
-dante_external_interface: eth0
+dante_external_interface: ''
 ```
 
 ### dante_listen_addresses

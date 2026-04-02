@@ -4,7 +4,7 @@ dante_listen_addresses:
   - "127.0.0.1"
   - "::1"
 dante_listen_port: 1080
-dante_external_interface: eth0
+dante_external_interface: ""
 
 # CIDR list of allowed source networks.
 # Default matches a typical WireGuard tunnel subnet.
