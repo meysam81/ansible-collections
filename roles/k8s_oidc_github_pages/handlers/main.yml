@@ -1,1 +1,12 @@
 ---
+- name: Start the k8s oidc github pages systemd timer
+  ansible.builtin.systemd:
+    name: k8s-oidc-github-pages.timer
+    enabled: true
+    daemon_reload: true
+    state: started
+- name: Start the k8s oidc github pages systemd service
+  ansible.builtin.systemd:
+    name: k8s-oidc-github-pages.service
+    daemon_reload: true
+    state: started

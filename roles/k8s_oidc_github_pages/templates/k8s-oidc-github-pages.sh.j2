@@ -33,6 +33,13 @@ mkdir -p ./openid/v1 ./.well-known
 kubectl get --raw /openid/v1/jwks > ./openid/v1/jwks
 kubectl get --raw /.well-known/openid-configuration > ./.well-known/openid-configuration
 
+{% if k8s_oidc_github_pages_create_ci_yml -%}
+mkdir -p ./.github/workflows
+cat > ./.github/workflows/ci.yml << 'CIEOF'
+{{ lookup('ansible.builtin.file', 'ci.yml') }}
+CIEOF
+{% endif -%}
+
 if [ -z "$(git status --porcelain)" ]; then
     echo "No changes to commit"
     exit 0

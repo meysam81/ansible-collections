@@ -48,6 +48,7 @@ it from being used on other Kubernetes clusters.
 - [Default Variables](#default-variables)
   - [k8s_oidc_github_pages_commit_email](#k8s_oidc_github_pages_commit_email)
   - [k8s_oidc_github_pages_commit_name](#k8s_oidc_github_pages_commit_name)
+  - [k8s_oidc_github_pages_create_ci_yml](#k8s_oidc_github_pages_create_ci_yml)
   - [k8s_oidc_github_pages_debug](#k8s_oidc_github_pages_debug)
   - [k8s_oidc_github_pages_environments](#k8s_oidc_github_pages_environments)
   - [k8s_oidc_github_pages_github_deploy_key](#k8s_oidc_github_pages_github_deploy_key)
@@ -58,6 +59,7 @@ it from being used on other Kubernetes clusters.
   - [k8s_oidc_github_pages_repository_ssh_url](#k8s_oidc_github_pages_repository_ssh_url)
   - [k8s_oidc_github_pages_ssh_config_host](#k8s_oidc_github_pages_ssh_config_host)
   - [k8s_oidc_github_pages_ssh_config_path](#k8s_oidc_github_pages_ssh_config_path)
+  - [k8s_oidc_github_pages_ssh_extra_options](#k8s_oidc_github_pages_ssh_extra_options)
   - [k8s_oidc_github_pages_ssh_private_key_path](#k8s_oidc_github_pages_ssh_private_key_path)
   - [k8s_oidc_github_pages_timer_calendar](#k8s_oidc_github_pages_timer_calendar)
 - [Dependencies](#dependencies)
@@ -86,6 +88,14 @@ k8s_oidc_github_pages_commit_email: k8s-oidc-github-pages[bot]@users.noreply.git
 
 ```YAML
 k8s_oidc_github_pages_commit_name: K8s OIDC GitHub Pages
+```
+
+### k8s_oidc_github_pages_create_ci_yml
+
+#### Default value
+
+```YAML
+k8s_oidc_github_pages_create_ci_yml: true
 ```
 
 ### k8s_oidc_github_pages_debug
@@ -167,6 +177,14 @@ k8s_oidc_github_pages_ssh_config_host: k8s-oidc-github-pages
 
 ```YAML
 k8s_oidc_github_pages_ssh_config_path: .ssh/config
+```
+
+### k8s_oidc_github_pages_ssh_extra_options
+
+#### Default value
+
+```YAML
+k8s_oidc_github_pages_ssh_extra_options: {}
 ```
 
 ### k8s_oidc_github_pages_ssh_private_key_path

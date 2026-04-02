@@ -1,3 +1,7 @@
 Host github.com
   IdentityFile ~/{{ k8s_oidc_github_pages_ssh_private_key_path }}
   User git
+  StrictHostKeyChecking accept-new
+{% for key, value in k8s_oidc_github_pages_ssh_extra_options.items() %}
+  {{ key }} {{ value }}
+{% endfor %}

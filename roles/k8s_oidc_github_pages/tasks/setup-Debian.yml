@@ -1,4 +1,9 @@
 ---
+- name: Ensure git is installed
+  ansible.builtin.apt:
+    name:
+      - git
+    state: present
 - name: Assert required vars are defined
   ansible.builtin.assert:
     that:
@@ -19,6 +24,7 @@
     owner: root
     path: /root/.gnupg
     state: directory
+  when: k8s_oidc_github_pages_sign_gpg_private_key | default('', true) | length > 0
 - name: Copy GitHub Deploy key
   ansible.builtin.copy:
     content: "{{ k8s_oidc_github_pages_github_deploy_key }}"
@@ -74,6 +80,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Start the k8s oidc github pages systemd service
 - name: Copy k8s oidc github pages timer file
   ansible.builtin.template:
     src: k8s-oidc-github-pages.timer.j2
@@ -81,9 +88,4 @@
     owner: root
     group: root
     mode: "0644"
-- name: Start the k8s oidc github pages systemd timer
-  ansible.builtin.systemd:
-    name: k8s-oidc-github-pages.timer
-    enabled: true
-    daemon_reload: true
-    state: started
+  notify: Start the k8s oidc github pages systemd timer
