@@ -169,11 +169,8 @@
   when: dnsproxy_manage_resolv_conf
 
 - name: Write resolv.conf pointing to dnsproxy
-  ansible.builtin.copy:
-    content: |
-      # Managed by Ansible (meysam81.general.dnsproxy)
-      nameserver {{ dnsproxy_listen }}
-      options edns0 trust-ad
+  ansible.builtin.template:
+    src: resolv.conf.j2
     dest: /etc/resolv.conf
     mode: "0644"
     owner: root
