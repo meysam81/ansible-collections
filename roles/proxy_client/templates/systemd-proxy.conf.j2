@@ -1,4 +1,4 @@
 # {{ ansible_managed }}
 {% set no_proxy_str = proxy_client_no_proxy | join(',') %}
 [Manager]
-DefaultEnvironment="http_proxy={{ proxy_client_proxy_url }}" "https_proxy={{ proxy_client_proxy_url }}" "HTTP_PROXY={{ proxy_client_proxy_url }}" "HTTPS_PROXY={{ proxy_client_proxy_url }}" "no_proxy={{ no_proxy_str }}" "NO_PROXY={{ no_proxy_str }}"
+DefaultEnvironment="http_proxy={{ proxy_client_proxy_url }}" "https_proxy={{ proxy_client_proxy_url }}" "HTTP_PROXY={{ proxy_client_proxy_url }}" "HTTPS_PROXY={{ proxy_client_proxy_url }}" "no_proxy={{ no_proxy_str }}" "NO_PROXY={{ no_proxy_str }}"{% if proxy_client_socks_url %} "ALL_PROXY={{ proxy_client_socks_url }}" "all_proxy={{ proxy_client_socks_url }}"{% endif %}

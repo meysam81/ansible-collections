@@ -23,3 +23,10 @@ egress_firewall_input_exceptions: []
 # Optional: dest: "<CIDR>" to restrict to specific destination (omit for any).
 # Use sparingly — each entry punches a hole in the enforcement.
 egress_firewall_forward_exceptions: []
+
+# ── SOCKS Proxy (optional) ────────────────────────────────────────────
+# Enable to allow a SOCKS proxy (e.g. Dante) alongside the HTTP proxy.
+# Adds INPUT accept for socks_port and MASQUERADE for socks_user.
+egress_firewall_socks_enabled: false
+egress_firewall_socks_port: 1080
+egress_firewall_socks_user: sockd

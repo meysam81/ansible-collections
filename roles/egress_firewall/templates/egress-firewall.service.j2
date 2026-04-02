@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
 [Unit]
-Description=Egress firewall enforcement (WireGuard -> Squid)
+Description=Egress firewall enforcement (WireGuard -> Squid / Dante)
 Before=wg-quick@{{ egress_firewall_tunnel_interface }}.service
 After=network-pre.target
 Wants=network-pre.target

@@ -1,0 +1,108 @@
+# {{ ansible_managed }}
+
+# ── Logging ────────────────────────────────────────────────────────────
+errorlog: {{ dante_error_log }}
+logoutput: {{ dante_log_file }}
+
+# ── Network ────────────────────────────────────────────────────────────
+{% for addr in dante_listen_addresses %}
+internal: {{ addr }} port = {{ dante_listen_port }}
+{% endfor %}
+external: {{ dante_external_interface }}
+
+# ── Users ──────────────────────────────────────────────────────────────
+user.privileged: root
+user.notprivileged: {{ dante_user }}
+
+# ── Authentication ─────────────────────────────────────────────────────
+# No password auth — WireGuard tunnel provides implicit authentication.
+# Source IP ACLs in client rules below restrict access to tunnel subnet.
+socksmethod: none
+clientmethod: none
+
+# ── Timeouts ───────────────────────────────────────────────────────────
+timeout.negotiate: {{ dante_timeout_negotiate }}
+timeout.io: {{ dante_timeout_io }}
+timeout.connect: {{ dante_timeout_connect }}
+
+# ── Performance ────────────────────────────────────────────────────────
+child.maxidle: {{ dante_child_maxidle }}
+
+# ── Client Rules (source IP filtering) ────────────────────────────────
+# First match wins. Allow tunnel sources, block everything else.
+{% for src in dante_allowed_sources %}
+client pass {
+    from: {{ src }} to: 0.0.0.0/0
+{% set log_parts = [] %}
+{% if dante_log_connect %}{% if log_parts.append('connect') %}{% endif %}{% endif %}
+{% if dante_log_disconnect %}{% if log_parts.append('disconnect') %}{% endif %}{% endif %}
+{% if dante_log_error %}{% if log_parts.append('error') %}{% endif %}{% endif %}
+{% if log_parts %}
+    log: {{ log_parts | join(' ') }}
+{% endif %}
+}
+{% endfor %}
+
+client block {
+    from: 0.0.0.0/0 to: 0.0.0.0/0
+    log: connect error
+}
+
+# ── SOCKS Rules (destination filtering) ───────────────────────────────
+# First match wins. Blocks evaluated first, then per-port allows.
+
+# Block loopback
+socks block {
+    from: 0.0.0.0/0 to: 127.0.0.0/8
+    command: connect
+    log: connect error
+}
+{% if dante_block_private_destinations %}
+
+# Block RFC1918 and link-local
+socks block {
+    from: 0.0.0.0/0 to: 10.0.0.0/8
+    command: connect
+    log: connect error
+}
+
+socks block {
+    from: 0.0.0.0/0 to: 172.16.0.0/12
+    command: connect
+    log: connect error
+}
+
+socks block {
+    from: 0.0.0.0/0 to: 192.168.0.0/16
+    command: connect
+    log: connect error
+}
+
+socks block {
+    from: 0.0.0.0/0 to: 169.254.0.0/16
+    command: connect
+    log: connect error
+}
+{% endif %}
+
+# Per-port allow rules
+{% for port in dante_allowed_ports %}
+socks pass {
+    from: 0.0.0.0/0 to: 0.0.0.0/0 port = {{ port }}
+    command: connect
+    protocol: tcp
+{% set log_parts = [] %}
+{% if dante_log_connect %}{% if log_parts.append('connect') %}{% endif %}{% endif %}
+{% if dante_log_disconnect %}{% if log_parts.append('disconnect') %}{% endif %}{% endif %}
+{% if dante_log_error %}{% if log_parts.append('error') %}{% endif %}{% endif %}
+{% if log_parts %}
+    log: {{ log_parts | join(' ') }}
+{% endif %}
+}
+
+{% endfor %}
+# Default deny
+socks block {
+    from: 0.0.0.0/0 to: 0.0.0.0/0
+    log: connect error
+}

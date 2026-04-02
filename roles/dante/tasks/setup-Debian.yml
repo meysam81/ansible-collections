@@ -1,0 +1,57 @@
+---
+- name: Install dante-server
+  ansible.builtin.apt:
+    name: dante-server
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create dante system user
+  ansible.builtin.user:
+    name: "{{ dante_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: /nonexistent
+    create_home: false
+
+- name: Deploy danted.conf
+  ansible.builtin.template:
+    src: danted.conf.j2
+    dest: /etc/danted.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "danted -Vf %s"
+  notify: Restart danted
+
+- name: Deploy logrotate config
+  ansible.builtin.template:
+    src: danted-logrotate.j2
+    dest: /etc/logrotate.d/danted
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create systemd override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/danted.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy systemd hardening override
+  ansible.builtin.template:
+    src: danted-hardening.conf.j2
+    dest: /etc/systemd/system/danted.service.d/hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart danted
+
+- name: Enable and start danted
+  ansible.builtin.systemd:
+    name: danted
+    state: started
+    enabled: true
+    daemon_reload: true

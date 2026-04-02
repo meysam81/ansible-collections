@@ -29,6 +29,27 @@
     database: passwd
     key: "{{ egress_firewall_proxy_user }}"
 
+- name: Assert egress_firewall_socks_user is safe
+  ansible.builtin.assert:
+    that:
+      - egress_firewall_socks_user is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "egress_firewall_socks_user must be a simple name (alphanumeric, dash, underscore)"
+  when: egress_firewall_socks_enabled
+
+- name: Assert egress_firewall_socks_port is valid
+  ansible.builtin.assert:
+    that:
+      - egress_firewall_socks_port | int > 0
+      - egress_firewall_socks_port | int < 65536
+    fail_msg: "egress_firewall_socks_port must be between 1 and 65535"
+  when: egress_firewall_socks_enabled
+
+- name: Verify SOCKS proxy user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ egress_firewall_socks_user }}"
+  when: egress_firewall_socks_enabled
+
 - name: Setup egress firewall dependencies on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_facts['os_family'] == 'Debian'

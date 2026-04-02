@@ -7,6 +7,9 @@
 -A EGRESS-WG-INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
 -A EGRESS-WG-INPUT -p ipv6-icmp -j ACCEPT
 -A EGRESS-WG-INPUT -p tcp --dport {{ egress_firewall_proxy_port }} -j ACCEPT
+{% if egress_firewall_socks_enabled %}
+-A EGRESS-WG-INPUT -p tcp --dport {{ egress_firewall_socks_port }} -j ACCEPT
+{% endif %}
 -A EGRESS-WG-INPUT -p tcp --dport {{ egress_firewall_dns_port }} -j ACCEPT
 -A EGRESS-WG-INPUT -p udp --dport {{ egress_firewall_dns_port }} -j ACCEPT
 {% for exc in egress_firewall_input_exceptions %}
@@ -26,6 +29,10 @@ COMMIT
 -F EGRESS-WG-NAT
 # Squid's own outbound connections
 -A EGRESS-WG-NAT -m owner --uid-owner {{ egress_firewall_proxy_user }} -j MASQUERADE
+{% if egress_firewall_socks_enabled %}
+# SOCKS proxy outbound connections
+-A EGRESS-WG-NAT -m owner --uid-owner {{ egress_firewall_socks_user }} -j MASQUERADE
+{% endif %}
 {% for exc in egress_firewall_forward_exceptions %}
 # {{ exc.comment | default('forward exception') }}
 -A EGRESS-WG-NAT -p {{ exc.proto }}{% if exc.dest is defined %} -d {{ exc.dest }}{% endif %} --dport {{ exc.dport }} -j MASQUERADE

@@ -1,9 +1,9 @@
 # proxy_client
 
-System-wide HTTP/HTTPS proxy configuration. Configures shells,
+System-wide HTTP/HTTPS and SOCKS proxy configuration. Configures shells,
 [systemd](https://systemd.io/) services, and
-[APT](https://wiki.debian.org/Apt) to route traffic through a forward
-proxy.
+[APT](https://wiki.debian.org/Apt) to route traffic through forward
+proxies. Optional git-over-SSH SOCKS proxy support.
 
 Deploys drop-in config files — never overwrites existing system files.
 Both lowercase and uppercase env vars are set for maximum compatibility.
@@ -14,12 +14,12 @@ Designed as a client-side companion to the egress proxy stack:
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌───────────┐
-│  wireguard   │────▶│  egress_firewall  │────▶│   squid    │
-│  (tunnel)    │     │  (enforcement)    │     │  (proxy)   │
-└─────────────┘     └──────────────────┘     └───────────┘
-       │                                            ▲
-       │            ┌───────────────┐               │
-       └───────────▶│ proxy_client  │───────────────┘
+│  wireguard  │────▶│  egress_firewall │────▶│   squid   │
+│  (tunnel)   │     │  (enforcement)   │     │  (HTTP)   │
+└─────────────┘     └──────────────────┘     ├───────────┤
+       │                                     │   dante   │
+       │            ┌───────────────┐        │  (SOCKS5) │
+       └───────────▶│ proxy_client  │───────▶└───────────┘
                     │ (env config)  │
                     └───────────────┘
 ```
@@ -27,7 +27,8 @@ Designed as a client-side companion to the egress proxy stack:
 | Role | Where | Purpose |
 |------|-------|---------|
 | `wireguard` | Server + Client | VPN tunnel |
-| `squid` | Server | Forward proxy |
+| `squid` | Server | HTTP/HTTPS forward proxy |
+| `dante` | Server | SOCKS5 proxy |
 | `egress_firewall` | Server | iptables enforcement |
 | `proxy_client` | Client | System-wide proxy env vars |
 
@@ -79,6 +80,25 @@ collections:
         proxy_client_configure_apt: false
 ```
 
+### With SOCKS proxy
+
+```yaml
+    - name: meysam81.general.proxy_client
+      vars:
+        proxy_client_proxy_url: "http://10.99.0.1:3128"
+        proxy_client_socks_url: "socks5h://10.99.0.1:1080"
+```
+
+### With git SSH proxy
+
+```yaml
+    - name: meysam81.general.proxy_client
+      vars:
+        proxy_client_proxy_url: "http://10.99.0.1:3128"
+        proxy_client_socks_url: "socks5h://10.99.0.1:1080"
+        proxy_client_configure_git_ssh: true
+```
+
 ## What gets configured
 
 | File | Purpose | Scope |
@@ -87,6 +107,7 @@ collections:
 | `/etc/environment.d/99-proxy.conf` | PAM / systemd-environment-d | Non-interactive sessions, cron |
 | `/etc/apt/apt.conf.d/99proxy` | APT package manager | `apt update`, `apt install` |
 | `/etc/systemd/system.conf.d/99-proxy.conf` | systemd `DefaultEnvironment` | All systemd services |
+| `/etc/profile.d/git-ssh-proxy.sh` | Git SSH ProxyCommand | `git clone git@...` over SOCKS |
 
 ## Verify
 
@@ -99,6 +120,12 @@ systemctl show-environment | grep -i proxy
 
 # APT
 apt-config dump | grep -i proxy
+
+# SOCKS proxy (when configured)
+su - $(whoami) -c 'echo $ALL_PROXY'
+
+# Git SSH proxy (when configured)
+su - $(whoami) -c 'echo $GIT_SSH_COMMAND'
 ```
 
 System-wide HTTP/HTTPS proxy configuration for shells, systemd services, and apt
@@ -108,9 +135,11 @@ System-wide HTTP/HTTPS proxy configuration for shells, systemd services, and apt
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [proxy_client_configure_apt](#proxy_client_configure_apt)
+  - [proxy_client_configure_git_ssh](#proxy_client_configure_git_ssh)
   - [proxy_client_configure_systemd](#proxy_client_configure_systemd)
   - [proxy_client_no_proxy](#proxy_client_no_proxy)
   - [proxy_client_proxy_url](#proxy_client_proxy_url)
+  - [proxy_client_socks_url](#proxy_client_socks_url)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -129,6 +158,14 @@ System-wide HTTP/HTTPS proxy configuration for shells, systemd services, and apt
 
 ```YAML
 proxy_client_configure_apt: true
+```
+
+### proxy_client_configure_git_ssh
+
+#### Default value
+
+```YAML
+proxy_client_configure_git_ssh: false
 ```
 
 ### proxy_client_configure_systemd
@@ -155,6 +192,14 @@ proxy_client_no_proxy:
 
 ```YAML
 proxy_client_proxy_url: ''
+```
+
+### proxy_client_socks_url
+
+#### Default value
+
+```YAML
+proxy_client_socks_url: ''
 ```
 
 ## Dependencies

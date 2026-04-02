@@ -6,3 +6,7 @@ export HTTPS_PROXY={{ proxy_client_proxy_url }}
 {% set no_proxy_str = proxy_client_no_proxy | join(',') %}
 export no_proxy={{ no_proxy_str }}
 export NO_PROXY={{ no_proxy_str }}
+{% if proxy_client_socks_url %}
+export ALL_PROXY={{ proxy_client_socks_url }}
+export all_proxy={{ proxy_client_socks_url }}
+{% endif %}

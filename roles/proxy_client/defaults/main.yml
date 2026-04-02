@@ -11,3 +11,9 @@ proxy_client_no_proxy:
 # ── Scopes ────────────────────────────────────────────────────────────
 proxy_client_configure_apt: true
 proxy_client_configure_systemd: true
+
+# ── SOCKS Proxy (optional) ────────────────────────────────────────────
+# e.g. "socks5h://10.99.0.1:1080"
+proxy_client_socks_url: ""
+# Deploy GIT_SSH_COMMAND with SOCKS ProxyCommand for git-over-SSH
+proxy_client_configure_git_ssh: false

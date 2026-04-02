@@ -1,0 +1,43 @@
+---
+# ── Network ────────────────────────────────────────────────────────────
+dante_listen_addresses:
+  - "127.0.0.1"
+  - "::1"
+dante_listen_port: 1080
+dante_external_interface: eth0
+
+# CIDR list of allowed source networks.
+# Default matches a typical WireGuard tunnel subnet.
+dante_allowed_sources: []
+
+# ── Port Allowlist ─────────────────────────────────────────────────────
+# Only these destination ports are permitted. Default deny all others.
+dante_allowed_ports:
+  - 22    # SSH / git
+  - 443   # HTTPS (fallback)
+  - 465   # SMTPS
+  - 587   # SMTP submission
+  - 993   # IMAPS
+  - 995   # POP3S
+
+# ── Destination Blocking ──────────────────────────────────────────────
+# Block connections to RFC1918, loopback, link-local, etc.
+dante_block_private_destinations: true
+
+# ── Logging ────────────────────────────────────────────────────────────
+dante_log_file: /var/log/danted.log
+dante_error_log: "syslog/daemon"
+dante_log_connect: true
+dante_log_disconnect: true
+dante_log_error: true
+
+# ── Performance ────────────────────────────────────────────────────────
+dante_child_maxidle: 25
+
+# ── Timeouts ───────────────────────────────────────────────────────────
+dante_timeout_negotiate: 30
+dante_timeout_io: 86400
+dante_timeout_connect: 30
+
+# ── System ─────────────────────────────────────────────────────────────
+dante_user: sockd

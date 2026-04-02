@@ -5,6 +5,13 @@
       - proxy_client_proxy_url | length > 0
     fail_msg: "proxy_client_proxy_url is required (e.g. http://10.99.0.1:3128)"
 
+- name: Assert SOCKS URL scheme if set
+  ansible.builtin.assert:
+    that:
+      - proxy_client_socks_url is match('^socks5h?://')
+    fail_msg: "proxy_client_socks_url must start with socks5:// or socks5h://"
+  when: proxy_client_socks_url | length > 0
+
 - name: Deploy /etc/profile.d/proxy.sh
   ansible.builtin.template:
     src: profile-proxy.sh.j2
@@ -69,3 +76,20 @@
     state: absent
   notify: Re-exec systemd manager
   when: not proxy_client_configure_systemd
+
+- name: Deploy /etc/profile.d/git-ssh-proxy.sh
+  ansible.builtin.template:
+    src: git-ssh-proxy.sh.j2
+    dest: /etc/profile.d/git-ssh-proxy.sh
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - proxy_client_configure_git_ssh
+    - proxy_client_socks_url | length > 0
+
+- name: Remove git-ssh-proxy.sh when disabled
+  ansible.builtin.file:
+    path: /etc/profile.d/git-ssh-proxy.sh
+    state: absent
+  when: not proxy_client_configure_git_ssh or proxy_client_socks_url | length == 0

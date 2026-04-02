@@ -1,0 +1,3 @@
+# {{ ansible_managed }}
+{% set socks_host_port = proxy_client_socks_url | regex_replace('^socks5h?://', '') %}
+export GIT_SSH_COMMAND='ssh -o ProxyCommand="nc -X 5 -x {{ socks_host_port }} %h %p"'

@@ -1,0 +1,41 @@
+---
+- name: Assert dante_listen_addresses is non-empty
+  ansible.builtin.assert:
+    that:
+      - dante_listen_addresses | length > 0
+    fail_msg: "dante_listen_addresses must contain at least one address"
+
+- name: Assert dante_listen_port is valid
+  ansible.builtin.assert:
+    that:
+      - dante_listen_port | int > 0
+      - dante_listen_port | int < 65536
+    fail_msg: "dante_listen_port must be between 1 and 65535"
+
+- name: Assert dante_allowed_sources is non-empty
+  ansible.builtin.assert:
+    that:
+      - dante_allowed_sources | length > 0
+    fail_msg: "dante_allowed_sources must contain at least one CIDR"
+
+- name: Assert dante_allowed_ports is non-empty
+  ansible.builtin.assert:
+    that:
+      - dante_allowed_ports | length > 0
+    fail_msg: "dante_allowed_ports must contain at least one port"
+
+- name: Assert dante_external_interface is safe
+  ansible.builtin.assert:
+    that:
+      - dante_external_interface is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "dante_external_interface must be a simple interface name"
+
+- name: Assert dante_user is safe
+  ansible.builtin.assert:
+    that:
+      - dante_user is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "dante_user must be a simple name (alphanumeric, dash, underscore)"
+
+- name: Setup Dante on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'

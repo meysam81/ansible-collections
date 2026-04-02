@@ -1,8 +1,8 @@
 # egress_firewall
 
 iptables enforcement ensuring [WireGuard](https://www.wireguard.com/) tunnel
-traffic passes through [Squid](http://www.squid-cache.org/) proxy — no direct
-egress possible.
+traffic passes through [Squid](http://www.squid-cache.org/) and/or
+[Dante](https://www.inet.no/dante/) proxies — no direct egress possible.
 
 Deploys persistent custom iptables chains via a systemd service. Only the
 proxy user's outbound connections reach the internet; all direct forwarding
@@ -17,11 +17,11 @@ independently deployable — you can use any subset:
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌───────────┐
 │  wireguard   │────▶│  egress_firewall  │────▶│   squid    │
-│  (tunnel)    │     │  (enforcement)    │     │  (proxy)   │
-└─────────────┘     └──────────────────┘     └───────────┘
-                            │
-                    ┌───────┴────────┐
-                    │blocklist_updater│
+│  (tunnel)    │     │  (enforcement)    │     │  (HTTP)    │
+└─────────────┘     └──────────────────┘     ├───────────┤
+                            │                 │   dante    │
+                    ┌───────┴────────┐        │  (SOCKS5)  │
+                    │blocklist_updater│        └───────────┘
                     │ (threat feeds)  │
                     └────────────────┘
 ```
@@ -30,7 +30,8 @@ independently deployable — you can use any subset:
 |------|---------|-------------|
 | `wireguard` | VPN tunnel (server or client) | Yes — works as plain VPN with its own NAT |
 | `squid` | Forward proxy with ACL blocklists | Yes — works as localhost proxy |
-| `egress_firewall` | iptables enforcement: tunnel → proxy only | No — requires wireguard + squid |
+| `dante` | SOCKS5 proxy for non-HTTP traffic | Yes — works as localhost SOCKS proxy |
+| `egress_firewall` | iptables enforcement: tunnel → proxy only | No — requires wireguard + squid/dante |
 | `blocklist_updater` | Fetches threat intelligence feeds to disk | Yes — any consumer can read the files |
 
 When composing all roles, set `wireguard_nat_enabled: false` on the
@@ -117,6 +118,16 @@ collections:
         egress_firewall_ipv6_enabled: true
 ```
 
+### With SOCKS proxy (Dante)
+
+```yaml
+    - name: meysam81.general.egress_firewall
+      vars:
+        egress_firewall_socks_enabled: true
+        egress_firewall_socks_port: 1080
+        egress_firewall_socks_user: sockd
+```
+
 ## Verify
 
 From the exit node:
@@ -129,6 +140,10 @@ iptables -t nat -L EGRESS-WG-NAT -v -n
 
 # Service status
 systemctl status egress-firewall
+
+# View SOCKS rules (when enabled)
+iptables -L EGRESS-WG-INPUT -v -n | grep 1080
+iptables -t nat -L EGRESS-WG-NAT -v -n | grep sockd
 ```
 
 From a tunnel client:
@@ -136,6 +151,12 @@ From a tunnel client:
 ```bash
 # Should succeed — goes through Squid
 curl -x http://10.99.0.1:3128 https://ifconfig.me
+
+# Should succeed — goes through Dante (port 22 allowed)
+ssh -o ProxyCommand='nc -X 5 -x 10.99.0.1:1080 %h %p' git@github.com
+
+# Should succeed — goes through Dante (port 443 allowed)
+curl -x socks5h://10.99.0.1:1080 https://ifconfig.me
 
 # Should FAIL (timeout) — direct connection hits FORWARD DROP
 curl --max-time 5 https://ifconfig.me
@@ -148,9 +169,9 @@ nc -w 5 8.8.8.8 53
 
 The role creates three custom iptables chains:
 
-- **EGRESS-WG-INPUT** — allows tunnel traffic to reach Squid and DNS only, drops everything else
+- **EGRESS-WG-INPUT** — allows tunnel traffic to reach Squid, Dante (if enabled), and DNS only, drops everything else
 - **EGRESS-WG-FORWARD** — drops all direct forwarding from tunnel to internet (with optional exceptions)
-- **EGRESS-WG-NAT** — MASQUERADE only for the proxy user's outbound connections
+- **EGRESS-WG-NAT** — MASQUERADE only for the proxy user's (and SOCKS user's, if enabled) outbound connections
 
 Jump rules from built-in chains to custom chains are managed idempotently
 (`iptables -C` check before `-I` insert). Rules are loaded atomically via

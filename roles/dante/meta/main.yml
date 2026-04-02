@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: dante
+  description: Install and configure Dante SOCKS5 proxy with port allowlisting and source ACLs
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+
+allow_duplicates: false
+
+dependencies: []
