@@ -160,14 +160,6 @@
   failed_when: false
   when: dnsproxy_resolvconf_bin.stat.exists
 
-# ── Write /etc/resolv.conf ──────────────────────────────────────────
-
-- name: Remove resolv.conf symlink
-  ansible.builtin.file:
-    path: /etc/resolv.conf
-    state: absent
-  when: dnsproxy_manage_resolv_conf
-
 - name: Write resolv.conf pointing to dnsproxy
   ansible.builtin.template:
     src: resolv.conf.j2
