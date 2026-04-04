@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.12.0](https://github.com/meysam81/ansible-collections/compare/v1.11.2...v1.12.0) (2026-04-04)
+
+
+### Features
+
+* add dante role ([bd226d6](https://github.com/meysam81/ansible-collections/commit/bd226d65e0dafa199895f68e51b4bc45b0c55f0f))
+* add microsocks role ([2cc7d6d](https://github.com/meysam81/ansible-collections/commit/2cc7d6d96720b09594deecea015ba93c74559742))
+* **dante:** compile from source if not available in apt ([7aaddab](https://github.com/meysam81/ansible-collections/commit/7aaddab957e657639d0bbedcb7014c79d71fede2))
+* **egress:** add support for microsocks rules ([7cd063a](https://github.com/meysam81/ansible-collections/commit/7cd063aacee3966222cbc655a49bd9125f048bd7))
+
+
+### Bug Fixes
+
+* add the missing ipv6 iptable rules for socks proxy ([a6e06e4](https://github.com/meysam81/ansible-collections/commit/a6e06e489b19a573cbbd8478f17884f550ebfc2a))
+* **CI:** address the last remaining ansible-lint issue ([bedaf07](https://github.com/meysam81/ansible-collections/commit/bedaf07d0c7badc7a6c729345c0aeea889594cfa))
+* **CI:** allow failures on systemd services in isolated runs ([d979ecd](https://github.com/meysam81/ansible-collections/commit/d979ecdef6d8a5dd2c2e8fe675d24c447f4abcc8))
+* **CI:** do not fail services if they failed on CI ([6ad1785](https://github.com/meysam81/ansible-collections/commit/6ad1785d3b24cec925f8ec913895d7be11990aa1))
+* **CI:** make linter happy ([98e3e2c](https://github.com/meysam81/ansible-collections/commit/98e3e2c31664467b60bc122ddecd40810f4f4856))
+* **dante:** remove default interface ([c11ecd0](https://github.com/meysam81/ansible-collections/commit/c11ecd0cb943cd6f75554cd351b73b9571448b75))
+* **dnsproxy:** move resolve conf to templates ([dbba758](https://github.com/meysam81/ansible-collections/commit/dbba75827882e4f6bad213caee432f90e7cb8dff))
+* **haproxy:** remove -i flag from subdomain regex ([0de5e24](https://github.com/meysam81/ansible-collections/commit/0de5e24d73f1050458aae13d62571614ab79776e))
+* **k8s-oidc:** ensure git is installed and deploy ci.yml by default ([2e2ada6](https://github.com/meysam81/ansible-collections/commit/2e2ada628a89de6f0131498bd7c3bbc77f103c34))
+* write resolve conf in idempotent manner ([30fbf9c](https://github.com/meysam81/ansible-collections/commit/30fbf9c69596e264b8016fbaabe0aaba7ff0dfeb))
+
 ## [1.11.2](https://github.com/meysam81/ansible-collections/compare/v1.11.1...v1.11.2) (2026-04-01)
 
 
