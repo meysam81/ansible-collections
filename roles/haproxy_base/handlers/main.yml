@@ -12,7 +12,7 @@
     state: reloaded
     enabled: true
     daemon_reload: true
-  register: _haproxy_reload
+  register: haproxy_base_haproxy_reload
   failed_when:
-    - _haproxy_reload.failed
+    - haproxy_base_haproxy_reload.failed
     - not (lookup('env', 'CI') | default('false') | bool)
