@@ -27,8 +27,8 @@
 - name: Assert dante_external_interface is safe
   ansible.builtin.assert:
     that:
-      - dante_external_interface is match('^[a-zA-Z0-9_-]+$')
-    fail_msg: "dante_external_interface must be a simple interface name"
+      - dante_external_interface is match('^[a-zA-Z0-9_.:-]+$')
+    fail_msg: "dante_external_interface must be an interface name or IP address"
 
 - name: Assert dante_user is safe
   ansible.builtin.assert:
@@ -36,6 +36,22 @@
       - dante_user is match('^[a-zA-Z0-9_-]+$')
     fail_msg: "dante_user must be a simple name (alphanumeric, dash, underscore)"
 
-- name: Setup Dante on Debian/Ubuntu
-  ansible.builtin.import_tasks: setup-Debian.yml
+- name: Check if dante-server is available in apt
+  ansible.builtin.shell:
+    cmd: apt-cache show dante-server > /dev/null 2>&1
+  register: dante_apt_available
+  changed_when: false
+  failed_when: false
   when: ansible_facts['os_family'] == 'Debian'
+
+- name: Setup Dante from apt package
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - dante_apt_available.rc == 0
+
+- name: Setup Dante from source
+  ansible.builtin.import_tasks: setup-Debian-source.yml
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - dante_apt_available.rc != 0

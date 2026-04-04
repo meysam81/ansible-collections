@@ -6,31 +6,12 @@
     update_cache: true
     cache_valid_time: 3600
 
-- name: Create dante system user
-  ansible.builtin.user:
-    name: "{{ dante_user }}"
-    system: true
-    shell: /usr/sbin/nologin
-    home: /nonexistent
-    create_home: false
+- name: Set dante binary path
+  ansible.builtin.set_fact:
+    dante_sockd_bin: danted
 
-- name: Deploy danted.conf
-  ansible.builtin.template:
-    src: danted.conf.j2
-    dest: /etc/danted.conf
-    owner: root
-    group: root
-    mode: "0644"
-    validate: "danted -Vf %s"
-  notify: Restart danted
-
-- name: Deploy logrotate config
-  ansible.builtin.template:
-    src: danted-logrotate.j2
-    dest: /etc/logrotate.d/danted
-    owner: root
-    group: root
-    mode: "0644"
+- name: Configure dante
+  ansible.builtin.import_tasks: configure.yml
 
 - name: Create systemd override directory
   ansible.builtin.file:
@@ -48,10 +29,3 @@
     group: root
     mode: "0644"
   notify: Restart danted
-
-- name: Enable and start danted
-  ansible.builtin.systemd:
-    name: danted
-    state: started
-    enabled: true
-    daemon_reload: true

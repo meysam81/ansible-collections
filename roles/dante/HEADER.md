@@ -104,57 +104,6 @@ collections:
         egress_firewall_socks_enabled: true
 ```
 
-## Default Variables
-
-### Network
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_listen_addresses` | `["127.0.0.1"]` | Bind addresses |
-| `dante_listen_port` | `1080` | Bind port |
-| `dante_external_interface` | `eth0` | Outbound interface |
-| `dante_allowed_sources` | `["10.99.0.0/24"]` | Allowed client CIDRs |
-
-### Port Allowlist
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_allowed_ports` | `[22, 443, 465, 587, 993, 995]` | Permitted destination ports |
-
-Default ports: SSH (22), HTTPS (443), SMTPS (465), SMTP submission (587),
-IMAPS (993), POP3S (995). All other destination ports are denied.
-
-### Security
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_block_private_destinations` | `true` | Block RFC1918, loopback, link-local |
-| `dante_user` | `sockd` | Unprivileged daemon user |
-
-### Logging
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_log_file` | `/var/log/danted.log` | Main log file |
-| `dante_error_log` | `syslog/daemon` | Error log destination |
-| `dante_log_connect` | `true` | Log connection events |
-| `dante_log_disconnect` | `true` | Log disconnection events |
-| `dante_log_error` | `true` | Log errors |
-
-### Timeouts
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_timeout_negotiate` | `30` | SOCKS negotiation timeout (seconds) |
-| `dante_timeout_io` | `86400` | I/O inactivity timeout (seconds) |
-| `dante_timeout_connect` | `30` | TCP connect timeout (seconds) |
-
-### Performance
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_child_maxidle` | `25` | Max idle child processes |
-
 ## ACL Evaluation Order
 
 ```

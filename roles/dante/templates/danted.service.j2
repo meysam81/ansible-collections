@@ -1,0 +1,48 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Dante SOCKS5 proxy (built from source)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=forking
+PIDFile=/run/sockd.pid
+ExecStart=/usr/local/sbin/sockd -D -f /etc/danted.conf
+ExecReload=/bin/kill -HUP $MAINPID
+
+# ── Filesystem protection ─────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+
+# ── Kernel protection ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+
+# ── Privilege restriction ─────────────────────────────────────────────
+# Safe with socksmethod: none — no privilege escalation needed for auth
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+# ── Syscall filtering ─────────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# ── Resource limits ────────────────────────────────────────────────────
+LimitNOFILE=65535
+
+# ── I/O access ─────────────────────────────────────────────────────────
+ReadWritePaths={{ dante_log_file }} /var/run
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

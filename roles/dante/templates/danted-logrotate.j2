@@ -7,6 +7,6 @@
     missingok
     notifempty
     postrotate
-        /bin/kill -HUP $(cat /var/run/sockd.pid 2>/dev/null) 2>/dev/null || true
+        /bin/kill -HUP $(cat /run/sockd.pid 2>/dev/null) 2>/dev/null || true
     endscript
 }

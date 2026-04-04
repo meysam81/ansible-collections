@@ -4,7 +4,7 @@ dante_listen_addresses:
   - "127.0.0.1"
   - "::1"
 dante_listen_port: 1080
-dante_external_interface: ""
+dante_external_interface: "{{ ansible_default_ipv4.address }}"
 
 # CIDR list of allowed source networks.
 # Default matches a typical WireGuard tunnel subnet.
@@ -31,13 +31,16 @@ dante_log_connect: true
 dante_log_disconnect: true
 dante_log_error: true
 
-# ── Performance ────────────────────────────────────────────────────────
-dante_child_maxidle: 25
-
 # ── Timeouts ───────────────────────────────────────────────────────────
 dante_timeout_negotiate: 30
 dante_timeout_io: 86400
 dante_timeout_connect: 30
+
+# ── Build (source compilation for Debian trixie+) ─────────────────────
+# Source tarball URL and checksum. Used when dante-server is not in apt.
+dante_version: "1.4.4"
+dante_source_url: "https://www.inet.no/dante/files/dante-{{ dante_version }}.tar.gz"
+dante_source_sha256: "1973c7732f1f9f0a4c0ccf2c1ce462c7c25060b25643ea90f9b98f53a813faec"
 
 # ── System ─────────────────────────────────────────────────────────────
 dante_user: sockd

@@ -104,57 +104,6 @@ collections:
         egress_firewall_socks_enabled: true
 ```
 
-## Default Variables
-
-### Network
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_listen_addresses` | `["127.0.0.1"]` | Bind addresses |
-| `dante_listen_port` | `1080` | Bind port |
-| `dante_external_interface` | `eth0` | Outbound interface |
-| `dante_allowed_sources` | `["10.99.0.0/24"]` | Allowed client CIDRs |
-
-### Port Allowlist
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_allowed_ports` | `[22, 443, 465, 587, 993, 995]` | Permitted destination ports |
-
-Default ports: SSH (22), HTTPS (443), SMTPS (465), SMTP submission (587),
-IMAPS (993), POP3S (995). All other destination ports are denied.
-
-### Security
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_block_private_destinations` | `true` | Block RFC1918, loopback, link-local |
-| `dante_user` | `sockd` | Unprivileged daemon user |
-
-### Logging
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_log_file` | `/var/log/danted.log` | Main log file |
-| `dante_error_log` | `syslog/daemon` | Error log destination |
-| `dante_log_connect` | `true` | Log connection events |
-| `dante_log_disconnect` | `true` | Log disconnection events |
-| `dante_log_error` | `true` | Log errors |
-
-### Timeouts
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_timeout_negotiate` | `30` | SOCKS negotiation timeout (seconds) |
-| `dante_timeout_io` | `86400` | I/O inactivity timeout (seconds) |
-| `dante_timeout_connect` | `30` | TCP connect timeout (seconds) |
-
-### Performance
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `dante_child_maxidle` | `25` | Max idle child processes |
-
 ## ACL Evaluation Order
 
 ```
@@ -240,7 +189,6 @@ Install and configure Dante SOCKS5 proxy with port allowlisting and source ACLs
   - [dante_allowed_ports](#dante_allowed_ports)
   - [dante_allowed_sources](#dante_allowed_sources)
   - [dante_block_private_destinations](#dante_block_private_destinations)
-  - [dante_child_maxidle](#dante_child_maxidle)
   - [dante_error_log](#dante_error_log)
   - [dante_external_interface](#dante_external_interface)
   - [dante_listen_addresses](#dante_listen_addresses)
@@ -249,10 +197,13 @@ Install and configure Dante SOCKS5 proxy with port allowlisting and source ACLs
   - [dante_log_disconnect](#dante_log_disconnect)
   - [dante_log_error](#dante_log_error)
   - [dante_log_file](#dante_log_file)
+  - [dante_source_sha256](#dante_source_sha256)
+  - [dante_source_url](#dante_source_url)
   - [dante_timeout_connect](#dante_timeout_connect)
   - [dante_timeout_io](#dante_timeout_io)
   - [dante_timeout_negotiate](#dante_timeout_negotiate)
   - [dante_user](#dante_user)
+  - [dante_version](#dante_version)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -295,14 +246,6 @@ dante_allowed_sources: []
 dante_block_private_destinations: true
 ```
 
-### dante_child_maxidle
-
-#### Default value
-
-```YAML
-dante_child_maxidle: 25
-```
-
 ### dante_error_log
 
 #### Default value
@@ -316,7 +259,7 @@ dante_error_log: syslog/daemon
 #### Default value
 
 ```YAML
-dante_external_interface: ''
+dante_external_interface: '{{ ansible_default_ipv4.address }}'
 ```
 
 ### dante_listen_addresses
@@ -369,6 +312,22 @@ dante_log_error: true
 dante_log_file: /var/log/danted.log
 ```
 
+### dante_source_sha256
+
+#### Default value
+
+```YAML
+dante_source_sha256: 1973c7732f1f9f0a4c0ccf2c1ce462c7c25060b25643ea90f9b98f53a813faec
+```
+
+### dante_source_url
+
+#### Default value
+
+```YAML
+dante_source_url: https://www.inet.no/dante/files/dante-{{ dante_version }}.tar.gz
+```
+
 ### dante_timeout_connect
 
 #### Default value
@@ -399,6 +358,14 @@ dante_timeout_negotiate: 30
 
 ```YAML
 dante_user: sockd
+```
+
+### dante_version
+
+#### Default value
+
+```YAML
+dante_version: 1.4.4
 ```
 
 ## Dependencies

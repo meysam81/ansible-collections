@@ -1,0 +1,78 @@
+---
+- name: Install build dependencies
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - bison
+      - flex
+      - libpam0g-dev
+      - libwrap0-dev
+      - libcrypt-dev
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check installed dante version
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/sockd -v
+  register: dante_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Download dante source tarball
+  ansible.builtin.get_url:
+    url: "{{ dante_source_url }}"
+    dest: "/usr/local/src/dante-{{ dante_version }}.tar.gz"
+    checksum: "sha256:{{ dante_source_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: dante_installed_version.rc != 0 or dante_version not in (dante_installed_version.stdout | default(''))
+
+- name: Extract dante source
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/dante-{{ dante_version }}.tar.gz"
+    dest: /usr/local/src
+    remote_src: true
+    creates: "/usr/local/src/dante-{{ dante_version }}/configure"
+
+- name: Configure dante source
+  ansible.builtin.command:
+    cmd: >-
+      ./configure
+      --prefix=/usr/local
+      --sysconfdir=/etc
+      --disable-client
+      --disable-preload
+      --without-gssapi
+      --without-upnp
+    chdir: "/usr/local/src/dante-{{ dante_version }}"
+    creates: "/usr/local/src/dante-{{ dante_version }}/Makefile"
+
+- name: Build dante
+  community.general.make:
+    chdir: "/usr/local/src/dante-{{ dante_version }}"
+  when: dante_installed_version.rc != 0 or dante_version not in (dante_installed_version.stdout | default(''))
+
+- name: Install dante
+  community.general.make:
+    chdir: "/usr/local/src/dante-{{ dante_version }}"
+    target: install
+  when: dante_installed_version.rc != 0 or dante_version not in (dante_installed_version.stdout | default(''))
+  notify: Restart danted
+
+- name: Set dante binary path
+  ansible.builtin.set_fact:
+    dante_sockd_bin: /usr/local/sbin/sockd
+
+- name: Configure dante
+  ansible.builtin.import_tasks: configure.yml
+
+- name: Deploy danted systemd service
+  ansible.builtin.template:
+    src: danted.service.j2
+    dest: /etc/systemd/system/danted.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart danted

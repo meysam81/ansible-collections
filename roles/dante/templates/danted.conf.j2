@@ -25,9 +25,6 @@ timeout.negotiate: {{ dante_timeout_negotiate }}
 timeout.io: {{ dante_timeout_io }}
 timeout.connect: {{ dante_timeout_connect }}
 
-# ── Performance ────────────────────────────────────────────────────────
-child.maxidle: {{ dante_child_maxidle }}
-
 # ── Client Rules (source IP filtering) ────────────────────────────────
 # First match wins. Allow tunnel sources, block everything else.
 {% for src in dante_allowed_sources %}
