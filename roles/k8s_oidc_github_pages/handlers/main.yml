@@ -10,3 +10,4 @@
     name: k8s-oidc-github-pages.service
     daemon_reload: true
     state: started
+  ignore_errors: true
