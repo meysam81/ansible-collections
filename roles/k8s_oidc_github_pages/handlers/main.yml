@@ -10,4 +10,7 @@
     name: k8s-oidc-github-pages.service
     daemon_reload: true
     state: started
-  ignore_errors: true
+  register: _k8s_oidc_github_pages_start
+  failed_when:
+    - _k8s_oidc_github_pages_start.failed
+    - not (lookup('env', 'CI') | default('false') | bool)

@@ -12,4 +12,7 @@
     state: reloaded
     enabled: true
     daemon_reload: true
-  ignore_errors: true
+  register: _haproxy_reload
+  failed_when:
+    - _haproxy_reload.failed
+    - not (lookup('env', 'CI') | default('false') | bool)

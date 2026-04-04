@@ -80,4 +80,6 @@
   when: node_exporter_healthcheck_enabled | bool
   retries: 5
   delay: 1
-  ignore_errors: true
+  failed_when:
+    - node_exporter_healthcheck.failed
+    - not (lookup('env', 'CI') | default('false') | bool)
