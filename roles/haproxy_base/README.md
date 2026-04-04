@@ -12,10 +12,10 @@ HAProxy shared infrastructure (user, dirs, error pages, systemd service)
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
-  - [haproxy_bin_path](#haproxy_bin_path)
-  - [haproxy_certs_dir](#haproxy_certs_dir)
-  - [haproxy_config_dir](#haproxy_config_dir)
-  - [haproxy_errors_dir](#haproxy_errors_dir)
+  - [haproxy_base_bin_path](#haproxy_base_bin_path)
+  - [haproxy_base_certs_dir](#haproxy_base_certs_dir)
+  - [haproxy_base_config_dir](#haproxy_base_config_dir)
+  - [haproxy_base_errors_dir](#haproxy_base_errors_dir)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Author](#author)
@@ -28,36 +28,36 @@ HAProxy shared infrastructure (user, dirs, error pages, systemd service)
 
 ## Default Variables
 
-### haproxy_bin_path
+### haproxy_base_bin_path
 
 #### Default value
 
 ```YAML
-haproxy_bin_path: /usr/local/sbin/haproxy
+haproxy_base_bin_path: /usr/local/sbin/haproxy
 ```
 
-### haproxy_certs_dir
+### haproxy_base_certs_dir
 
 #### Default value
 
 ```YAML
-haproxy_certs_dir: /etc/haproxy/certs
+haproxy_base_certs_dir: /etc/haproxy/certs
 ```
 
-### haproxy_config_dir
+### haproxy_base_config_dir
 
 #### Default value
 
 ```YAML
-haproxy_config_dir: /etc/haproxy
+haproxy_base_config_dir: /etc/haproxy
 ```
 
-### haproxy_errors_dir
+### haproxy_base_errors_dir
 
 #### Default value
 
 ```YAML
-haproxy_errors_dir: /etc/haproxy/errors
+haproxy_base_errors_dir: /etc/haproxy/errors
 ```
 
 ## Dependencies

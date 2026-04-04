@@ -19,7 +19,10 @@
     - pushgateway_sha256sum_url | default('') | length > 0
 - name: Extract SHA256 checksums for {{ pushgateway_download_url | basename }}
   ansible.builtin.set_fact:
-    pushgateway_sha256sum: "{{ pushgateway_sha256sum_file_content | select('search', pushgateway_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+    pushgateway_sha256sum: >-
+      {{ pushgateway_sha256sum_file_content
+      | select('search', pushgateway_download_url | basename)
+      | map('split', ' ') | map('first') | list | first }}
   when:
     - pushgateway_version | default('') | length > 0
     - pushgateway_sha256sum_url | default('') | length > 0

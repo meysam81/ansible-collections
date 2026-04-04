@@ -23,23 +23,10 @@
     version: "{{ microsocks_version }}"
     force: true
   register: microsocks_source
-
-- name: Build microsocks
-  community.general.make:
-    chdir: /usr/local/src/microsocks
-  when: microsocks_source.changed
-  notify: Restart microsocks
-
-- name: Install microsocks binary
-  ansible.builtin.copy:
-    src: /usr/local/src/microsocks/microsocks
-    dest: /usr/local/bin/microsocks
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0755"
-  when: microsocks_source.changed
-  notify: Restart microsocks
+  notify:
+    - Build microsocks
+    - Install microsocks binary
+    - Restart microsocks
 
 - name: Deploy microsocks systemd service
   ansible.builtin.template:

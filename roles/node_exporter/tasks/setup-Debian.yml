@@ -19,7 +19,10 @@
     - node_exporter_sha256sum_url | default('') | length > 0
 - name: Extract SHA256 checksums for {{ node_exporter_download_url | basename }}
   ansible.builtin.set_fact:
-    node_exporter_sha256sum: "{{ node_exporter_sha256sum_file_content | select('search', node_exporter_download_url | basename) | map('split', ' ') | map('first') | list | first }}"
+    node_exporter_sha256sum: >-
+      {{ node_exporter_sha256sum_file_content
+      | select('search', node_exporter_download_url | basename)
+      | map('split', ' ') | map('first') | list | first }}
   when:
     - node_exporter_version | default('') | length > 0
     - node_exporter_sha256sum_url | default('') | length > 0

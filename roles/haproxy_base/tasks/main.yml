@@ -15,12 +15,12 @@
     group: haproxy
     mode: "0755"
   loop:
-    - "{{ haproxy_config_dir }}"
-    - "{{ haproxy_errors_dir }}"
+    - "{{ haproxy_base_config_dir }}"
+    - "{{ haproxy_base_errors_dir }}"
 
 - name: Create HAProxy certificate directory
   ansible.builtin.file:
-    path: "{{ haproxy_certs_dir }}"
+    path: "{{ haproxy_base_certs_dir }}"
     state: directory
     owner: haproxy
     group: haproxy
@@ -29,7 +29,7 @@
 - name: Copy HAProxy error files from build
   ansible.builtin.copy:
     src: /usr/local/share/haproxy/errors/
-    dest: "{{ haproxy_errors_dir }}/"
+    dest: "{{ haproxy_base_errors_dir }}/"
     owner: haproxy
     group: haproxy
     mode: "0644"
@@ -39,7 +39,7 @@
 - name: Copy custom error pages
   ansible.builtin.copy:
     src: "errors/"
-    dest: "{{ haproxy_errors_dir }}/"
+    dest: "{{ haproxy_base_errors_dir }}/"
     owner: haproxy
     group: haproxy
     mode: "0644"

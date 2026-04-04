@@ -1,4 +1,17 @@
 ---
+- name: Build microsocks
+  community.general.make:
+    chdir: /usr/local/src/microsocks
+
+- name: Install microsocks binary
+  ansible.builtin.copy:
+    src: /usr/local/src/microsocks/microsocks
+    dest: /usr/local/bin/microsocks
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Restart microsocks
   ansible.builtin.systemd:
     name: microsocks

@@ -31,20 +31,17 @@
 - name: Deploy allowed_domains.txt
   ansible.builtin.template:
     src: allowed_domains.txt.j2
-    dest: "{{ haproxy_config_dir }}/allowed_domains.txt"
+    dest: "{{ haproxy_base_config_dir }}/allowed_domains.txt"
     owner: haproxy
     group: haproxy
     mode: "0644"
   notify: Reload haproxy service
   when: haproxy_cors_allowed_domains | length > 0
 
-- name: debug
-  debug: var=ansible_facts
-
 - name: Deploy HAProxy config
   ansible.builtin.template:
     src: haproxy.cfg.j2
-    dest: "{{ haproxy_config_dir }}/haproxy.cfg"
+    dest: "{{ haproxy_base_config_dir }}/haproxy.cfg"
     owner: haproxy
     group: haproxy
     mode: "0640"

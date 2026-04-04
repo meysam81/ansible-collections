@@ -144,7 +144,8 @@ promtail_sha256sum_url: https://github.com/grafana/loki/releases/download/v{{ pr
 #### Default value
 
 ```YAML
-promtail_url: https://github.com/grafana/loki/releases/download/v{{ promtail_version | regex_replace('^v', '') }}/promtail-{{ promtail_os }}-{{ promtail_arch }}.zip
+promtail_url: >-
+  https://github.com/grafana/loki/releases/download/v{{ promtail_version | regex_replace('^v', '') }}/promtail-{{ promtail_os }}-{{ promtail_arch }}.zip
 ```
 
 ### promtail_user

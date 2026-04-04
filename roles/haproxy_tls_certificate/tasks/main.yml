@@ -7,7 +7,10 @@
       - haproxy_tls_certificate_cloudflare_dns_api_token is defined
       - haproxy_tls_certificate_cloudflare_dns_api_token | length > 0
       - haproxy_tls_certificate_served_domains | length > 0
-    fail_msg: "haproxy_tls_certificate_email must be a valid email, haproxy_tls_certificate_cloudflare_dns_api_token and haproxy_tls_certificate_served_domains are required"
+    fail_msg: >-
+      haproxy_tls_certificate_email must be a valid email,
+      haproxy_tls_certificate_cloudflare_dns_api_token and
+      haproxy_tls_certificate_served_domains are required
 
 - name: Assert haproxy_tls_certificate_served_domains contain valid domain names
   ansible.builtin.assert:

@@ -137,7 +137,8 @@ kratos_configuration: |
   identity:
     schemas:
       - id: default
-        url: https://github.com/ory/kratos/raw/refs/tags/v{{ kratos_version | regex_replace('^v', '') }}/contrib/quickstart/kratos/email-password/identity.schema.json
+        url: >-
+          https://github.com/ory/kratos/raw/refs/tags/v{{ kratos_version | regex_replace('^v', '') }}/contrib/quickstart/kratos/email-password/identity.schema.json
 ```
 
 ### kratos_download_url
