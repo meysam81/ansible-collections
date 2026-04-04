@@ -1,0 +1,36 @@
+---
+- name: Assert microsocks_listen_address is set
+  ansible.builtin.assert:
+    that:
+      - microsocks_listen_address | length > 0
+    fail_msg: "microsocks_listen_address must be set"
+
+- name: Assert microsocks_listen_port is valid
+  ansible.builtin.assert:
+    that:
+      - microsocks_listen_port | int > 0
+      - microsocks_listen_port | int < 65536
+    fail_msg: "microsocks_listen_port must be between 1 and 65535"
+
+- name: Assert microsocks_user is safe
+  ansible.builtin.assert:
+    that:
+      - microsocks_user is match('^[a-zA-Z0-9_-]+$')
+    fail_msg: "microsocks_user must be a simple name (alphanumeric, dash, underscore)"
+
+- name: Assert microsocks_version is a git ref
+  ansible.builtin.assert:
+    that:
+      - microsocks_version | length > 0
+    fail_msg: "microsocks_version must be a git tag or commit (e.g. v1.0.5)"
+
+- name: Assert auth password requires username
+  ansible.builtin.assert:
+    that:
+      - microsocks_auth_user | length > 0
+    fail_msg: "microsocks_auth_user is required when microsocks_auth_password is set"
+  when: microsocks_auth_password | length > 0
+
+- name: Setup microsocks on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'

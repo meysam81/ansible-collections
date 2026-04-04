@@ -1,0 +1,58 @@
+---
+- name: Install build dependencies
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - git
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create microsocks system user
+  ansible.builtin.user:
+    name: "{{ microsocks_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: /nonexistent
+    create_home: false
+
+- name: Clone microsocks source
+  ansible.builtin.git:
+    repo: https://github.com/rofl0r/microsocks.git
+    dest: /usr/local/src/microsocks
+    version: "{{ microsocks_version }}"
+    force: true
+  register: microsocks_source
+
+- name: Build microsocks
+  community.general.make:
+    chdir: /usr/local/src/microsocks
+  when: microsocks_source.changed
+  notify: Restart microsocks
+
+- name: Install microsocks binary
+  ansible.builtin.copy:
+    src: /usr/local/src/microsocks/microsocks
+    dest: /usr/local/bin/microsocks
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  when: microsocks_source.changed
+  notify: Restart microsocks
+
+- name: Deploy microsocks systemd service
+  ansible.builtin.template:
+    src: microsocks.service.j2
+    dest: /etc/systemd/system/microsocks.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart microsocks
+
+- name: Enable and start microsocks
+  ansible.builtin.systemd:
+    name: microsocks
+    state: started
+    enabled: true
+    daemon_reload: true

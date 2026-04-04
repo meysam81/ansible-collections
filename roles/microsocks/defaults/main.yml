@@ -1,0 +1,16 @@
+---
+# ── Network ────────────────────────────────────────────────────────────
+microsocks_listen_address: "::"
+microsocks_listen_port: 1080
+
+# ── Build ──────────────────────────────────────────────────────────────
+# Git tag from https://github.com/rofl0r/microsocks/releases
+microsocks_version: "v1.0.5"
+
+# ── Authentication (optional) ─────────────────────────────────────────
+# Leave empty for no auth (recommended when behind WireGuard).
+microsocks_auth_user: ""
+microsocks_auth_password: ""
+
+# ── System ─────────────────────────────────────────────────────────────
+microsocks_user: sockd

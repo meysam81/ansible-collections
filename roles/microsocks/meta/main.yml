@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: microsocks
+  description: >-
+    Build and deploy microsocks as a lightweight SOCKS5 proxy
+    with systemd hardening
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+
+allow_duplicates: false
+dependencies: []
