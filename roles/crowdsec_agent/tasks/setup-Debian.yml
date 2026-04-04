@@ -45,7 +45,9 @@
     cmd: "cscli collections install {{ item }}"
   loop: "{{ crowdsec_agent_collections }}"
   register: crowdsec_agent_cscli_result
-  changed_when: "'overwrite' not in crowdsec_agent_cscli_result.stderr"
+  changed_when: >-
+    'overwrite' not in crowdsec_agent_cscli_result.stderr and
+    'Nothing to install or remove.' not in crowdsec_agent_cscli_result.stdout
   failed_when:
     - crowdsec_agent_cscli_result.rc != 0
     - "'already' not in (crowdsec_agent_cscli_result.stderr | default(''))"

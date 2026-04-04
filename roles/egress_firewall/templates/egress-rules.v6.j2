@@ -31,6 +31,8 @@
 # Allow DNS to local resolver before blocking private destinations
 -A EGRESS-WG-OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -p udp --dport {{ egress_firewall_dns_port }} -j ACCEPT
 -A EGRESS-WG-OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -p tcp --dport {{ egress_firewall_dns_port }} -j ACCEPT
+# Fast-path established connections before block rules
+-A EGRESS-WG-OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 # Block SOCKS user from reaching private destinations
 -A EGRESS-WG-OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -d ::1/128 -j DROP
 -A EGRESS-WG-OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -d fc00::/7 -j DROP
