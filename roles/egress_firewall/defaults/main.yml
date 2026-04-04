@@ -25,8 +25,18 @@ egress_firewall_input_exceptions: []
 egress_firewall_forward_exceptions: []
 
 # ── SOCKS Proxy (optional) ────────────────────────────────────────────
-# Enable to allow a SOCKS proxy (e.g. Dante) alongside the HTTP proxy.
+# Enable to allow a SOCKS proxy (e.g. microsocks, Dante) alongside the HTTP proxy.
 # Adds INPUT accept for socks_port and MASQUERADE for socks_user.
 egress_firewall_socks_enabled: false
 egress_firewall_socks_port: 1080
 egress_firewall_socks_user: sockd
+
+# ── SOCKS Output Filtering (optional) ─────────────────────────────────
+# Port allowlist for SOCKS proxy outbound connections.
+# When non-empty AND socks_enabled, only these destination ports are
+# permitted for the SOCKS user's OUTPUT. Empty list = no restriction
+# (backward compatible with Dante setups that filter ports internally).
+egress_firewall_socks_allowed_ports: []
+
+# Block SOCKS proxy from reaching RFC1918, loopback, and link-local.
+egress_firewall_socks_block_private: true

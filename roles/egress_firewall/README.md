@@ -2,7 +2,8 @@
 
 iptables enforcement ensuring [WireGuard](https://www.wireguard.com/) tunnel
 traffic passes through [Squid](http://www.squid-cache.org/) and/or
-[Dante](https://www.inet.no/dante/) proxies — no direct egress possible.
+SOCKS5 proxies ([microsocks](https://github.com/rofl0r/microsocks),
+[Dante](https://www.inet.no/dante/)) — no direct egress possible.
 
 Deploys persistent custom iptables chains via a systemd service. Only the
 proxy user's outbound connections reach the internet; all direct forwarding
@@ -15,22 +16,23 @@ These roles are designed to compose on a WireGuard exit node. Each is
 independently deployable — you can use any subset:
 
 ```
-┌─────────────┐     ┌──────────────────┐     ┌───────────┐
-│  wireguard   │────▶│  egress_firewall  │────▶│   squid    │
-│  (tunnel)    │     │  (enforcement)    │     │  (HTTP)    │
-└─────────────┘     └──────────────────┘     ├───────────┤
-                            │                 │   dante    │
-                    ┌───────┴────────┐        │  (SOCKS5)  │
-                    │blocklist_updater│        └───────────┘
-                    │ (threat feeds)  │
-                    └────────────────┘
+┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
+│  wireguard  │────▶│  egress_firewall │────▶│    squid    │
+│  (tunnel)   │     │  (enforcement)   │     │   (HTTP)    │
+└─────────────┘     └──────────────────┘     ├─────────────┤
+                            │                │ microsocks  │
+                    ┌───────┴─────────┐      │ or dante    │
+                    │blocklist_updater│      │  (SOCKS5)   │
+                    │ (threat feeds)  │      └─────────────┘
+                    └─────────────────┘
 ```
 
 | Role | Purpose | Standalone? |
 |------|---------|-------------|
 | `wireguard` | VPN tunnel (server or client) | Yes — works as plain VPN with its own NAT |
 | `squid` | Forward proxy with ACL blocklists | Yes — works as localhost proxy |
-| `dante` | SOCKS5 proxy for non-HTTP traffic | Yes — works as localhost SOCKS proxy |
+| `microsocks` | Lightweight SOCKS5 proxy (build from source) | Yes — works as localhost SOCKS proxy |
+| `dante` | SOCKS5 proxy for non-HTTP traffic (Debian bookworm) | Yes — works as localhost SOCKS proxy |
 | `egress_firewall` | iptables enforcement: tunnel → proxy only | No — requires wireguard + squid/dante |
 | `blocklist_updater` | Fetches threat intelligence feeds to disk | Yes — any consumer can read the files |
 
@@ -128,6 +130,21 @@ collections:
         egress_firewall_socks_user: sockd
 ```
 
+### With SOCKS proxy + port allowlisting (microsocks)
+
+```yaml
+    - name: meysam81.general.egress_firewall
+      vars:
+        egress_firewall_socks_enabled: true
+        egress_firewall_socks_allowed_ports:
+          - 22    # SSH / git
+          - 443   # HTTPS
+          - 465   # SMTPS
+          - 587   # SMTP submission
+          - 993   # IMAPS
+          - 995   # POP3S
+```
+
 ## Verify
 
 From the exit node:
@@ -144,6 +161,9 @@ systemctl status egress-firewall
 # View SOCKS rules (when enabled)
 iptables -L EGRESS-WG-INPUT -v -n | grep 1080
 iptables -t nat -L EGRESS-WG-NAT -v -n | grep sockd
+
+# View OUTPUT rules (when socks_allowed_ports is set)
+iptables -L EGRESS-WG-OUTPUT -v -n
 ```
 
 From a tunnel client:
@@ -171,6 +191,7 @@ The role creates three custom iptables chains:
 
 - **EGRESS-WG-INPUT** — allows tunnel traffic to reach Squid, Dante (if enabled), and DNS only, drops everything else
 - **EGRESS-WG-FORWARD** — drops all direct forwarding from tunnel to internet (with optional exceptions)
+- **EGRESS-WG-OUTPUT** (optional) — when `socks_allowed_ports` is set, restricts SOCKS proxy to specific destination ports and blocks private destinations
 - **EGRESS-WG-NAT** — MASQUERADE only for the proxy user's (and SOCKS user's, if enabled) outbound connections
 
 Jump rules from built-in chains to custom chains are managed idempotently
@@ -191,6 +212,8 @@ iptables enforcement ensuring WireGuard tunnel traffic passes through Squid prox
   - [egress_firewall_nat_interface](#egress_firewall_nat_interface)
   - [egress_firewall_proxy_port](#egress_firewall_proxy_port)
   - [egress_firewall_proxy_user](#egress_firewall_proxy_user)
+  - [egress_firewall_socks_allowed_ports](#egress_firewall_socks_allowed_ports)
+  - [egress_firewall_socks_block_private](#egress_firewall_socks_block_private)
   - [egress_firewall_socks_enabled](#egress_firewall_socks_enabled)
   - [egress_firewall_socks_port](#egress_firewall_socks_port)
   - [egress_firewall_socks_user](#egress_firewall_socks_user)
@@ -261,6 +284,22 @@ egress_firewall_proxy_port: 3128
 
 ```YAML
 egress_firewall_proxy_user: proxy
+```
+
+### egress_firewall_socks_allowed_ports
+
+#### Default value
+
+```YAML
+egress_firewall_socks_allowed_ports: []
+```
+
+### egress_firewall_socks_block_private
+
+#### Default value
+
+```YAML
+egress_firewall_socks_block_private: true
 ```
 
 ### egress_firewall_socks_enabled

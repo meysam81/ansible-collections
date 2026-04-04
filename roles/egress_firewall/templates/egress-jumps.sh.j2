@@ -15,6 +15,12 @@ iptables -C FORWARD -i {{ egress_firewall_tunnel_interface }} -o {{ egress_firew
 
 iptables -t nat -C POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT 2>/dev/null || \
   iptables -t nat -I POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT
+{% if egress_firewall_socks_enabled and (egress_firewall_socks_allowed_ports | length > 0 or egress_firewall_socks_block_private) %}
+
+# SOCKS OUTPUT filtering
+iptables -C OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -j EGRESS-WG-OUTPUT 2>/dev/null || \
+  iptables -I OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -j EGRESS-WG-OUTPUT
+{% endif %}
 {% if egress_firewall_ipv6_enabled %}
 
 # IPv6 jumps
@@ -26,4 +32,10 @@ ip6tables -C FORWARD -i {{ egress_firewall_tunnel_interface }} -o {{ egress_fire
 
 ip6tables -t nat -C POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT 2>/dev/null || \
   ip6tables -t nat -I POSTROUTING -o {{ egress_firewall_nat_interface }} -j EGRESS-WG-NAT
+{% if egress_firewall_socks_enabled and (egress_firewall_socks_allowed_ports | length > 0 or egress_firewall_socks_block_private) %}
+
+# SOCKS OUTPUT filtering (IPv6)
+ip6tables -C OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -j EGRESS-WG-OUTPUT 2>/dev/null || \
+  ip6tables -I OUTPUT -m owner --uid-owner {{ egress_firewall_socks_user }} -j EGRESS-WG-OUTPUT
+{% endif %}
 {% endif %}
