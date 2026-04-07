@@ -125,7 +125,9 @@ frontend web
     acl allowed_origin_exact hdr(origin) -i -m str -f {{ haproxy_base_config_dir }}/allowed_domains.txt
 {% endif %}
 {% if haproxy_cors_subdomain_patterns %}
-    acl allowed_origin_subdomain hdr(origin) -m reg -i ^https?://[^/]*\.({{ haproxy_cors_subdomain_patterns | join('|') | regex_replace('\.', '\\.') }})$
+{% for pattern in haproxy_cors_subdomain_patterns %}
+    acl allowed_origin_subdomain hdr(origin) -i -m end .{{ pattern }}
+{% endfor %}
 {% endif %}
 {% if haproxy_cors_allowed_domains or haproxy_cors_subdomain_patterns %}
     acl has_valid_origin hdr(origin) -m found
@@ -154,7 +156,9 @@ frontend web
 {% endif %}
 
 {% if haproxy_blocked_extensions %}
-    http-request return status 403 if { path_reg -i \.({{ haproxy_blocked_extensions | join('|') }})$ }
+{% for ext in haproxy_blocked_extensions %}
+    http-request return status 403 if { path_end -i .{{ ext }} }
+{% endfor %}
 {% endif %}
 {% if haproxy_blocked_user_agents %}
     http-request return status 403 if { hdr(user-agent) -i -m sub ({{ haproxy_blocked_user_agents | join('|') }}) }
