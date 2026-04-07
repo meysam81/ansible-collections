@@ -5,7 +5,7 @@ dnsproxy_download_url: >-
   https://github.com/AdguardTeam/dnsproxy/releases/download/v{{ dnsproxy_version
   }}/dnsproxy-linux-{{ dnsproxy_arch }}-v{{ dnsproxy_version }}.tar.gz
 
-dnsproxy_listen: "127.0.0.1"
+dnsproxy_listen: "" # 127.0.0.1
 dnsproxy_port: 53
 dnsproxy_http3: true
 

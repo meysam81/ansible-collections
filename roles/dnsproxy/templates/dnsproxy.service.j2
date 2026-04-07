@@ -19,7 +19,9 @@ StartLimitBurst=5
 Type=simple
 
 ExecStart=/usr/local/bin/dnsproxy \
+{% if dnsproxy_listen %}
     --listen={{ dnsproxy_listen }} \
+{% endif %}
     --port={{ dnsproxy_port }} \
 {% if dnsproxy_http3 %}
     --http3 \

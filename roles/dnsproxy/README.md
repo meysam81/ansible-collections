@@ -199,7 +199,7 @@ dnsproxy_http3: true
 #### Default value
 
 ```YAML
-dnsproxy_listen: 127.0.0.1
+dnsproxy_listen: ''
 ```
 
 ### dnsproxy_manage_resolv_conf
