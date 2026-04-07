@@ -31,7 +31,7 @@
   ansible.builtin.include_tasks: issue-cert.yml
   loop: "{{ haproxy_tls_certificate_served_domains }}"
   vars:
-    domain: "{{ item | regex_replace('^\\*\\.', '') }}"
+    domain: "{{ item }}"
 
 - name: Deploy Cloudflare API token environment file
   ansible.builtin.copy:

@@ -54,16 +54,6 @@
     state: absent
   when: dnsproxy_needs_install
 
-- name: Deploy dnsproxy systemd service
-  ansible.builtin.template:
-    src: dnsproxy.service.j2
-    dest: /etc/systemd/system/dnsproxy.service
-    mode: "0644"
-    owner: root
-    group: root
-  notify:
-    - Enable and start dnsproxy
-
 - name: Configure sysctl RW memory
   ansible.builtin.template:
     backup: true
@@ -75,3 +65,20 @@
   notify:
     - Read dnsproxy sysctl config
     - Restart dnsproxy
+
+- name: Deploy dnsproxy systemd service
+  ansible.builtin.template:
+    src: dnsproxy.service.j2
+    dest: /etc/systemd/system/dnsproxy.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify:
+    - Enable and start dnsproxy
+
+- name: Enable and start dnsproxy
+  ansible.builtin.systemd:
+    name: dnsproxy
+    state: started
+    enabled: true
+    daemon_reload: true

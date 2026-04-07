@@ -1,5 +1,15 @@
 ---
-- name: Issue wildcard TLS certificates via lego
+- name: Resolve cert and key paths
+  ansible.builtin.set_fact:
+    _cert_path: "{{ haproxy_tls_certificate_lego_cert_dir }}/{{ domain | regex_replace('^\\*\\.', '_.') }}.crt"
+    _key_path: "{{ haproxy_tls_certificate_lego_cert_dir }}/{{ domain | regex_replace('^\\*\\.', '_.') }}.key"
+
+- name: Check TLS certificate
+  ansible.builtin.stat:
+    path: "{{ _cert_path }}"
+  register: haproxy_tls_certificate_tls_cert_check
+
+- name: Issue TLS certificates via lego
   ansible.builtin.shell:
     cmd: >
       lego
@@ -9,26 +19,28 @@
       --path /etc/lego
       -d '{{ domain }}'
       run
-    creates: "{{ haproxy_tls_certificate_lego_cert_dir }}/_.{{ domain }}.crt"
+  register: haproxy_tls_certificate_lego_cert
+  when: not haproxy_tls_certificate_tls_cert_check.stat.exists
+  changed_when: >-
+    "Server responded with a certificate." in haproxy_tls_certificate_lego_cert.stderr
   environment:
     CLOUDFLARE_DNS_API_TOKEN: "{{ haproxy_tls_certificate_cloudflare_dns_api_token }}"
-  no_log: true
 
 - name: Read TLS certificate
   ansible.builtin.slurp:
-    src: "{{ haproxy_tls_certificate_lego_cert_dir }}/_.{{ domain }}.crt"
+    src: "{{ _cert_path }}"
   register: haproxy_tls_certificate_tls_cert
 
 - name: Read TLS key
   ansible.builtin.slurp:
-    src: "{{ haproxy_tls_certificate_lego_cert_dir }}/_.{{ domain }}.key"
+    src: "{{ _key_path }}"
   register: haproxy_tls_certificate_tls_key
   no_log: true
 
 - name: Create HAProxy compatible TLS cert
   ansible.builtin.copy:
     content: "{{ haproxy_tls_certificate_tls_cert.content | b64decode }}{{ haproxy_tls_certificate_tls_key.content | b64decode }}"
-    dest: "{{ haproxy_tls_certificate_haproxy_certs_dir }}/{{ domain }}"
+    dest: "{{ haproxy_tls_certificate_haproxy_certs_dir }}/{{ domain | regex_replace('^\\*\\.', '_.') }}.pem"
     owner: haproxy
     group: haproxy
     mode: "0600"
