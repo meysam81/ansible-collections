@@ -126,11 +126,17 @@ frontend web
     acl allowed_origin_exact hdr(origin) -i -m str -f {{ haproxy_base_config_dir }}/allowed_domains.txt
 {% endif %}
 {% if haproxy_cors_subdomain_patterns %}
-    acl allowed_origin_subdomain hdr(origin) -m reg '^https?://[^/]*\.({{ haproxy_cors_subdomain_patterns | map('regex_escape') | join('|') }})$'
+    acl allowed_origin_subdomain hdr(origin) -m reg -i ^https?://[^/]*\.({{ haproxy_cors_subdomain_patterns | join('|') | regex_replace('\.', '\\.') }})$
 {% endif %}
 {% if haproxy_cors_allowed_domains or haproxy_cors_subdomain_patterns %}
     acl has_valid_origin hdr(origin) -m found
-    http-request set-var(txn.origin) hdr(origin) if has_valid_origin{% if haproxy_cors_allowed_domains %} allowed_origin_exact{% endif %}{% if haproxy_cors_subdomain_patterns %} or has_valid_origin allowed_origin_subdomain{% endif %}
+{% if haproxy_cors_allowed_domains and haproxy_cors_subdomain_patterns %}
+    http-request set-var(txn.origin) hdr(origin) if has_valid_origin allowed_origin_exact or has_valid_origin allowed_origin_subdomain
+{% elif haproxy_cors_allowed_domains %}
+    http-request set-var(txn.origin) hdr(origin) if has_valid_origin allowed_origin_exact
+{% else %}
+    http-request set-var(txn.origin) hdr(origin) if has_valid_origin allowed_origin_subdomain
+{% endif %}
 
 {% endif %}
 
@@ -190,9 +196,9 @@ frontend web
     http-request return status 204 if is_options { var(txn.origin) -m found }
 {% endif %}
 
-    redirect scheme https code 301 if !{ ssl_fc }
-
     http-request set-var(txn.path) path
+
+    redirect scheme https code 301 if !{ ssl_fc }
 
 {% if haproxy_cache_control_enabled %}
     # --- Cache-Control (differentiated by content type) ---
