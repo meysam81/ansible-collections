@@ -40,7 +40,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 # ── Syscall filtering ───────────────────────────────────────────────
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
-SystemCallFilter=~@privileged @resources
 
 # ── Logging ─────────────────────────────────────────────────────────
 StandardOutput=journal
