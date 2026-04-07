@@ -4,10 +4,10 @@ Description=HAProxy Load Balancer
 Documentation=man:haproxy(1)
 After=network-online.target
 Wants=network-online.target
-StartLimitIntervalSec=500
-StartLimitBurst=5
 
 [Service]
+Type=notify
+
 ExecStartPre={{ haproxy_base_bin_path }} -f {{ haproxy_base_config_dir }}/haproxy.cfg -c -q
 ExecStart={{ haproxy_base_bin_path }} -Ws -f {{ haproxy_base_config_dir }}/haproxy.cfg -p /run/haproxy.pid
 ExecReload=/bin/kill -USR2 $MAINPID
@@ -15,6 +15,54 @@ ExecStop=/bin/kill -SIGTERM $MAINPID
 TimeoutStopSec=30
 KillMode=mixed
 SuccessExitStatus=143
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RuntimeDirectory=haproxy
+RuntimeDirectoryMode=0755
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=haproxy
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# MemoryDenyWriteExecute is intentionally omitted: PCRE2 JIT requires W+X mmap
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

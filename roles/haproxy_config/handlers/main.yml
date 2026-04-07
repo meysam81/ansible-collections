@@ -1,3 +1,1 @@
 ---
-# Handlers live in haproxy (dependency).
-# Ansible resolves handlers from role dependencies automatically.
