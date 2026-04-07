@@ -35,9 +35,9 @@ ExecStartPre=-/sbin/modprobe overlay
 {% if k3s_flannel_backend is defined and k3s_flannel_backend %}
 {% set _ = args.append('--flannel-backend=' + k3s_flannel_backend) %}
 {% endif %}
-{% for component in k3s_disable_components %}
-{% set _ = args.append('--disable=' + component) %}
-{% endfor %}
+{% if k3s_disable_components %}
+{% set _ = args.append('--disable=' + k3s_disable_components | join(",")) %}
+{% endif %}
 {% for san in k3s_tls_san %}
 {% set _ = args.append('--tls-san=' + san) %}
 {% endfor %}

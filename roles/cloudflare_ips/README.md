@@ -66,7 +66,7 @@ cloudflare_ips_haproxy_config_dir: /etc/haproxy
 
 ## Dependencies
 
-- haproxy_base
+- haproxy
 
 ## License
 

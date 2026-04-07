@@ -1,5 +1,4 @@
-roles/haproxy/defaults/main.yml yaml[line-length]
-roles/haproxy_build/tasks/main.yml yaml[line-length]
+roles/haproxy_config/defaults/main.yml yaml[line-length]
 roles/kratos/defaults/main.yml yaml[line-length]
 roles/node_exporter/tasks/setup-Debian.yml yaml[line-length]
 roles/oathkeeper/defaults/main.yml yaml[line-length]

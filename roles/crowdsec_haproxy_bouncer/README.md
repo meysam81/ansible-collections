@@ -104,7 +104,7 @@ crowdsec_haproxy_bouncer_spoa_port: 9001
 
 ## Dependencies
 
-- haproxy_base
+- haproxy
 
 ## License
 

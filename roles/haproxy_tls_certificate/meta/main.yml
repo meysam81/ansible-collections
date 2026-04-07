@@ -17,4 +17,4 @@ allow_duplicates: false
 
 dependencies:
   - role: lego
-  - role: haproxy_base
+  - role: haproxy

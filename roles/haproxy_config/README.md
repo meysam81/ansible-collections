@@ -862,7 +862,7 @@ haproxy_x_xss_protection: '0'
 
 ## Dependencies
 
-- haproxy_base
+None.
 
 ## License
 

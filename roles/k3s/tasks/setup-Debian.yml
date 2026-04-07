@@ -94,8 +94,8 @@
     owner: root
     group: root
   notify:
-    - Restart k3s
     - Enable and start k3s
+    - Restart k3s
 
 - name: Create kubectl symlink
   ansible.builtin.file:

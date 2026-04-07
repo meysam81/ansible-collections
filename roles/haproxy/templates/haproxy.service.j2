@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+[Unit]
+Description=HAProxy Load Balancer
+Documentation=man:haproxy(1)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+ExecStartPre={{ haproxy_base_bin_path }} -f {{ haproxy_base_config_dir }}/haproxy.cfg -c -q
+ExecStart={{ haproxy_base_bin_path }} -Ws -f {{ haproxy_base_config_dir }}/haproxy.cfg -p /run/haproxy.pid
+ExecReload=/bin/kill -USR2 $MAINPID
+ExecStop=/bin/kill -SIGTERM $MAINPID
+TimeoutStopSec=30
+KillMode=mixed
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

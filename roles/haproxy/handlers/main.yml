@@ -1,3 +1,18 @@
 ---
-# Handlers live in haproxy_base (dependency).
-# Ansible resolves handlers from role dependencies automatically.
+- name: Start haproxy service
+  ansible.builtin.systemd:
+    name: haproxy
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Reload haproxy service
+  ansible.builtin.systemd:
+    name: haproxy
+    state: reloaded
+    enabled: true
+    daemon_reload: true
+  register: haproxy_base_haproxy_reload
+  failed_when:
+    - haproxy_base_haproxy_reload.failed
+    - not (lookup('env', 'CI') | default('false') | bool)

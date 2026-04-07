@@ -1,4 +1,4 @@
 ---
 dependencies:
   - role: golang
-  - role: haproxy_base
+  - role: haproxy

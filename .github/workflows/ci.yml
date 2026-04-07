@@ -63,7 +63,7 @@ jobs:
       - id: roles
         name: Discover testable roles
         env:
-          EXCLUDE: cloudflare_ips coraza crowdsec_haproxy_bouncer golang haproxy_build lego haproxy_tls_certificate
+          EXCLUDE: cloudflare_ips coraza crowdsec_haproxy_bouncer golang lego haproxy_tls_certificate
         run: |
           roles=$(find roles/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort \
             | while read -r role; do

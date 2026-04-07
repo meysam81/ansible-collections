@@ -91,7 +91,7 @@ haproxy_tls_certificate_served_domains: []
 ## Dependencies
 
 - lego
-- haproxy_base
+- haproxy
 
 ## License
 

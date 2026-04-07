@@ -1,33 +1,16 @@
+---
 galaxy_info:
   author: Meysam Azad
-  description: HAProxy with full config management, TLS, and security headers
-  company: Self employed
-
-  license: Apache-2.0
-
-  min_ansible_version: "2.17"
-
+  role_name: haproxy
+  description: Build HAProxy from source and set up system infrastructure (user, dirs, systemd)
+  min_ansible_version: "2.15"
   platforms:
     - name: Debian
       versions:
-        - all
         - bookworm
-        - bullseye
-        - buster
     - name: Ubuntu
       versions:
-        - all
-        - bionic
-        - focal
         - jammy
-
-  galaxy_tags:
-    - haproxy
-    - loadbalancer
-    - proxy
-    - reverseproxy
-    - webserver
-    - web
-
-dependencies:
-  - role: haproxy_base
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
