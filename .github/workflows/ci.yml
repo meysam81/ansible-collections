@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-trivy-db-
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
+        uses: aquasecurity/trivy-action@f685ba721536b1ff19093eb4e1b1bf994c2bdbe2 # master
         with:
           format: sarif
           ignore-unfixed: true
