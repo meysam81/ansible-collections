@@ -1,4 +1,3 @@
 # {{ ansible_managed }}
-nameserver 127.0.0.1
-nameserver ::1
+{{ dnsproxy_resolvconf_nameservers }}
 options edns0 trust-ad

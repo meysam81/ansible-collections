@@ -44,6 +44,6 @@
     dest: "{{ haproxy_base_config_dir }}/haproxy.cfg"
     owner: haproxy
     group: haproxy
-    mode: "0640"
+    mode: "0644"
     validate: "haproxy -f %s -c -q"
   notify: Reload haproxy service

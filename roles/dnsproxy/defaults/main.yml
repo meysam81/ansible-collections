@@ -43,3 +43,7 @@ dnsproxy_disable_resolvers: true
 dnsproxy_manage_resolv_conf: true
 
 dnsproxy_force_download: false
+
+dnsproxy_resolvconf_nameservers: |
+  nameserver 127.0.0.1
+  nameserver ::1

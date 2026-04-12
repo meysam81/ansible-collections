@@ -15,5 +15,4 @@ galaxy_info:
   license: Apache-2.0
 allow_duplicates: false
 
-dependencies:
-  - role: haproxy
+dependencies: []

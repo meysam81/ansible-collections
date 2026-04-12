@@ -167,4 +167,5 @@
     mode: "0644"
     owner: root
     group: root
+    backup: true
   when: dnsproxy_manage_resolv_conf

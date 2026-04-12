@@ -220,9 +220,15 @@ frontend web
     http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
 {% endif %}
     http-response set-header Content-Security-Policy "{{ haproxy_csp }}" unless { res.hdr(Content-Security-Policy) -m found }
+{% if haproxy_coep %}
     http-response set-header Cross-Origin-Embedder-Policy "{{ haproxy_coep }}" unless { res.hdr(Cross-Origin-Embedder-Policy) -m found }
+{% endif %}
+{% if haproxy_coop %}
     http-response set-header Cross-Origin-Opener-Policy "{{ haproxy_coop }}" unless { res.hdr(Cross-Origin-Opener-Policy) -m found }
+{% endif %}
+{% if haproxy_corp %}
     http-response set-header Cross-Origin-Resource-Policy "{{ haproxy_corp }}" unless { res.hdr(Cross-Origin-Resource-Policy) -m found }
+{% endif %}
     http-response set-header Permissions-Policy "{{ haproxy_permissions_policy }}" unless { res.hdr(Permissions-Policy) -m found }
     http-response set-header Referrer-Policy "{{ haproxy_referrer_policy }}" unless { res.hdr(Referrer-Policy) -m found }
     http-response set-header Strict-Transport-Security "max-age={{ haproxy_hsts_max_age }}{% if haproxy_hsts_include_subdomains %}; includeSubDomains{% endif %}{% if haproxy_hsts_preload %}; preload{% endif %}" unless { res.hdr(Strict-Transport-Security) -m found }

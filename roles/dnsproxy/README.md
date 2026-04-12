@@ -76,6 +76,7 @@ Install and configure AdguardTeam/dnsproxy as a local encrypted DNS forwarder
   - [dnsproxy_pending_requests](#dnsproxy_pending_requests)
   - [dnsproxy_port](#dnsproxy_port)
   - [dnsproxy_refuse_any](#dnsproxy_refuse_any)
+  - [dnsproxy_resolvconf_nameservers](#dnsproxy_resolvconf_nameservers)
   - [dnsproxy_timeout](#dnsproxy_timeout)
   - [dnsproxy_upstream_mode](#dnsproxy_upstream_mode)
   - [dnsproxy_upstreams](#dnsproxy_upstreams)
@@ -240,6 +241,16 @@ dnsproxy_port: 53
 
 ```YAML
 dnsproxy_refuse_any: true
+```
+
+### dnsproxy_resolvconf_nameservers
+
+#### Default value
+
+```YAML
+dnsproxy_resolvconf_nameservers: |
+  nameserver 127.0.0.1
+  nameserver ::1
 ```
 
 ### dnsproxy_timeout

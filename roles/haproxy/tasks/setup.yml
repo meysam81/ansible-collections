@@ -36,6 +36,17 @@
     remote_src: true
   failed_when: false
 
+- name: Deploy minimal bootstrap config if none exists
+  ansible.builtin.template:
+    src: haproxy.cfg.minimal.j2
+    dest: "{{ haproxy_base_config_dir }}/haproxy.cfg"
+    owner: haproxy
+    group: haproxy
+    mode: "0644"
+    force: false
+  notify:
+    - Reload haproxy service
+
 - name: Copy custom error pages
   ansible.builtin.copy:
     src: "errors/"

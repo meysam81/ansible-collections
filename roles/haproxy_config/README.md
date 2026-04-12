@@ -495,7 +495,7 @@ haproxy_global_extra: []
 #### Default value
 
 ```YAML
-haproxy_hashed_asset_regex: \\.[a-f0-9]{8,}\\.(js|css|woff2?|ttf|png|jpg|svg|webp|avif)$
+haproxy_hashed_asset_regex: (/|[.~_-])[A-Za-z0-9_-]{6,64}\\.(js|css|woff2?|ttf|png|jpe?g|gif|svg|webp|avif|ico|map)$
 ```
 
 ### haproxy_honeypot_enabled
@@ -857,7 +857,7 @@ haproxy_x_frame_options: SAMEORIGIN
 #### Default value
 
 ```YAML
-haproxy_x_xss_protection: '0'
+haproxy_x_xss_protection: 1; mode=block
 ```
 
 ## Dependencies
