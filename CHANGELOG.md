@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.13.0](https://github.com/meysam81/ansible-collections/compare/v1.12.0...v1.13.0) (2026-04-12)
+
+
+### Features
+
+* **haproxy:** increase robustness of hashed assets ([3139b80](https://github.com/meysam81/ansible-collections/commit/3139b8036de420da01c69df5b812572c39104cca))
+
+
+### Bug Fixes
+
+* **dnsproxy:** listen on all addresses ([3083994](https://github.com/meysam81/ansible-collections/commit/30839947ac48167d0f6103911760953a0bd276e3))
+* **haproxy:** address the regex issue in the ACL ([2d5a954](https://github.com/meysam81/ansible-collections/commit/2d5a954aee15071730a965f5e787be91faf4c334))
+* **haproxy:** remove daemon from global ([f173e86](https://github.com/meysam81/ansible-collections/commit/f173e869eef7aa2dd4c74ae8d37a503f1b9a63ff))
+* **haproxy:** remove the broken syscall filter ([b02d618](https://github.com/meysam81/ansible-collections/commit/b02d6185f52f6786fa8381cdd94379bbfdd38fb2))
+* **haproxy:** resort to string comparison instead of regex ([fba0d6b](https://github.com/meysam81/ansible-collections/commit/fba0d6b1337293cdb09e4b52f034ae8deb540b87))
+* start dnsproxy in the tasks and parse tls domain properly ([bcf8993](https://github.com/meysam81/ansible-collections/commit/bcf89935be44ce6265c3994bc93da9c14af6ca84))
+
 ## [1.12.0](https://github.com/meysam81/ansible-collections/compare/v1.11.2...v1.12.0) (2026-04-04)
 
 
