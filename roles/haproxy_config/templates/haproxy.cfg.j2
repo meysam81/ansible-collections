@@ -17,6 +17,9 @@ global
     ssl-default-server-ciphers {{ _ciphers }}
     ssl-default-server-ciphersuites {{ haproxy_tls_ciphersuites }}
     ssl-default-server-options ssl-min-ver {{ haproxy_tls_min_version }} {{ haproxy_tls_options }}
+{% for line in haproxy_global_ciphers_extra %}
+    {{ line | regex_replace('^\s+', '') }}
+{% endfor %}
 
     ca-base /etc/ssl/certs
     crt-base /etc/ssl/private
@@ -33,6 +36,7 @@ global
     tune.maxrewrite {{ haproxy_maxrewrite }}
     tune.ssl.maxrecord {{ haproxy_ssl_maxrecord }}
     tune.ssl.cachesize {{ haproxy_ssl_cachesize }}
+
 {% for line in haproxy_global_extra %}
     {{ line | regex_replace('^\s+', '') }}
 {% endfor %}
@@ -216,7 +220,7 @@ frontend web
 
 {% if haproxy_security_headers_enabled %}
     # --- Security headers (configurable, backend-respecting) ---
-{% if haproxy_alt_svc_enabled %}
+{% if haproxy_alt_svc_enabled and haproxy_quic_enabled %}
     http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
 {% endif %}
     http-response set-header Content-Security-Policy "{{ haproxy_csp }}" unless { res.hdr(Content-Security-Policy) -m found }

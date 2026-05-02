@@ -35,6 +35,7 @@ Install Go from go.dev/dl
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [golang_arch](#golang_arch)
+  - [golang_checksum](#golang_checksum)
   - [golang_checksum_url](#golang_checksum_url)
   - [golang_download_url](#golang_download_url)
   - [golang_install_dir](#golang_install_dir)
@@ -57,7 +58,15 @@ Install Go from go.dev/dl
 #### Default value
 
 ```YAML
-golang_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+golang_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+```
+
+### golang_checksum
+
+#### Default value
+
+```YAML
+golang_checksum: ''
 ```
 
 ### golang_checksum_url

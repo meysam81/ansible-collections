@@ -63,8 +63,12 @@
     group: root
     mode: "0644"
   notify:
-    - Read dnsproxy sysctl config
     - Restart dnsproxy
+
+- name: Read dnsproxy sysctl config
+  ansible.builtin.command:
+    cmd: sysctl -p /etc/sysctl.d/50-dnsproxy.conf
+  changed_when: false
 
 - name: Deploy dnsproxy systemd service
   ansible.builtin.template:

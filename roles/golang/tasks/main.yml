@@ -21,14 +21,15 @@
   ansible.builtin.uri:
     url: "{{ golang_checksum_url }}"
     return_content: true
+    follow_redirects: true
   register: golang_sha256
-  when: golang_needs_install
+  when: golang_needs_install and not golang_checksum
 
 - name: Download Go tarball
   ansible.builtin.get_url:
     url: "{{ golang_download_url }}"
     dest: "{{ golang_tmp_dir.path }}/go{{ golang_version }}.{{ golang_os }}-{{ golang_arch }}.tar.gz"
-    checksum: "sha256:{{ golang_sha256.content | trim }}"
+    checksum: "sha256:{{ golang_checksum if golang_checksum else (golang_sha256.content | trim) }}"
     mode: "0644"
   when: golang_needs_install
 
