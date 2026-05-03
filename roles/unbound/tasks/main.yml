@@ -1,0 +1,8 @@
+---
+- name: Setup unbound on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Disable conflicting DNS resolvers
+  ansible.builtin.import_tasks: disable-resolvers.yml
+  when: unbound_disable_resolvers

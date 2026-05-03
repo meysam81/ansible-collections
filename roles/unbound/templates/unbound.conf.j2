@@ -1,0 +1,101 @@
+# {{ ansible_managed }}
+#
+# Fully-recursive resolver. No forwarders. Queries reach authoritative
+# DNS servers directly from this host's egress IP, so per-IP rate
+# limits (DNSBLs, reputation services) apply correctly.
+
+server:
+    verbosity: 1
+    num-threads: {{ unbound_num_threads }}
+    interface: {{ unbound_listen }}@{{ unbound_port }}
+    port: {{ unbound_port }}
+
+    do-daemonize: no
+    use-syslog: no
+    log-time-ascii: yes
+    log-queries: no
+    log-replies: no
+
+    # Slab counts: power of 2, one per thread is the recommended
+    # baseline for low contention.
+    msg-cache-slabs: {{ unbound_num_threads | int * 2 }}
+    rrset-cache-slabs: {{ unbound_num_threads | int * 2 }}
+    infra-cache-slabs: {{ unbound_num_threads | int * 2 }}
+    key-cache-slabs: {{ unbound_num_threads | int * 2 }}
+
+    msg-cache-size: {{ unbound_msg_cache_size }}
+    rrset-cache-size: {{ unbound_rrset_cache_size }}
+
+    # TTL policy: respect upstream values, never extend. DNSBL operators
+    # (Spamhaus, SenderScore) require this in their ToS.
+    cache-min-ttl: {{ unbound_cache_min_ttl }}
+    cache-max-ttl: {{ unbound_cache_max_ttl }}
+    cache-min-negative-ttl: 0
+    prefetch: {{ 'yes' if unbound_prefetch else 'no' }}
+    prefetch-key: no
+    serve-expired: {{ 'yes' if unbound_serve_expired else 'no' }}
+
+    # Privacy + hardening
+    qname-minimisation: {{ 'yes' if unbound_qname_minimisation else 'no' }}
+    qname-minimisation-strict: no
+    harden-glue: yes
+    harden-dnssec-stripped: yes
+    harden-below-nxdomain: yes
+    harden-referral-path: yes
+    harden-algo-downgrade: yes
+    use-caps-for-id: no
+    aggressive-nsec: yes
+
+    # EDNS buffer aligned with DNS Flag Day recommendation, avoids
+    # IP-fragmentation issues on path MTU-restricted links.
+    edns-buffer-size: {{ unbound_edns_buffer_size }}
+
+{% if unbound_refuse_any %}
+    # Mitigate DNS amplification: refuse ANY queries.
+    refuse-any: yes
+{% endif %}
+
+    # Performance tuning for multi-thread workloads.
+    so-reuseport: yes
+    so-rcvbuf: 4m
+    so-sndbuf: 4m
+
+    # Allow access from this host only.
+    access-control: 127.0.0.0/8 allow
+    access-control: ::1 allow
+
+    # Block private/martian addresses appearing in upstream answers.
+    private-address: 10.0.0.0/8
+    private-address: 172.16.0.0/12
+    private-address: 192.168.0.0/16
+    private-address: 169.254.0.0/16
+    private-address: fd00::/8
+    private-address: fe80::/10
+
+    do-not-query-localhost: no
+
+    # Root hints + DNSSEC trust anchor (provisioned by role tasks).
+    root-hints: "{{ unbound_root_hints_path }}"
+{% if unbound_dnssec_enabled %}
+    auto-trust-anchor-file: "{{ unbound_trust_anchor_path }}"
+    val-clean-additional: yes
+    val-log-level: 1
+{% endif %}
+
+    # Drop privileges after binding the socket. Debian package creates
+    # the unbound user/group on install.
+    username: "unbound"
+    chroot: ""
+    directory: "/etc/unbound"
+    pidfile: "/run/unbound.pid"
+{% if unbound_extra_config %}
+
+    # Operator-supplied extras
+    {{ unbound_extra_config | indent(4) }}
+{% endif %}
+
+# Local control socket — used by unbound_exporter and unbound-control.
+remote-control:
+    control-enable: yes
+    control-interface: {{ unbound_exporter_control_socket }}
+    control-use-cert: no

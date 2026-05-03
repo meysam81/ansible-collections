@@ -1,0 +1,98 @@
+---
+# ── Install unbound + helper utilities ──────────────────────────────
+
+- name: Install unbound packages
+  ansible.builtin.apt:
+    name:
+      - "{{ unbound_apt_package }}"
+      - dns-root-data
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# ── DNSSEC root key bootstrap ───────────────────────────────────────
+#
+# Seed the trust anchor from dns-root-data's /usr/share/dns/root.key,
+# which Debian keeps in sync with IANA. Avoids the runtime dependency
+# on the unbound-anchor binary (split into its own package on newer
+# Debian/Ubuntu and not always present). After bootstrap, unbound
+# keeps the key fresh per RFC 5011.
+
+- name: Ensure unbound state directory exists
+  ansible.builtin.file:
+    path: /var/lib/unbound
+    state: directory
+    owner: unbound
+    group: unbound
+    mode: "0755"
+
+- name: Install DNSSEC trust anchor from dns-root-data package
+  ansible.builtin.copy:
+    src: /usr/share/dns/root.key
+    dest: "{{ unbound_trust_anchor_path }}"
+    owner: unbound
+    group: unbound
+    mode: "0644"
+    remote_src: true
+    force: false
+
+# ── Root hints (from dns-root-data package) ─────────────────────────
+
+- name: Install root hints from dns-root-data package
+  ansible.builtin.copy:
+    src: /usr/share/dns/root.hints
+    dest: "{{ unbound_root_hints_path }}"
+    owner: unbound
+    group: unbound
+    mode: "0644"
+    remote_src: true
+
+# ── Render config (validated by handler before swap) ────────────────
+
+- name: Ensure config directory exists
+  ansible.builtin.file:
+    path: /etc/unbound
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render unbound.conf to staging path
+  ansible.builtin.template:
+    src: unbound.conf.j2
+    dest: /etc/unbound/unbound.conf.next
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Validate and activate unbound config
+
+# ── Systemd unit (override Debian default) ─────────────────────────
+
+- name: Deploy unbound systemd service
+  ansible.builtin.template:
+    src: unbound.service.j2
+    dest: /etc/systemd/system/unbound.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart unbound
+
+# ── Prometheus exporter (optional) ─────────────────────────────────
+
+- name: Setup unbound_exporter
+  ansible.builtin.include_tasks: setup-exporter.yml
+  when: unbound_exporter_enabled
+
+# ── Kick handlers immediately so the service is up by end-of-play ──
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Ensure unbound is enabled and started
+  ansible.builtin.systemd:
+    name: unbound
+    enabled: true
+    state: started
+    daemon_reload: true

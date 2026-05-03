@@ -11,7 +11,7 @@ Description=dnsproxy — encrypted DNS forwarder (DoH/DoT/DoQ)
 Documentation=https://github.com/AdguardTeam/dnsproxy
 After=network-online.target nss-lookup.target
 Wants=network-online.target
-Conflicts=systemd-resolved.service dnsmasq.service named.service
+Conflicts=systemd-resolved.service dnsmasq.service named.service unbound.service
 StartLimitIntervalSec=60
 StartLimitBurst=5
 

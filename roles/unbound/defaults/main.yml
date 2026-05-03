@@ -1,0 +1,51 @@
+---
+unbound_install_method: "apt"
+unbound_apt_package: "unbound"
+
+unbound_listen: "127.0.0.1"
+unbound_port: 53
+unbound_num_threads: 2
+unbound_msg_cache_size: "32m"
+unbound_rrset_cache_size: "64m"
+
+# Cache: respect upstream TTLs, no prefetch, no stale serving.
+# DNSBL operators (Spamhaus, SenderScore, Barracuda) explicitly forbid
+# extending TTLs beyond the authoritative response or pre-fetching.
+unbound_cache_min_ttl: 0
+unbound_cache_max_ttl: 86400
+unbound_prefetch: false
+unbound_serve_expired: false
+
+# Hardening + privacy
+unbound_qname_minimisation: true
+unbound_dnssec_enabled: true
+unbound_root_hints_path: "/var/lib/unbound/root.hints"
+unbound_trust_anchor_path: "/var/lib/unbound/root.key"
+unbound_edns_buffer_size: 1232
+unbound_refuse_any: true
+
+# Bundled Prometheus exporter (letsencrypt/unbound_exporter — actively
+# maintained fork of the original kumina/unbound_exporter). Upstream
+# only ships .deb packages, so we install via the dpkg-arch-named
+# asset URL. Binary lands at /usr/bin/unbound_exporter.
+unbound_exporter_enabled: true
+unbound_exporter_version: "0.6.0"
+unbound_exporter_deb_arch: >-
+  {{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}
+unbound_exporter_download_url: >-
+  https://github.com/letsencrypt/unbound_exporter/releases/download/v{{
+  unbound_exporter_version }}/unbound_exporter-v{{ unbound_exporter_version
+  }}.{{ unbound_exporter_deb_arch }}.deb
+unbound_exporter_binary_path: "/usr/bin/unbound_exporter"
+unbound_exporter_listen: "127.0.0.1:9167"
+unbound_exporter_control_socket: "/run/unbound/control.sock"
+
+# Hygiene
+unbound_disable_resolvers: true
+unbound_manage_resolv_conf: true
+unbound_resolvconf_nameservers: |
+  nameserver 127.0.0.1
+  nameserver ::1
+
+# Escape hatch
+unbound_extra_config: ""

@@ -1,0 +1,52 @@
+---
+# Validate-before-swap is the safety guardrail: a typo in unbound.conf
+# fails the playbook BEFORE the live config is overwritten, so the
+# running unbound keeps serving its previous valid config.
+
+# Three handlers share one `listen:` topic so a single notification fans
+# out into validate → swap → reload, executed in declaration order.
+# Block-wrapped handlers are not notifiable in Ansible — only top-level
+# `name:` entries (or `listen:` topics) are.
+
+- name: Validate staged unbound config
+  ansible.builtin.command:
+    cmd: /usr/sbin/unbound-checkconf /etc/unbound/unbound.conf.next
+  changed_when: false
+  listen: Validate and activate unbound config
+
+- name: Atomically swap validated config into place
+  ansible.builtin.command:
+    cmd: mv /etc/unbound/unbound.conf.next /etc/unbound/unbound.conf
+  changed_when: true
+  listen: Validate and activate unbound config
+
+- name: Reload unbound (apply new config without dropping queries)
+  ansible.builtin.systemd:
+    name: unbound
+    state: reloaded
+  register: unbound_reload
+  # On a fresh install the service may not be running yet — let the
+  # later "Restart unbound" handler bring it up. Any other failure
+  # is real.
+  failed_when: >-
+    unbound_reload is failed and
+    'is not active' not in (unbound_reload.msg | default(''))
+  listen: Validate and activate unbound config
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart unbound
+  ansible.builtin.systemd:
+    name: unbound
+    state: restarted
+    daemon_reload: true
+    enabled: true
+
+- name: Restart unbound_exporter
+  ansible.builtin.systemd:
+    name: unbound_exporter
+    state: restarted
+    daemon_reload: true
+    enabled: true

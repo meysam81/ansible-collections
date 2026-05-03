@@ -1,0 +1,49 @@
+# {{ ansible_managed }}
+#
+# Minimal systemd unit for unbound. Hardening directives that install
+# implicit seccomp filters (Protect*, Restrict*, Private*, LockPersonality,
+# MemoryDenyWriteExecute, SystemCallFilter, ...) have been removed because
+# they killed the process with SIGSYS (status=31/SYS) immediately after
+# start on this host. Layer them back in one at a time, restarting after
+# each, once a baseline boot is confirmed.
+#
+# Conflicts= prevents both unbound and any other resolver (dnsproxy,
+# systemd-resolved, dnsmasq, ...) from racing for port 53. systemd
+# refuses to start one while the other is active.
+
+[Unit]
+Description=unbound — fully recursive local DNS resolver
+Documentation=https://www.nlnetlabs.nl/projects/unbound/about/
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+Conflicts=dnsproxy.service systemd-resolved.service dnsmasq.service named.service bind9.service stubby.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStartPre=/usr/sbin/unbound-checkconf /etc/unbound/unbound.conf
+ExecStart=/usr/sbin/unbound -d -p -c /etc/unbound/unbound.conf
+ExecReload=/usr/sbin/unbound-control reload
+PIDFile=/run/unbound.pid
+
+# Start as root so we can bind port 53; unbound itself drops to the
+# "unbound" user per its config "username:" key after socket bind.
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID CAP_DAC_READ_SEARCH
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=unbound
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=512
+
+# Restart policy
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,57 @@
+---
+# letsencrypt/unbound_exporter upstream only ships .deb packages
+# (verified against GitHub releases API, 2026-05-02). On Debian
+# targets the cleanest install path is to download the .deb and
+# let apt handle dependencies and binary placement.
+
+- name: Check installed unbound_exporter version
+  ansible.builtin.command:
+    cmd: "{{ unbound_exporter_binary_path }} -version"
+  register: unbound_exporter_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Set unbound_exporter install needed flag
+  ansible.builtin.set_fact:
+    unbound_exporter_needs_install: >-
+      {{ unbound_exporter_installed_version.rc != 0 or
+         unbound_exporter_version not in
+         (unbound_exporter_installed_version.stderr | default('') +
+          unbound_exporter_installed_version.stdout | default('')) }}
+
+- name: Download unbound_exporter {{ unbound_exporter_version }} .deb
+  ansible.builtin.get_url:
+    url: "{{ unbound_exporter_download_url }}"
+    dest: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
+    mode: "0644"
+  when: unbound_exporter_needs_install
+
+- name: Install unbound_exporter from .deb
+  ansible.builtin.apt:
+    deb: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
+  when: unbound_exporter_needs_install
+  notify: Restart unbound_exporter
+
+- name: Remove downloaded .deb
+  ansible.builtin.file:
+    path: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
+    state: absent
+  when: unbound_exporter_needs_install
+
+- name: Deploy unbound_exporter systemd service
+  ansible.builtin.template:
+    src: unbound_exporter.service.j2
+    dest: /etc/systemd/system/unbound_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart unbound_exporter
+
+- name: Ensure unbound_exporter is enabled and started
+  ansible.builtin.systemd:
+    name: unbound_exporter
+    enabled: true
+    state: started
+    daemon_reload: true

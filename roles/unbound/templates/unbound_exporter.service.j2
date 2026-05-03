@@ -1,0 +1,51 @@
+# {{ ansible_managed }}
+#
+# Prometheus exporter for unbound. Reads stats over the Unix control
+# socket configured in unbound.conf.
+
+[Unit]
+Description=unbound_exporter — Prometheus metrics for unbound
+Documentation=https://github.com/letsencrypt/unbound_exporter
+After=unbound.service
+Requires=unbound.service
+
+[Service]
+Type=simple
+User=unbound
+Group=unbound
+ExecStart={{ unbound_exporter_binary_path }} \
+    -unbound.host=unix://{{ unbound_exporter_control_socket }} \
+    -web.listen-address={{ unbound_exporter_listen }}
+
+# ── Hardening ────────────────────────────────────────────────────────
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077
+LimitNOFILE=4096
+LimitNPROC=64
+
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
