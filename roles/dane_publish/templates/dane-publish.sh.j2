@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Publish DANE TLSA (3 1 1) records to Cloudflare for each cert listed in
+# /etc/dane/certs.conf. Idempotent and additive — does not delete records.
+#
+# Exit codes:
+#   0 — all certs processed (each line in conf either already current or
+#       newly published)
+#   1 — config or dependency error
+#   2 — Cloudflare API error
+set -uo pipefail
+umask 0077
+
+ENV_FILE="{{ dane_config_dir }}/.env"
+if [ ! -r "$ENV_FILE" ]; then
+  echo "missing $ENV_FILE" >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+. "$ENV_FILE"
+
+# Hold an exclusive flock so concurrent invocations (lego renew hook +
+# manual run, two cert renewals on the same minute, etc.) don't race and
+# create duplicate TLSA records. Re-exec ourselves under flock if not
+# already held. Lock file lives in the role's config dir so its parent is
+# already writable to root and within the lego renewal unit's
+# ReadWritePaths.
+: "${DANE_LOCK_FILE:={{ dane_config_dir }}/lock}"
+if [ "${DANE_PUBLISH_LOCKED:-}" != "1" ]; then
+  exec env DANE_PUBLISH_LOCKED=1 flock -w 60 "$DANE_LOCK_FILE" "$0" "$@"
+fi
+
+# Self-gate: when DANE_PUBLISH_ENABLED is not "true", exit cleanly so this
+# script can be wired unconditionally into lego renewal hooks without firing
+# until the operator flips the var. Reflects the dane_enabled role default.
+if [ "${DANE_PUBLISH_ENABLED:-false}" != "true" ]; then
+  echo "DANE_PUBLISH_ENABLED is not true; skipping"
+  exit 0
+fi
+
+: "${CF_API_TOKEN:?CF_API_TOKEN must be set}"
+: "${CF_ZONE_ID:?CF_ZONE_ID must be set}"
+: "${DANE_RECORD_TTL:=300}"
+: "${DANE_CERTS_CONF:={{ dane_config_dir }}/certs.conf}"
+
+if [ ! -r "$DANE_CERTS_CONF" ]; then
+  echo "missing $DANE_CERTS_CONF" >&2
+  exit 1
+fi
+
+# --fail-with-body keeps the response body on HTTP errors so `logger` shows
+# Cloudflare's error JSON instead of an opaque exit code (curl 7.76+; on
+# Debian 13 trixie curl is 8.x so this is safe).
+cf() {
+  curl --silent --show-error --fail-with-body \
+    --max-time 30 --connect-timeout 10 \
+    --retry 2 --retry-delay 5 --retry-connrefused \
+    -H "Authorization: Bearer $CF_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$@"
+}
+
+extract_spki_sha256() {
+  local cert="$1"
+  openssl x509 -in "$cert" -pubkey -noout 2>/dev/null \
+    | openssl pkey -pubin -outform DER 2>/dev/null \
+    | sha256sum \
+    | awk '{print $1}'
+}
+
+publish_one() {
+  local cert="$1" host="$2" port="$3" protocol="$4"
+  local name="_${port}._${protocol}.${host}"
+
+  if [ ! -r "$cert" ]; then
+    echo "SKIP $name: cert $cert not readable" >&2
+    return 0
+  fi
+
+  local spki
+  spki=$(extract_spki_sha256 "$cert")
+  if [ -z "$spki" ]; then
+    echo "SKIP $name: could not extract SPKI from $cert" >&2
+    return 0
+  fi
+
+  # Existing TLSA records at this name with matching cert hash?
+  # Lowercase both sides — Cloudflare has been observed to normalise the
+  # `certificate` field case differently across accounts; sha256sum
+  # produces lowercase, so the byte-exact equality check could otherwise
+  # falsely report "not present" and double-publish.
+  local list_resp
+  if ! list_resp=$(cf "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records?type=TLSA&name=${name}&per_page=50"); then
+    echo "FAILED $name: list API call failed" >&2
+    logger -t dane-publish "FAILED to list TLSA $name (curl rc $?)"
+    return 2
+  fi
+
+  local existing
+  existing=$(printf '%s' "$list_resp" \
+    | jq -r --arg spki "$spki" \
+        '.result[]? | select((.data.certificate // "") | ascii_downcase == ($spki | ascii_downcase)) | .id')
+
+  if [ -n "$existing" ]; then
+    echo "CURRENT $name spki=$spki"
+    return 0
+  fi
+
+  # Add new TLSA record (additive — does not touch existing records).
+  local payload
+  payload=$(jq -n \
+    --arg name "$name" \
+    --argjson ttl "$DANE_RECORD_TTL" \
+    --arg spki "$spki" \
+    '{type:"TLSA", name:$name, ttl:$ttl, data:{usage:3, selector:1, matching_type:1, certificate:$spki}}')
+
+  if cf -X POST -d "$payload" \
+       "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
+       >/dev/null; then
+    echo "PUBLISHED $name spki=$spki"
+    logger -t dane-publish "published TLSA $name spki=$spki"
+  else
+    echo "FAILED $name spki=$spki" >&2
+    logger -t dane-publish "FAILED to publish TLSA $name spki=$spki"
+    return 2
+  fi
+}
+
+rc=0
+while IFS= read -r line || [ -n "$line" ]; do
+  case "$line" in
+    ''|\#*) continue ;;
+  esac
+  IFS=':' read -r cert host port protocol <<<"$line"
+  publish_one "$cert" "$host" "${port:-25}" "${protocol:-tcp}" || rc=$?
+done <"$DANE_CERTS_CONF"
+
+exit "$rc"

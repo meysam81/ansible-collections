@@ -136,6 +136,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_frontend_extra_acls](#haproxy_frontend_extra_acls)
   - [haproxy_frontend_extra_rules](#haproxy_frontend_extra_rules)
+  - [haproxy_global_ciphers_extra](#haproxy_global_ciphers_extra)
   - [haproxy_global_extra](#haproxy_global_extra)
   - [haproxy_hashed_asset_regex](#haproxy_hashed_asset_regex)
   - [haproxy_honeypot_enabled](#haproxy_honeypot_enabled)
@@ -143,11 +144,13 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_hsts_include_subdomains](#haproxy_hsts_include_subdomains)
   - [haproxy_hsts_max_age](#haproxy_hsts_max_age)
   - [haproxy_hsts_preload](#haproxy_hsts_preload)
+  - [haproxy_inline_responders](#haproxy_inline_responders)
   - [haproxy_listen_sections](#haproxy_listen_sections)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_option_forwardfor](#haproxy_option_forwardfor)
   - [haproxy_permissions_policy](#haproxy_permissions_policy)
+  - [haproxy_quic_enabled](#haproxy_quic_enabled)
   - [haproxy_rate_limit_api_count](#haproxy_rate_limit_api_count)
   - [haproxy_rate_limit_api_path_prefix](#haproxy_rate_limit_api_path_prefix)
   - [haproxy_rate_limit_api_period](#haproxy_rate_limit_api_period)
@@ -482,6 +485,14 @@ haproxy_frontend_extra_acls: []
 haproxy_frontend_extra_rules: []
 ```
 
+### haproxy_global_ciphers_extra
+
+#### Default value
+
+```YAML
+haproxy_global_ciphers_extra: []
+```
+
 ### haproxy_global_extra
 
 #### Default value
@@ -541,6 +552,14 @@ haproxy_hsts_max_age: 63072000
 haproxy_hsts_preload: true
 ```
 
+### haproxy_inline_responders
+
+#### Default value
+
+```YAML
+haproxy_inline_responders: []
+```
+
 ### haproxy_listen_sections
 
 #### Default value
@@ -579,6 +598,14 @@ haproxy_option_forwardfor: true
 
 ```YAML
 haproxy_permissions_policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), fullscreen=(self), sync-xhr=()
+```
+
+### haproxy_quic_enabled
+
+#### Default value
+
+```YAML
+haproxy_quic_enabled: false
 ```
 
 ### haproxy_rate_limit_api_count

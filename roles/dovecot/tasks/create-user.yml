@@ -1,0 +1,22 @@
+---
+- name: "Compute home for {{ vuser.name }}"
+  ansible.builtin.set_fact:
+    dovecot_vuser_home: "{{ vuser.home | default(dovecot_vmail_home_base + '/' + vuser.name) }}"
+
+- name: "Ensure mailbox directory for {{ vuser.name }}"
+  ansible.builtin.file:
+    path: "{{ dovecot_vuser_home }}"
+    state: directory
+    owner: "{{ dovecot_vmail_user }}"
+    group: "{{ dovecot_vmail_group }}"
+    mode: "0700"
+
+- name: "Create default mailboxes via doveadm for {{ vuser.name }}"
+  ansible.builtin.command:
+    cmd: "doveadm mailbox create -u {{ vuser.name | quote }} {{ item | quote }}"
+  register: dovecot_doveadm_create
+  changed_when: '"already exists" not in (dovecot_doveadm_create.stderr | default(""))'
+  failed_when:
+    - dovecot_doveadm_create.rc != 0
+    - '"already exists" not in (dovecot_doveadm_create.stderr | default(""))'
+  loop: "{{ dovecot_default_mailboxes }}"

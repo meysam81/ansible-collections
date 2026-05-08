@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+{% for entry in postfix_virtual_alias_maps %}
+{{ entry.pattern }} {{ entry.target }}
+{% endfor %}

@@ -1,0 +1,31 @@
+---
+# Master switch.
+#   false (default): script and config are installed but never invoked.
+#                    Wire-but-don't-deploy posture.
+#   true:            script is installed AND run once during play to publish
+#                    initial TLSA. Caller is responsible for adding the
+#                    script to lego's reload_commands so it re-runs on cert
+#                    renewal.
+dane_enabled: false
+
+# Cloudflare API token with Zone:DNS:Edit on the relevant zone. Caller MUST
+# resolve via SSM/vault and pass at playbook time. Protected with no_log.
+dane_cloudflare_api_token: ""
+
+# Cloudflare zone ID. The Postfix host typically only knows about one zone;
+# look this up in tofu/dns or fetch via API and pass it in.
+dane_cloudflare_zone_id: ""
+
+# DNS TTL applied to TLSA records created by this role.
+dane_record_ttl: 300
+
+# List of certs to publish TLSA records for. Each entry:
+#   cert_path: absolute path to the cert file (PEM)
+#   host:      DNS hostname the cert is bound to (e.g. mx.dmarcguard.io)
+#   port:      service port (default 25)
+#   protocol:  transport protocol (default tcp)
+dane_certs: []
+
+# Where the role drops its config + script. Don't override unless you know why.
+dane_config_dir: /etc/dane
+dane_script_path: /usr/local/bin/dane-publish.sh

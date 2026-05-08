@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Periodic Dovecot mailbox expunge
+
+[Timer]
+OnCalendar={{ dovecot_expunge_on_calendar }}
+Persistent=true
+RandomizedDelaySec={{ dovecot_expunge_random_delay_sec }}
+
+[Install]
+WantedBy=timers.target

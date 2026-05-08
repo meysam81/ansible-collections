@@ -1,0 +1,164 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - dovecot_listen | length > 0
+      - (dovecot_ssl_server_cert_file | length > 0) or (not dovecot_ssl_required)
+      - (dovecot_ssl_server_key_file  | length > 0) or (not dovecot_ssl_required)
+      - dovecot_postmaster_address | length > 0
+      - dovecot_postmaster_address is regex('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+      - dovecot_userdb_mode in ['passwd_file', 'static_by_domain', 'static']
+    fail_msg: >-
+      dovecot_listen must be non-empty;
+      dovecot_ssl_server_cert_file/key_file required when dovecot_ssl_required;
+      dovecot_postmaster_address must be a valid email address;
+      dovecot_userdb_mode must be one of passwd_file, static_by_domain, static.
+
+- name: Validate user entries
+  ansible.builtin.assert:
+    that:
+      - item.name | length > 0
+      - item.name is regex('^[a-zA-Z0-9._%+-]+(@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})?$')
+      - item.password_hash | length > 0
+      - item.password_hash is regex('^\{[A-Z0-9-]+\}')
+    fail_msg: "Invalid user entry: {{ item }}"
+  loop: "{{ dovecot_users }}"
+  loop_control:
+    label: "{{ item.name | default('?') }}"
+  when: dovecot_users | length > 0
+
+- name: Ensure LMTP socket owner exists (postfix package creates the user)
+  ansible.builtin.apt:
+    name: postfix
+    state: present
+    update_cache: true
+  when: dovecot_postfix_lmtp_socket_owner == 'postfix'
+
+- name: Validate LMTP socket owner exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ dovecot_postfix_lmtp_socket_owner }}"
+    fail_key: true
+
+- name: Install Dovecot
+  ansible.builtin.apt:
+    name:
+      - dovecot-core
+      - dovecot-imapd
+      - dovecot-lmtpd
+    state: present
+    update_cache: true
+
+- name: Ensure vmail group exists
+  ansible.builtin.group:
+    name: "{{ dovecot_vmail_group }}"
+    gid: "{{ dovecot_vmail_gid }}"
+    system: true
+
+- name: Ensure vmail user exists
+  ansible.builtin.user:
+    name: "{{ dovecot_vmail_user }}"
+    uid: "{{ dovecot_vmail_uid }}"
+    group: "{{ dovecot_vmail_group }}"
+    home: "{{ dovecot_vmail_home_base }}"
+    shell: /usr/sbin/nologin
+    system: true
+    create_home: false
+
+- name: Ensure vmail home base exists
+  ansible.builtin.file:
+    path: "{{ dovecot_vmail_home_base }}"
+    state: directory
+    owner: "{{ dovecot_vmail_user }}"
+    group: "{{ dovecot_vmail_group }}"
+    mode: "0750"
+
+- name: Render passwd-file
+  ansible.builtin.template:
+    src: users.j2
+    dest: "{{ dovecot_passwd_file }}"
+    owner: root
+    group: dovecot
+    mode: "0640"
+  no_log: true
+  notify: Reload dovecot
+
+- name: Remove default conf.d snippets that conflict with 2.4 single-file config
+  ansible.builtin.file:
+    path: /etc/dovecot/conf.d
+    state: absent
+  notify: Restart dovecot
+
+- name: Render dovecot.conf
+  ansible.builtin.template:
+    src: dovecot.conf.j2
+    dest: /etc/dovecot/dovecot.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart dovecot
+
+- name: Verify dovecot configuration
+  ansible.builtin.command: doveconf -n
+  changed_when: false
+
+- name: Ensure dovecot enabled and running
+  ansible.builtin.systemd:
+    name: dovecot
+    state: started
+    enabled: true
+
+- name: Force handlers to run before mailbox creation
+  ansible.builtin.meta: flush_handlers
+
+- name: Create per-user home + mailboxes
+  ansible.builtin.include_tasks: create-user.yml
+  loop: "{{ dovecot_users }}"
+  loop_control:
+    loop_var: vuser
+    label: "{{ vuser.name }}"
+
+- name: Deploy expunge script
+  ansible.builtin.template:
+    src: dovecot-expunge.sh.j2
+    dest: /usr/local/bin/dovecot-expunge.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: dovecot_expunge_enabled
+
+- name: Deploy expunge service
+  ansible.builtin.template:
+    src: dovecot-expunge.service.j2
+    dest: /etc/systemd/system/dovecot-expunge.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: dovecot_expunge_enabled
+  notify: Reload systemd daemon
+
+- name: Deploy expunge timer
+  ansible.builtin.template:
+    src: dovecot-expunge.timer.j2
+    dest: /etc/systemd/system/dovecot-expunge.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: dovecot_expunge_enabled
+  notify: Reload systemd daemon
+
+- name: Enable and start expunge timer
+  ansible.builtin.systemd:
+    name: dovecot-expunge.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: dovecot_expunge_enabled
+
+- name: Disable expunge timer when feature disabled
+  ansible.builtin.systemd:
+    name: dovecot-expunge.timer
+    state: stopped
+    enabled: false
+  failed_when: false
+  when: not dovecot_expunge_enabled

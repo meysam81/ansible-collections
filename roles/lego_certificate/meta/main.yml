@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: lego_certificate
+  description: Issue and renew Let's Encrypt certificates via lego with Cloudflare DNS-01 and pluggable reload hooks
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
+
+dependencies:
+  - role: lego

@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Periodic Lego certificate renewal
+
+[Timer]
+OnCalendar={{ lego_certificate_renew_on_calendar }}
+Persistent=true
+RandomizedDelaySec={{ lego_certificate_renew_random_delay_sec }}
+
+[Install]
+WantedBy=timers.target

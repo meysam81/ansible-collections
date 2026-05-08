@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Renews lego certificates and runs caller-supplied reload hooks per cert
+# only when the cert content changes. Failures are logged via syslog and
+# tallied; the script exits non-zero at the end if any cert failed so that
+# systemd OnFailure= / monitoring surfaces the problem.
+set -uo pipefail
+umask 0077
+
+CERT_DIR="{{ lego_certificate_cert_dir }}"
+LEGO_BIN="{{ lego_certificate_lego_bin }}"
+EMAIL={{ lego_certificate_email | quote }}
+
+RENEW_FAILURES=0
+RELOAD_FAILURES=0
+
+log_failure() {
+  logger -t lego-certificate "$1"
+  echo "FAIL: $1" >&2
+}
+
+renew_cert() {
+  local name="$1"
+  local reuse_key="$2"
+  shift 2
+  local domains_args=()
+  for d in "$@"; do
+    domains_args+=( -d "$d" )
+  done
+
+  local extra_args=()
+  if [ "$reuse_key" = "true" ]; then
+    extra_args+=( --reuse-key )
+  fi
+
+  local crt="$CERT_DIR/$name.crt"
+  local before_hash=""
+  if [ -f "$crt" ]; then
+    before_hash=$(sha256sum "$crt" | awk '{print $1}')
+  fi
+
+  if ! "$LEGO_BIN" --accept-tos --email "$EMAIL" --dns cloudflare \
+        --path /etc/lego "${domains_args[@]}" "${extra_args[@]}" renew; then
+    log_failure "renew non-zero for $name"
+    RENEW_FAILURES=$((RENEW_FAILURES + 1))
+    return 0  # don't abort the batch — try other certs
+  fi
+
+  local after_hash=""
+  if [ -f "$crt" ]; then
+    after_hash=$(sha256sum "$crt" | awk '{print $1}')
+  fi
+
+  if [ "$before_hash" != "$after_hash" ]; then
+    echo "[$name] cert changed"
+    return 1  # signal change to caller (so reload commands fire)
+  fi
+
+  echo "[$name] cert unchanged"
+  return 0
+}
+
+CHANGED=()
+
+{% for cert in lego_certificate_certs %}
+# {{ cert.name }}
+if ! renew_cert {{ cert.name | quote }} {{ (cert.reuse_key | default(false)) | string | lower | quote }} {% for d in cert.domains %}{{ d | quote }} {% endfor %}; then
+  CHANGED+=({{ cert.name | quote }})
+  chown {{ cert.cert_owner | default('root') }}:{{ cert.cert_group | default('root') }} "$CERT_DIR/{{ cert.name }}.crt" \
+    || { log_failure "chown cert failed for {{ cert.name }}"; RELOAD_FAILURES=$((RELOAD_FAILURES + 1)); }
+  chmod {{ cert.cert_mode | default('0644') }} "$CERT_DIR/{{ cert.name }}.crt" \
+    || { log_failure "chmod cert failed for {{ cert.name }}"; RELOAD_FAILURES=$((RELOAD_FAILURES + 1)); }
+  chown {{ cert.key_owner | default('root') }}:{{ cert.key_group | default('root') }} "$CERT_DIR/{{ cert.name }}.key" \
+    || { log_failure "chown key failed for {{ cert.name }}"; RELOAD_FAILURES=$((RELOAD_FAILURES + 1)); }
+  chmod {{ cert.key_mode | default('0640') }} "$CERT_DIR/{{ cert.name }}.key" \
+    || { log_failure "chmod key failed for {{ cert.name }}"; RELOAD_FAILURES=$((RELOAD_FAILURES + 1)); }
+{% for cmd in cert.reload_commands | default([]) %}
+  {{ cmd }} \
+    || { log_failure "reload failed for {{ cert.name }}: {{ cmd | replace('"', '\\"') }}"; RELOAD_FAILURES=$((RELOAD_FAILURES + 1)); }
+{% endfor %}
+fi
+{% endfor %}
+
+if [ {% raw %}"${#CHANGED[@]}"{% endraw %} -gt 0 ]; then
+  echo "Renewed: ${CHANGED[*]}"
+fi
+
+# Exit codes: 0 = clean, 2 = renewals failed, 3 = reloads failed,
+# 4 = both. Distinct codes let the operator pinpoint failure class via
+# `systemctl status lego-certificate-renew`.
+rc=0
+if [ "$RENEW_FAILURES" -gt 0 ]; then
+  log_failure "$RENEW_FAILURES cert(s) failed to renew"
+  rc=$((rc | 2))
+fi
+if [ "$RELOAD_FAILURES" -gt 0 ]; then
+  log_failure "$RELOAD_FAILURES reload step(s) failed"
+  rc=$((rc | 1))
+fi
+exit "$rc"

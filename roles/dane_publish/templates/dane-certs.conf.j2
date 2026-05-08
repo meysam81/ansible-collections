@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+# Format: <cert_path>:<host>:<port>:<protocol>
+{% for c in dane_certs %}
+{{ c.cert_path }}:{{ c.host }}:{{ c.port | default(25) }}:{{ c.protocol | default('tcp') }}
+{% endfor %}

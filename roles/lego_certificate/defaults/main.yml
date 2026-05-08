@@ -1,0 +1,45 @@
+---
+# Email used for ACME registration. Required.
+lego_certificate_email: ""
+
+# Cloudflare API token with Zone:DNS:Edit on the relevant zone(s). Required.
+# Pass via lookup, never commit. Protected with no_log.
+lego_certificate_cloudflare_dns_api_token: ""
+
+# List of certificates to issue and renew. Each entry:
+#   name:           filename stem (no extension); cert lands at
+#                   {{ lego_certificate_cert_dir }}/<name>.crt
+#   domains:        list of SANs; first becomes the CN
+#   reload_commands: list of shell commands run if cert content changed after
+#                    renewal
+#   key_type:       lego --key-type value (rsa2048, rsa4096, ec256, ec384).
+#                   Applies at issue time only; renewals with --reuse-key
+#                   keep the original key. Omit to use lego's default (ec256).
+#   reuse_key:      when true, lego renewal preserves the existing private
+#                   key. Required for DANE setups that pin SPKI (3 1 1) so
+#                   the published TLSA hash stays stable. Defaults to false.
+#   cert_owner:     defaults to "root"
+#   cert_group:     defaults to "root"
+#   cert_mode:      defaults to "0644"
+#   key_owner:      defaults to "root"
+#   key_group:      defaults to "root"
+#   key_mode:       defaults to "0640"
+lego_certificate_certs: []
+
+# Directory lego writes certificates and keys to.
+lego_certificate_cert_dir: /etc/lego/certificates
+
+# Path to the lego CLI (must exist; install with the `lego` role).
+lego_certificate_lego_bin: /usr/local/bin/lego
+
+# systemd timer schedule for renewal.
+lego_certificate_renew_on_calendar: daily
+lego_certificate_renew_random_delay_sec: 600
+
+# Paths the renewal systemd unit is allowed to write to. The service runs
+# under ProtectSystem=strict so EVERYTHING outside this list is read-only.
+# Add destinations referenced by your reload_commands here — common cases:
+#   /etc/haproxy/certs   — combined PEM written for HAProxy
+#   /etc/dane            — DANE TLSA publisher state
+# /etc/lego is always required and prepended automatically.
+lego_certificate_renew_extra_read_write_paths: []

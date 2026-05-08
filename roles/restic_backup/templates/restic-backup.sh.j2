@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Run a tagged restic backup, then forget+prune per retention policy.
+set -euo pipefail
+umask 0077
+
+{% if restic_init_if_missing %}
+if ! restic --quiet snapshots >/dev/null 2>&1; then
+  logger -t restic-backup "repository absent; initialising"
+  restic init --quiet
+fi
+{% endif %}
+
+restic backup \
+  --tag {{ restic_snapshot_tag | quote }} \
+  --host "$(hostname)" \
+{% for ex in restic_exclude_patterns %}
+  --exclude {{ ex | quote }} \
+{% endfor %}
+{% for p in restic_paths %}
+  {{ p | quote }} \
+{% endfor %}
+  --quiet
+
+restic forget \
+  --tag {{ restic_snapshot_tag | quote }} \
+{% if restic_keep_daily | int > 0 %}
+  --keep-daily {{ restic_keep_daily }} \
+{% endif %}
+{% if restic_keep_weekly | int > 0 %}
+  --keep-weekly {{ restic_keep_weekly }} \
+{% endif %}
+{% if restic_keep_monthly | int > 0 %}
+  --keep-monthly {{ restic_keep_monthly }} \
+{% endif %}
+{% if restic_keep_yearly | int > 0 %}
+  --keep-yearly {{ restic_keep_yearly }} \
+{% endif %}
+  --prune \
+  --quiet

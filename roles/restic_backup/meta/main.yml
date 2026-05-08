@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: restic_backup
+  description: Encrypted, deduplicated backups via restic on a systemd timer with retention and periodic integrity checks. S3-compatible backends supported.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+    - name: Ubuntu
+      versions:
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
+
+dependencies: []

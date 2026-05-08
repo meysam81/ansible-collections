@@ -1,0 +1,105 @@
+# {{ ansible_managed }}
+dovecot_config_version = 2.4.0
+dovecot_storage_version = 2.4.0
+
+protocols = {{ dovecot_protocols | join(' ') }}
+
+listen = {{ dovecot_listen | join(', ') }}
+
+# Logging
+log_path = syslog
+syslog_facility = mail
+
+postmaster_address = {{ dovecot_postmaster_address }}
+
+# SSL
+{% if dovecot_ssl_required %}
+ssl = required
+ssl_server_cert_file = {{ dovecot_ssl_server_cert_file }}
+ssl_server_key_file  = {{ dovecot_ssl_server_key_file }}
+ssl_min_protocol = TLSv1.2
+{% else %}
+ssl = no
+{% endif %}
+
+# Auth
+auth_allow_cleartext = {{ 'yes' if dovecot_auth_allow_cleartext else 'no' }}
+auth_mechanisms = plain login
+
+passdb passwd_file_main {
+  driver = passwd-file
+  passwd_file_path = {{ dovecot_passwd_file }}
+}
+
+{% if dovecot_userdb_mode == "passwd_file" %}
+userdb passwd_file_main {
+  driver = passwd-file
+  passwd_file_path = {{ dovecot_passwd_file }}
+  default_fields = uid={{ dovecot_vmail_uid }} gid={{ dovecot_vmail_gid }}
+}
+{% elif dovecot_userdb_mode == "static_by_domain" %}
+userdb static_main {
+  driver = static
+  fields {
+    uid  = {{ dovecot_vmail_uid }}
+    gid  = {{ dovecot_vmail_gid }}
+    home = {{ dovecot_vmail_home_base }}/%{user | domain}
+    mail = {{ dovecot_mail_driver }}:~/Maildir
+  }
+}
+{% elif dovecot_userdb_mode == "static" %}
+userdb static_main {
+  driver = static
+  fields {
+    uid  = {{ dovecot_vmail_uid }}
+    gid  = {{ dovecot_vmail_gid }}
+    home = {{ dovecot_vmail_home_base }}/%{user | username}
+    mail = {{ dovecot_mail_driver }}:~/Maildir
+  }
+}
+{% endif %}
+
+# Mail
+# uid/gid are returned by userdb (passwd_file mode pulls per-user, static_*
+# modes return the role-default); top-level mail_uid/mail_gid were removed
+# in Dovecot 2.4 and trigger doveconf -n warnings on Debian 13.
+mail_driver = {{ dovecot_mail_driver }}
+mail_path   = {{ dovecot_mail_path }}
+
+# Services
+service lmtp {
+  unix_listener {{ dovecot_postfix_lmtp_socket_path }} {
+    user  = {{ dovecot_postfix_lmtp_socket_owner }}
+    group = {{ dovecot_postfix_lmtp_socket_group }}
+    mode  = {{ dovecot_postfix_lmtp_socket_mode }}
+  }
+}
+
+service auth {
+  unix_listener auth-userdb {
+    user  = {{ dovecot_vmail_user }}
+    group = {{ dovecot_vmail_group }}
+    mode  = 0600
+  }
+}
+
+{% if dovecot_disable_plain_imap %}
+service imap-login {
+  inet_listener imaps {
+    port = 993
+    ssl = yes
+  }
+  inet_listener imap {
+    port = 0
+  }
+}
+{% endif %}
+
+namespace inbox {
+  inbox = yes
+  separator = .
+}
+
+{% if dovecot_extra_conf | length > 0 %}
+{{ dovecot_extra_conf }}
+{% endif %}

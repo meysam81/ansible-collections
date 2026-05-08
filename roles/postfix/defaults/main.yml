@@ -1,0 +1,85 @@
+---
+# Required: hostname Postfix announces (HELO, banner). Must match TLS cert.
+postfix_myhostname: ""
+# Required: parent domain.
+postfix_mydomain: ""
+
+# Postfix compatibility level. Bump when targeting newer Postfix versions
+# (Debian 12 ships 3.7, Debian 13 ships 3.9). Setting higher than the
+# installed Postfix version is undefined behaviour.
+postfix_compatibility_level: "3.6"
+
+# Listen interfaces / protocols.
+postfix_inet_interfaces: "all"
+postfix_inet_protocols: "all"
+
+# Trusted networks for relay/origin. Loopback-only is correct for an
+# inbound-only MX. Override only if you genuinely need to relay from another
+# host. mynetworks does NOT control who can send TO your virtual_mailbox_domains
+# from the internet — that's smtpd_recipient_restrictions territory.
+postfix_mynetworks:
+  - "127.0.0.0/8"
+  - "[::1]/128"
+
+# Pure-virtual mode: empty mydestination, no local delivery, every accepted
+# recipient must resolve via virtual_mailbox_domains. Use for inbound-only MX
+# fronting Dovecot via LMTP. When false, $myhostname/$mydomain/localhost are
+# delivered locally as usual.
+postfix_pure_virtual: false
+
+# Size and rate limits.
+postfix_message_size_limit: 52428800           # 50 MB
+postfix_smtpd_client_connection_rate_limit: 100
+postfix_smtpd_client_connection_count_limit: 50
+postfix_smtpd_recipient_limit: 10
+
+# HELO + VRFY hardening.
+postfix_smtpd_helo_required: true
+postfix_disable_vrfy: true
+postfix_helo_restrictions:
+  - permit_mynetworks
+  - reject_invalid_helo_hostname
+  - reject_non_fqdn_helo_hostname
+  - permit
+
+# Envelope sender (5321.MailFrom) checks. Cheap anti-spoof.
+postfix_smtpd_sender_restrictions:
+  - permit_mynetworks
+  - reject_non_fqdn_sender
+  - reject_unknown_sender_domain
+
+# Never an open relay.
+postfix_relay_restrictions:
+  - permit_mynetworks
+  - reject_unauth_destination
+
+# Recipient-side acceptance rules.
+postfix_recipient_restrictions:
+  - permit_mynetworks
+  - reject_non_fqdn_recipient
+  - reject_unknown_recipient_domain
+  - reject_unauth_destination
+  - permit
+
+# No SASL auth on port 25.
+postfix_smtpd_sasl_auth_enable: false
+
+# When true, removes submission and smtps entries from master.cf.
+postfix_disable_submission: true
+
+# Opportunistic STARTTLS (must accept legit MX peers that don't STARTTLS).
+postfix_smtpd_tls_security_level: "may"
+postfix_smtpd_tls_protocols: ">=TLSv1.2"
+postfix_smtpd_tls_cert_file: ""
+postfix_smtpd_tls_key_file: ""
+
+# Virtual mail.
+postfix_virtual_mailbox_domains: []           # list of domain strings
+postfix_virtual_alias_maps: []                # list of {pattern, target}
+postfix_virtual_transport: "lmtp:unix:private/dovecot-lmtp"
+
+# Local /etc/aliases override for "root". Empty = leave default.
+postfix_local_root_alias: ""
+
+# Escape hatch: extra main.cf key-value pairs appended verbatim.
+postfix_extra_main_cf: {}

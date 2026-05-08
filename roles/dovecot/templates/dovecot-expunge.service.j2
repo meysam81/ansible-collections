@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Dovecot mailbox expunge
+After=dovecot.service
+Requires=dovecot.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dovecot-expunge.sh
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths={{ dovecot_vmail_home_base }}
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dovecot-expunge

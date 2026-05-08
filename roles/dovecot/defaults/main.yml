@@ -1,0 +1,71 @@
+---
+# Protocols enabled. 2.4 default is empty; we ship a sane default.
+dovecot_protocols: ["imap", "lmtp"]
+
+# Listen interfaces. Default = loopback only; caller must override for non-local.
+dovecot_listen: ["127.0.0.1", "::1"]
+
+# SSL.
+dovecot_ssl_required: true
+dovecot_ssl_server_cert_file: ""           # required when ssl_required = true
+dovecot_ssl_server_key_file: ""            # required when ssl_required = true
+dovecot_auth_allow_cleartext: false        # 2.4 syntax (replaces disable_plaintext_auth)
+
+# When true, the imap (143) inet_listener is set to port 0, forcing imaps-only
+# on 993. Defense in depth for IMAPS-only deployments.
+dovecot_disable_plain_imap: true
+
+# Mail storage.
+dovecot_mail_driver: "maildir"
+dovecot_mail_path: "~/Maildir"
+
+# vmail system user/group.
+dovecot_vmail_user: "vmail"
+dovecot_vmail_group: "vmail"
+dovecot_vmail_uid: 5000
+dovecot_vmail_gid: 5000
+dovecot_vmail_home_base: "/var/vmail"
+
+# Auth backend.
+dovecot_passwd_file: "/etc/dovecot/users"
+dovecot_passwd_scheme: "ARGON2ID"
+
+# userdb mode.
+#   passwd_file       — userdb mirrors passdb; per-user home from the passwd
+#                       file's home column.
+#   static_by_domain  — userdb returns a single home per address domain;
+#                       every <x>@domain lands in the same Maildir.
+#                       Use this for catch-all-per-domain MX setups.
+#   static            — userdb returns a single home for all addresses; rarely
+#                       useful but kept for completeness.
+dovecot_userdb_mode: "passwd_file"
+
+# Postmaster address used by LMTP for delivery error envelopes and by doveadm
+# for administrative messages. Required.
+dovecot_postmaster_address: ""
+
+# Virtual users. Each entry:
+#   name:           login (used as Maildir directory name)
+#   password_hash:  {SCHEME}hash format (caller-supplied; never generated here)
+#   home:           absolute path; defaults to {{ dovecot_vmail_home_base }}/{{ name }}
+dovecot_users: []
+
+# LMTP socket exposed to Postfix.
+dovecot_postfix_lmtp_socket_path: "/var/spool/postfix/private/dovecot-lmtp"
+dovecot_postfix_lmtp_socket_owner: "postfix"
+dovecot_postfix_lmtp_socket_group: "postfix"
+dovecot_postfix_lmtp_socket_mode: "0660"
+
+# Mailboxes auto-created per user via doveadm.
+dovecot_default_mailboxes: ["INBOX"]
+
+# Optional retention via `doveadm expunge` on systemd timer.
+# Each rule: {user, mailbox, before}. user="*" or "all" expands to -A
+# (all users); any other value passes through as -u <user>.
+dovecot_expunge_enabled: false
+dovecot_expunge_rules: []
+dovecot_expunge_on_calendar: daily
+dovecot_expunge_random_delay_sec: 600
+
+# Escape hatch (raw text appended to dovecot.conf).
+dovecot_extra_conf: ""

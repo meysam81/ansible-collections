@@ -1,0 +1,77 @@
+# {{ ansible_managed }}
+compatibility_level = {{ postfix_compatibility_level }}
+
+myhostname = {{ postfix_myhostname }}
+mydomain   = {{ postfix_mydomain }}
+myorigin   = $myhostname
+
+{% if postfix_pure_virtual %}
+# Pure-virtual MX: nothing is delivered locally. Every accepted recipient
+# must resolve via virtual_mailbox_domains.
+mydestination =
+local_recipient_maps =
+local_transport = error:local mail delivery is disabled
+{% else %}
+mydestination = $myhostname, localhost.$mydomain, localhost
+{% endif %}
+
+inet_interfaces = {{ postfix_inet_interfaces }}
+inet_protocols  = {{ postfix_inet_protocols }}
+mynetworks      = {{ postfix_mynetworks | join(', ') }}
+
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+
+# Limits
+message_size_limit = {{ postfix_message_size_limit }}
+smtpd_client_connection_rate_limit  = {{ postfix_smtpd_client_connection_rate_limit }}
+smtpd_client_connection_count_limit = {{ postfix_smtpd_client_connection_count_limit }}
+smtpd_recipient_limit               = {{ postfix_smtpd_recipient_limit }}
+
+# HELO + VRFY
+smtpd_helo_required = {{ 'yes' if postfix_smtpd_helo_required else 'no' }}
+disable_vrfy_command = {{ 'yes' if postfix_disable_vrfy else 'no' }}
+smtpd_helo_restrictions = {{ postfix_helo_restrictions | join(', ') }}
+
+# Sender / relay / recipient
+smtpd_sender_restrictions    = {{ postfix_smtpd_sender_restrictions | join(', ') }}
+smtpd_relay_restrictions     = {{ postfix_relay_restrictions | join(', ') }}
+smtpd_recipient_restrictions = {{ postfix_recipient_restrictions | join(', ') }}
+
+# SASL (off for inbound MX)
+smtpd_sasl_auth_enable = {{ 'yes' if postfix_smtpd_sasl_auth_enable else 'no' }}
+
+# TLS
+{% if postfix_smtpd_tls_cert_file | length > 0 %}
+smtpd_tls_security_level  = {{ postfix_smtpd_tls_security_level }}
+smtpd_tls_protocols       = {{ postfix_smtpd_tls_protocols }}
+smtpd_tls_mandatory_protocols = {{ postfix_smtpd_tls_protocols }}
+smtpd_tls_cert_file       = {{ postfix_smtpd_tls_cert_file }}
+smtpd_tls_key_file        = {{ postfix_smtpd_tls_key_file }}
+smtpd_tls_received_header = yes
+smtpd_tls_loglevel        = 1
+tls_preempt_cipherlist    = yes
+{% else %}
+smtpd_tls_security_level = none
+{% endif %}
+
+# Virtual mail
+{% if postfix_virtual_mailbox_domains | length > 0 %}
+virtual_mailbox_domains = {{ postfix_virtual_mailbox_domains | join(', ') }}
+{% if postfix_virtual_alias_maps | length > 0 %}
+virtual_alias_maps      = hash:/etc/postfix/virtual_aliases
+{% endif %}
+virtual_transport       = {{ postfix_virtual_transport }}
+{% endif %}
+
+# Aliases
+alias_maps     = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+
+# Misc
+recipient_delimiter = +
+
+{% for k, v in postfix_extra_main_cf.items() %}
+{{ k }} = {{ v }}
+{% endfor %}

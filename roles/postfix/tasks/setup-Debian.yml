@@ -1,0 +1,119 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - postfix_myhostname | length > 0
+      - postfix_mydomain | length > 0
+      - (postfix_smtpd_tls_cert_file | length > 0) == (postfix_smtpd_tls_key_file | length > 0)
+      - postfix_mynetworks | length > 0
+    fail_msg: >-
+      postfix_myhostname and postfix_mydomain are required;
+      cert + key file must be set together (or both empty);
+      postfix_mynetworks must be non-empty.
+
+- name: Validate virtual alias entries
+  ansible.builtin.assert:
+    that:
+      - item.pattern is defined
+      - item.target is defined
+      - item.pattern | length > 0
+      - item.target | length > 0
+    fail_msg: "Invalid virtual alias entry: {{ item }}"
+  loop: "{{ postfix_virtual_alias_maps }}"
+  loop_control:
+    label: "{{ item.pattern | default('?') }}"
+  when: postfix_virtual_alias_maps | length > 0
+
+- name: Pre-seed Postfix debconf
+  ansible.builtin.debconf:
+    name: postfix
+    question: "{{ item.q }}"
+    vtype: "{{ item.t }}"
+    value: "{{ item.v }}"
+  loop:
+    - q: postfix/main_mailer_type
+      t: select
+      v: Internet Site
+    - q: postfix/mailname
+      t: string
+      v: "{{ postfix_myhostname }}"
+
+- name: Install Postfix
+  ansible.builtin.apt:
+    name:
+      - postfix
+    state: present
+    update_cache: true
+
+- name: Create /etc/postfix/virtual_aliases
+  ansible.builtin.template:
+    src: virtual_aliases.j2
+    dest: /etc/postfix/virtual_aliases
+    owner: root
+    group: root
+    mode: "0644"
+  when: postfix_virtual_alias_maps | length > 0
+  notify:
+    - Postmap virtual aliases
+    - Reload postfix
+
+- name: Remove /etc/postfix/virtual_aliases when no maps configured
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/postfix/virtual_aliases
+    - /etc/postfix/virtual_aliases.db
+  when: postfix_virtual_alias_maps | length == 0
+  notify: Reload postfix
+
+- name: Render /etc/postfix/main.cf
+  ansible.builtin.template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload postfix
+
+- name: Render /etc/postfix/master.cf
+  ansible.builtin.template:
+    src: master.cf.j2
+    dest: /etc/postfix/master.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Set local root alias
+  ansible.builtin.lineinfile:
+    path: /etc/aliases
+    regexp: '^root:'
+    line: "root: {{ postfix_local_root_alias }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  register: postfix_root_alias_set
+  when: postfix_local_root_alias | length > 0
+  notify: Reload postfix
+
+- name: Run newaliases
+  ansible.builtin.command:
+    cmd: newaliases
+  when:
+    - postfix_local_root_alias | length > 0
+    - postfix_root_alias_set is defined
+    - postfix_root_alias_set.changed | default(false)
+  changed_when: true
+
+- name: Verify postfix configuration
+  ansible.builtin.command:
+    cmd: postfix check
+  changed_when: false
+
+- name: Ensure postfix enabled and running
+  ansible.builtin.systemd:
+    name: postfix
+    state: started
+    enabled: true

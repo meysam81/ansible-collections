@@ -1,0 +1,121 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - restic_repo_url | length > 0
+      - restic_password | length > 0
+      - restic_paths | length > 0
+      - (not (restic_repo_url is regex('^s3:'))) or (restic_aws_access_key_id | length > 0 and restic_aws_secret_access_key | length > 0)
+    fail_msg: >-
+      restic_repo_url, restic_password, and restic_paths are required;
+      restic_aws_access_key_id and restic_aws_secret_access_key are required
+      when restic_repo_url uses an s3: backend.
+
+- name: Install restic
+  ansible.builtin.apt:
+    name: restic
+    state: present
+    update_cache: true
+
+- name: Ensure /etc/restic exists
+  ansible.builtin.file:
+    path: /etc/restic
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Ensure restic cache dir exists
+  ansible.builtin.file:
+    path: "{{ restic_cache_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Render restic env file
+  ansible.builtin.template:
+    src: restic.env.j2
+    dest: /etc/restic/.env
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Deploy backup script
+  ansible.builtin.template:
+    src: restic-backup.sh.j2
+    dest: /usr/local/bin/restic-backup.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy backup service
+  ansible.builtin.template:
+    src: restic-backup.service.j2
+    dest: /etc/systemd/system/restic-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Deploy backup timer
+  ansible.builtin.template:
+    src: restic-backup.timer.j2
+    dest: /etc/systemd/system/restic-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Enable backup timer
+  ansible.builtin.systemd:
+    name: restic-backup.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Deploy check script
+  ansible.builtin.template:
+    src: restic-check.sh.j2
+    dest: /usr/local/bin/restic-check.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: restic_check_enabled
+
+- name: Deploy check service
+  ansible.builtin.template:
+    src: restic-check.service.j2
+    dest: /etc/systemd/system/restic-check.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: restic_check_enabled
+  notify: Reload systemd daemon
+
+- name: Deploy check timer
+  ansible.builtin.template:
+    src: restic-check.timer.j2
+    dest: /etc/systemd/system/restic-check.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: restic_check_enabled
+  notify: Reload systemd daemon
+
+- name: Enable check timer
+  ansible.builtin.systemd:
+    name: restic-check.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: restic_check_enabled
+
+- name: Disable check timer when feature disabled
+  ansible.builtin.systemd:
+    name: restic-check.timer
+    state: stopped
+    enabled: false
+  failed_when: false
+  when: not restic_check_enabled

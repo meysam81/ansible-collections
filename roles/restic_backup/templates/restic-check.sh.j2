@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Verify repository integrity. Reads a sampled subset to bound network/io cost.
+set -euo pipefail
+umask 0077
+
+restic check --read-data-subset={{ restic_check_read_data_subset | quote }} --quiet

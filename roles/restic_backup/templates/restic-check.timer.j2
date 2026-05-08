@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Periodic restic repository integrity check
+
+[Timer]
+OnCalendar={{ restic_check_on_calendar }}
+Persistent=true
+RandomizedDelaySec={{ restic_check_random_delay_sec }}
+
+[Install]
+WantedBy=timers.target

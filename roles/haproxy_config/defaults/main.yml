@@ -20,6 +20,10 @@ haproxy_tls_ciphers: >-
 haproxy_tls_options: "no-tls-tickets"
 haproxy_tls_allow_dhe: true
 
+haproxy_global_ciphers_extra: []
+
+haproxy_quic_enabled: false
+
 # SSL tuning
 haproxy_dh_param_bits: 4096
 haproxy_bufsize: 32768
@@ -56,6 +60,24 @@ haproxy_backends: []
 #     host_suffix:     suffix match, e.g. "example.com" matches *.example.com
 #     path_prefix:     path prefix match, e.g. "/api"
 haproxy_routes: []
+
+# ── Inline responders (host+path → static body) ────────────────────
+# Returned directly from the web frontend before any backend lookup.
+# Useful for static well-known files: MTA-STS policy, ACME http-01,
+# robots.txt, health probes. Generic by design — callers supply the
+# host, path, and body. Body must be ASCII; non-ASCII characters need
+# explicit escaping for HAProxy's `string` argument format.
+#
+# Each entry:
+#   name:           (required) unique slug used to derive ACL names
+#                   (must match ^[A-Za-z0-9_]+$)
+#   host:           (required) exact host header match (case-insensitive)
+#   path:           (required) exact path match
+#   status:         (default 200) HTTP status code
+#   content_type:   (default "text/plain; charset=utf-8")
+#   body:           (required) response body; \n for newlines
+#   only_https:     (default true) only fire on TLS-terminated requests
+haproxy_inline_responders: []
 
 # ── Listen sections (TCP passthrough, etc.) ─────────────────────────
 # List of raw listen blocks. Each entry:

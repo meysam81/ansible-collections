@@ -148,6 +148,19 @@ frontend web
     unique-id-format %[uuid()]
     unique-id-header X-Unique-ID
 
+{% if haproxy_inline_responders %}
+    # --- Inline responders (host+path → static body, served before routing) ---
+{% for r in haproxy_inline_responders %}
+    acl ir_{{ r.name }}_host hdr(host) -i {{ r.host }}
+    acl ir_{{ r.name }}_path path {{ r.path }}
+{% if r.only_https | default(true) %}
+    http-request return status {{ r.status | default(200) }} content-type "{{ r.content_type | default('text/plain; charset=utf-8') }}" string {{ r.body | to_json }} if ir_{{ r.name }}_host ir_{{ r.name }}_path { ssl_fc }
+{% else %}
+    http-request return status {{ r.status | default(200) }} content-type "{{ r.content_type | default('text/plain; charset=utf-8') }}" string {{ r.body | to_json }} if ir_{{ r.name }}_host ir_{{ r.name }}_path
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% if haproxy_rate_limiting_enabled %}
     # --- Rate limiting ---
     stick-table type ip size 100k expire 30s store http_req_rate({{ haproxy_rate_limit_http_req_period }}s),http_err_rate({{ haproxy_rate_limit_http_req_period }}s),conn_rate({{ haproxy_rate_limit_conn_period }}s),conn_cur,gpc0,gpc0_rate({{ haproxy_rate_limit_api_period }}s)

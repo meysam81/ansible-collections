@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Expunges old mail per per-user/per-mailbox rules. Each rule with user="*"
+# or user="all" applies to every user via doveadm -A; any other value
+# scopes to that single user via -u.
+set -euo pipefail
+
+{% for rule in dovecot_expunge_rules %}
+{% if rule.user in ['*', 'all'] %}
+doveadm expunge -A mailbox {{ rule.mailbox | quote }} savedbefore {{ rule.before | quote }} \
+  || logger -t dovecot-expunge "expunge non-zero: u=ALL m={{ rule.mailbox }} before={{ rule.before }}"
+{% else %}
+doveadm expunge -u {{ rule.user | quote }} mailbox {{ rule.mailbox | quote }} savedbefore {{ rule.before | quote }} \
+  || logger -t dovecot-expunge "expunge non-zero: u={{ rule.user }} m={{ rule.mailbox }} before={{ rule.before }}"
+{% endif %}
+{% endfor %}

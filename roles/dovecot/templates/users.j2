@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+# format: user:hash::uid:gid::home::extra
+{% for u in dovecot_users %}
+{{ u.name }}:{{ u.password_hash }}::{{ dovecot_vmail_uid }}:{{ dovecot_vmail_gid }}::{{ u.home | default(dovecot_vmail_home_base + '/' + u.name) }}::
+{% endfor %}

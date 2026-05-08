@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: dane_publish
+  description: Publish DANE TLSA (3 1 1) records to Cloudflare from a cert file. Designed to hook into lego cert-renewal so the SPKI hash stays in lockstep with the live cert. Add-only by default; manual cleanup after key rotation.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+    - name: Ubuntu
+      versions:
+        - noble
+  license: Apache-2.0
+allow_duplicates: false
+
+dependencies: []

@@ -1,0 +1,73 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - dane_cloudflare_api_token | length > 0
+      - dane_cloudflare_zone_id | length > 0
+      - dane_certs | length > 0
+    fail_msg: >-
+      dane_cloudflare_api_token, dane_cloudflare_zone_id, and dane_certs
+      are required even when dane_enabled is false (so the script can be
+      pre-deployed and flipped on later without re-running with new vars).
+
+- name: Validate cert entries
+  ansible.builtin.assert:
+    that:
+      - item.cert_path is defined
+      - item.cert_path | length > 0
+      - item.host is defined
+      - item.host | length > 0
+    fail_msg: "Invalid dane_certs entry: {{ item }}"
+  loop: "{{ dane_certs }}"
+  loop_control:
+    label: "{{ item.host | default('?') }}"
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - openssl
+      - jq
+      - curl
+      - util-linux  # provides flock
+    state: present
+    update_cache: true
+
+- name: Ensure config directory exists
+  ansible.builtin.file:
+    path: "{{ dane_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Render env file
+  ansible.builtin.template:
+    src: dane.env.j2
+    dest: "{{ dane_config_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Render certs.conf
+  ansible.builtin.template:
+    src: dane-certs.conf.j2
+    dest: "{{ dane_config_dir }}/certs.conf"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Deploy publish script
+  ansible.builtin.template:
+    src: dane-publish.sh.j2
+    dest: "{{ dane_script_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Run initial TLSA publish
+  ansible.builtin.command:
+    cmd: "{{ dane_script_path }}"
+  when: dane_enabled
+  register: dane_publish_run
+  changed_when: '"PUBLISHED" in (dane_publish_run.stdout | default(""))'
