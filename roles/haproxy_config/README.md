@@ -132,6 +132,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cors_max_age](#haproxy_cors_max_age)
   - [haproxy_cors_subdomain_patterns](#haproxy_cors_subdomain_patterns)
   - [haproxy_csp](#haproxy_csp)
+  - [haproxy_default_redirect_url](#haproxy_default_redirect_url)
   - [haproxy_defaults_extra](#haproxy_defaults_extra)
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_frontend_extra_acls](#haproxy_frontend_extra_acls)
@@ -451,6 +452,14 @@ haproxy_csp: >-
   font-src 'self' data: https:;
   object-src 'none';
   upgrade-insecure-requests
+```
+
+### haproxy_default_redirect_url
+
+#### Default value
+
+```YAML
+haproxy_default_redirect_url: ''
 ```
 
 ### haproxy_defaults_extra

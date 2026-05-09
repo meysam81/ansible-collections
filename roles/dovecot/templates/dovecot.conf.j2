@@ -31,6 +31,26 @@ passdb passwd_file_main {
   passwd_file_path = {{ dovecot_passwd_file }}
 }
 
+{% if dovecot_lmtp_catchall_enabled %}
+# Catch-all LMTP delivery. Scoped to `protocol lmtp` so it only fires during
+# LMTP RCPT TO — IMAP/POP3 login still goes through passwd_file_main above
+# and requires a real {SCHEME}hash match. `nopassword = yes` tells Dovecot
+# any password works (LMTP has none to verify), and `allow_nets = local`
+# is required for unix-socket delivery from Postfix; without it Dovecot 2.4
+# rejects the recipient with `5.1.1 User doesn't exist` (per docs at
+# core/config/auth/passdb.html → allow_nets → 'local' Keyword). Domain
+# scoping is enforced upstream by Postfix's `virtual_mailbox_domains`.
+protocol lmtp {
+  passdb static_lmtp_catchall {
+    driver = static
+    fields {
+      nopassword = yes
+      allow_nets = local,127.0.0.1/32
+    }
+  }
+}
+{% endif %}
+
 {% if dovecot_userdb_mode == "passwd_file" %}
 userdb passwd_file_main {
   driver = passwd-file

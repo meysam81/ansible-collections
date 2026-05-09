@@ -190,6 +190,11 @@ haproxy_compression_types:
   - application/wasm
   - application/manifest+json
 
+# ── Default backend behaviour ───────────────────────────────────────
+# When set, unmatched requests receive a 301 redirect to this URL.
+# When empty, the default backend returns plain 404.
+haproxy_default_redirect_url: ""
+
 # ── Misc ────────────────────────────────────────────────────────────
 haproxy_alt_svc_enabled: true
 haproxy_option_forwardfor: true

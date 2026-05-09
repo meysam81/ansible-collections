@@ -50,6 +50,18 @@ dovecot_postmaster_address: ""
 #   home:           absolute path; defaults to {{ dovecot_vmail_home_base }}/{{ name }}
 dovecot_users: []
 
+# Catch-all LMTP delivery. When true, an extra static passdb is rendered
+# inside `protocol lmtp { ... }` so any recipient passes auth lookup during
+# LMTP RCPT TO; pair with `dovecot_userdb_mode: static_by_domain` to route
+# each to /var/vmail/<domain>/Maildir. IMAP/POP3 login is unaffected — the
+# static passdb is scoped to the lmtp protocol filter and is never consulted
+# during user login. Domain restriction is enforced upstream by Postfix's
+# `virtual_mailbox_domains` (only configured domains reach LMTP at all).
+# Required by Dovecot 2.4 docs to also set `allow_nets = local` so unix-socket
+# delivery from Postfix succeeds — without it, LMTP returns
+# `5.1.1 User doesn't exist`. The template handles that automatically.
+dovecot_lmtp_catchall_enabled: false
+
 # LMTP socket exposed to Postfix.
 dovecot_postfix_lmtp_socket_path: "/var/spool/postfix/private/dovecot-lmtp"
 dovecot_postfix_lmtp_socket_owner: "postfix"

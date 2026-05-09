@@ -52,6 +52,9 @@ smtpd_tls_key_file        = {{ postfix_smtpd_tls_key_file }}
 smtpd_tls_received_header = yes
 smtpd_tls_loglevel        = 1
 tls_preempt_cipherlist    = yes
+{% if postfix_tls_eecdh_auto_curves | length > 0 %}
+tls_eecdh_auto_curves     = {{ postfix_tls_eecdh_auto_curves }}
+{% endif %}
 {% else %}
 smtpd_tls_security_level = none
 {% endif %}

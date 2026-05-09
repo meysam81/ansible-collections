@@ -49,6 +49,7 @@ Install and configure Dovecot 2.4 with virtual users (passwd-file), Maildir, IMA
   - [dovecot_expunge_rules](#dovecot_expunge_rules)
   - [dovecot_extra_conf](#dovecot_extra_conf)
   - [dovecot_listen](#dovecot_listen)
+  - [dovecot_lmtp_catchall_enabled](#dovecot_lmtp_catchall_enabled)
   - [dovecot_mail_driver](#dovecot_mail_driver)
   - [dovecot_mail_path](#dovecot_mail_path)
   - [dovecot_passwd_file](#dovecot_passwd_file)
@@ -151,6 +152,14 @@ dovecot_extra_conf: ''
 
 ```YAML
 dovecot_listen: [127.0.0.1, ::1]
+```
+
+### dovecot_lmtp_catchall_enabled
+
+#### Default value
+
+```YAML
+dovecot_lmtp_catchall_enabled: false
 ```
 
 ### dovecot_mail_driver

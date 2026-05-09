@@ -81,5 +81,16 @@ postfix_virtual_transport: "lmtp:unix:private/dovecot-lmtp"
 # Local /etc/aliases override for "root". Empty = leave default.
 postfix_local_root_alias: ""
 
+# Whitespace-separated list of TLS named groups (curves) for ECDHE/hybrid KEM
+# negotiation. Empty = leave Postfix's compiled-in default. Order matters:
+# server-side preference is honoured because `tls_preempt_cipherlist = yes`,
+# so list highest-priority groups first. To enable post-quantum hybrid KEM,
+# OpenSSL 3.5+ supports `X25519MLKEM768` and `SecP256r1MLKEM768` (NIST FIPS
+# 203 ML-KEM-768 paired with classical ECDH); listing them ahead of the
+# classical curves opportunistically uses PQC with peers that support it
+# while staying interoperable with everyone else. PQC certs/signatures are
+# orthogonal — this only affects key exchange.
+postfix_tls_eecdh_auto_curves: ""
+
 # Escape hatch: extra main.cf key-value pairs appended verbatim.
 postfix_extra_main_cf: {}

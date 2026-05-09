@@ -65,6 +65,7 @@ Install and configure Postfix, opinionated toward inbound-only MX deployments
   - [postfix_smtpd_tls_key_file](#postfix_smtpd_tls_key_file)
   - [postfix_smtpd_tls_protocols](#postfix_smtpd_tls_protocols)
   - [postfix_smtpd_tls_security_level](#postfix_smtpd_tls_security_level)
+  - [postfix_tls_eecdh_auto_curves](#postfix_tls_eecdh_auto_curves)
   - [postfix_virtual_alias_maps](#postfix_virtual_alias_maps)
   - [postfix_virtual_mailbox_domains](#postfix_virtual_mailbox_domains)
   - [postfix_virtual_transport](#postfix_virtual_transport)
@@ -294,6 +295,14 @@ postfix_smtpd_tls_protocols: '>=TLSv1.2'
 
 ```YAML
 postfix_smtpd_tls_security_level: may
+```
+
+### postfix_tls_eecdh_auto_curves
+
+#### Default value
+
+```YAML
+postfix_tls_eecdh_auto_curves: ''
 ```
 
 ### postfix_virtual_alias_maps

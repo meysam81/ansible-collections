@@ -153,10 +153,12 @@ frontend web
 {% for r in haproxy_inline_responders %}
     acl ir_{{ r.name }}_host hdr(host) -i {{ r.host }}
     acl ir_{{ r.name }}_path path {{ r.path }}
+{% set ir_cors = r.cors_allow_origin | default('') %}
+{% set ir_hdrs = ('hdr "Access-Control-Allow-Origin" "' ~ ir_cors ~ '" hdr "Vary" "Origin" ') if ir_cors | length > 0 else '' %}
 {% if r.only_https | default(true) %}
-    http-request return status {{ r.status | default(200) }} content-type "{{ r.content_type | default('text/plain; charset=utf-8') }}" string {{ r.body | to_json }} if ir_{{ r.name }}_host ir_{{ r.name }}_path { ssl_fc }
+    http-request return status {{ r.status | default(200) }} content-type "{{ r.content_type | default('text/plain; charset=utf-8') }}" string {{ r.body | to_json }} {{ ir_hdrs }}if ir_{{ r.name }}_host ir_{{ r.name }}_path { ssl_fc }
 {% else %}
-    http-request return status {{ r.status | default(200) }} content-type "{{ r.content_type | default('text/plain; charset=utf-8') }}" string {{ r.body | to_json }} if ir_{{ r.name }}_host ir_{{ r.name }}_path
+    http-request return status {{ r.status | default(200) }} content-type "{{ r.content_type | default('text/plain; charset=utf-8') }}" string {{ r.body | to_json }} {{ ir_hdrs }}if ir_{{ r.name }}_host ir_{{ r.name }}_path
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -342,7 +344,11 @@ backend {{ backend.name }}
 
 {% endfor %}
 backend not_found
+{% if haproxy_default_redirect_url %}
+    http-request redirect location {{ haproxy_default_redirect_url }} code 301
+{% else %}
     http-request return status 404
+{% endif %}
 
 {% if haproxy_coraza_enabled %}
 backend coraza-spoa
