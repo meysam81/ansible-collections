@@ -52,11 +52,14 @@ haproxy_bind_addresses:
   - "*"
   - "::"
 
-# OCSP stapling on port 443 binds. When true, HAProxy fetches OCSP responses
-# automatically via its built-in httpclient and staples them into the TLS
+# OCSP stapling for all loaded certificates. When true, the global
+# `ocsp-update.mode on` directive is rendered, which makes HAProxy fetch
+# OCSP responses via its built-in updater and staple them into the TLS
 # handshake. Removes the client-side OCSP fetch round-trip and contributes
-# to SSL Labs A+. Requires HAProxy >= 2.8 and outbound HTTPS from the host
-# to the OCSP responder named in each certificate's AIA extension.
+# to SSL Labs A+. Requires HAProxy >= 3.0 (the canonical `ocsp-update.mode`
+# global keyword; older 2.8/2.9 used a different spelling and per-cert
+# crt-list configuration). Also requires outbound HTTPS from the host to
+# the OCSP responder named in each certificate's AIA extension.
 haproxy_ocsp_stapling_enabled: true
 
 # SSL tuning

@@ -25,9 +25,9 @@ Defaults are tuned for production-grade public exposure:
 
 Loosening any of these is the caller's explicit decision via overrides.
 
-> **HAProxy version:** OCSP stapling uses HAProxy's built-in `ocsp-update`,
-> which requires HAProxy >= 2.8. Set `haproxy_ocsp_stapling_enabled: false`
-> to use this role on older HAProxy.
+> **HAProxy version:** OCSP stapling is enabled via the global
+> `ocsp-update.mode on` directive, which requires HAProxy >= 3.0. Set
+> `haproxy_ocsp_stapling_enabled: false` to use this role on older HAProxy.
 
 ## Install
 

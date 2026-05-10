@@ -36,6 +36,9 @@ global
     tune.maxrewrite {{ haproxy_maxrewrite }}
     tune.ssl.maxrecord {{ haproxy_ssl_maxrecord }}
     tune.ssl.cachesize {{ haproxy_ssl_cachesize }}
+{% if haproxy_ocsp_stapling_enabled %}
+    ocsp-update.mode on
+{% endif %}
 
 {% for line in haproxy_global_extra %}
     {{ line | regex_replace('^\s+', '') }}
@@ -100,7 +103,7 @@ frontend web
 {% set is_v6 = ':' in addr %}
 {% set bind_addr = ('[' ~ addr ~ ']') if is_v6 else addr %}
     bind {{ bind_addr }}:80
-    bind {{ bind_addr }}:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h2,http/1.1{% if haproxy_ocsp_stapling_enabled %} ocsp-update on{% endif %}
+    bind {{ bind_addr }}:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h2,http/1.1
 
 {% if haproxy_quic_enabled %}
     bind quic{{ '6' if is_v6 else '4' }}@{{ bind_addr }}:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h3
