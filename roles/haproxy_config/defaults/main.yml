@@ -14,15 +14,50 @@ haproxy_timeout_tunnel: "3600s"
 
 # TLS
 haproxy_tls_min_version: "TLSv1.2"
-haproxy_tls_ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
+haproxy_tls_ciphersuites: "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256"
+# SSL Labs A+ / Mozilla "Modern intermediate"-grade default. ECDHE-only AEAD,
+# zero DHE so there are no DH params to size or rotate. `@SECLEVEL=2` raises
+# OpenSSL's security level: SHA-1 in the TLS handshake `signature_algorithms`
+# extension is forbidden, and RSA/DH keys < 2048 bits are forbidden. Order
+# of preference within the list: AES-256-GCM > CHACHA20-POLY1305 > AES-128-GCM,
+# with ECDSA preferred over RSA per algorithm so an ECDSA cert is fully
+# utilised when present. Override only if you need to interoperate with
+# legacy clients that lack ECDHE.
 haproxy_tls_ciphers: >-
-  ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+  @SECLEVEL=2:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
+# `no-tls-tickets`: session tickets disabled. Rotating ticket keys correctly
+# is operationally hard and a known footgun; A+ does not require tickets and
+# session caching covers the resumption case.
 haproxy_tls_options: "no-tls-tickets"
-haproxy_tls_allow_dhe: true
+# Default false to match the ECDHE-only cipher list above. The template
+# filters DHE-* entries out of the final cipher string when this is false,
+# so reintroducing DHE in an override requires flipping both this flag AND
+# adding DHE-* entries to `haproxy_tls_ciphers`.
+haproxy_tls_allow_dhe: false
 
 haproxy_global_ciphers_extra: []
 
 haproxy_quic_enabled: false
+
+# Frontend bind addresses for ports 80/443. Default is dual-stack wildcard:
+# every IPv4 and every IPv6 address on the host. Override to bind to
+# specific NICs or to disable a family:
+#   ["*"]                            # IPv4-only
+#   ["::"]                           # IPv6-only
+#   ["10.0.0.5", "2001:db8::5"]      # specific addresses (raw, no brackets)
+# On Linux, HAProxy sets IPV6_V6ONLY=1 on `::` sockets so `*` and `::`
+# coexist without duplicate-bind errors. The template adds [] brackets to
+# IPv6 literals when rendering bind lines.
+haproxy_bind_addresses:
+  - "*"
+  - "::"
+
+# OCSP stapling on port 443 binds. When true, HAProxy fetches OCSP responses
+# automatically via its built-in httpclient and staples them into the TLS
+# handshake. Removes the client-side OCSP fetch round-trip and contributes
+# to SSL Labs A+. Requires HAProxy >= 2.8 and outbound HTTPS from the host
+# to the OCSP responder named in each certificate's AIA extension.
+haproxy_ocsp_stapling_enabled: true
 
 # SSL tuning
 haproxy_dh_param_bits: 4096

@@ -62,10 +62,14 @@ Install and configure Postfix, opinionated toward inbound-only MX deployments
   - [postfix_smtpd_sasl_auth_enable](#postfix_smtpd_sasl_auth_enable)
   - [postfix_smtpd_sender_restrictions](#postfix_smtpd_sender_restrictions)
   - [postfix_smtpd_tls_cert_file](#postfix_smtpd_tls_cert_file)
+  - [postfix_smtpd_tls_ciphers](#postfix_smtpd_tls_ciphers)
+  - [postfix_smtpd_tls_eecdh_grade](#postfix_smtpd_tls_eecdh_grade)
   - [postfix_smtpd_tls_key_file](#postfix_smtpd_tls_key_file)
+  - [postfix_smtpd_tls_mandatory_ciphers](#postfix_smtpd_tls_mandatory_ciphers)
   - [postfix_smtpd_tls_protocols](#postfix_smtpd_tls_protocols)
   - [postfix_smtpd_tls_security_level](#postfix_smtpd_tls_security_level)
   - [postfix_tls_eecdh_auto_curves](#postfix_tls_eecdh_auto_curves)
+  - [postfix_tls_high_cipherlist](#postfix_tls_high_cipherlist)
   - [postfix_virtual_alias_maps](#postfix_virtual_alias_maps)
   - [postfix_virtual_mailbox_domains](#postfix_virtual_mailbox_domains)
   - [postfix_virtual_transport](#postfix_virtual_transport)
@@ -273,12 +277,36 @@ postfix_smtpd_sender_restrictions:
 postfix_smtpd_tls_cert_file: ''
 ```
 
+### postfix_smtpd_tls_ciphers
+
+#### Default value
+
+```YAML
+postfix_smtpd_tls_ciphers: high
+```
+
+### postfix_smtpd_tls_eecdh_grade
+
+#### Default value
+
+```YAML
+postfix_smtpd_tls_eecdh_grade: auto
+```
+
 ### postfix_smtpd_tls_key_file
 
 #### Default value
 
 ```YAML
 postfix_smtpd_tls_key_file: ''
+```
+
+### postfix_smtpd_tls_mandatory_ciphers
+
+#### Default value
+
+```YAML
+postfix_smtpd_tls_mandatory_ciphers: high
 ```
 
 ### postfix_smtpd_tls_protocols
@@ -303,6 +331,15 @@ postfix_smtpd_tls_security_level: may
 
 ```YAML
 postfix_tls_eecdh_auto_curves: ''
+```
+
+### postfix_tls_high_cipherlist
+
+#### Default value
+
+```YAML
+postfix_tls_high_cipherlist: >-
+  @SECLEVEL=2:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
 ```
 
 ### postfix_virtual_alias_maps

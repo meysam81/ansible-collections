@@ -6,6 +6,29 @@ to any specific backend technology.
 
 Depends on `haproxy_base` (user, dirs, error pages, systemd service).
 
+## Safe by default
+
+Defaults are tuned for production-grade public exposure:
+
+- **TLS posture targets SSL Labs A+ / Mozilla "Modern intermediate":**
+  TLS 1.2+1.3 only, ECDHE-only AEAD cipher list with `@SECLEVEL=2` (no DHE,
+  no CBC, no SHA-1 in handshake or MAC), session tickets disabled,
+  TLS_FALLBACK_SCSV honoured, OCSP stapling on by default.
+- **Dual-stack bind by default:** the frontend listens on every IPv4 and
+  every IPv6 address on the host. Override `haproxy_bind_addresses` to
+  pin to specific NICs or disable a family.
+- **Security headers default-on:** HSTS (2-year max-age, includeSubDomains,
+  preload), CSP, COEP/COOP/CORP, X-Frame-Options, Referrer-Policy,
+  Permissions-Policy. These apply to *every* response — backend, redirect,
+  errorfile, and inline-responder — via `http-after-response`.
+- **Rate limiting default-on** with conservative per-IP burst limits.
+
+Loosening any of these is the caller's explicit decision via overrides.
+
+> **HAProxy version:** OCSP stapling uses HAProxy's built-in `ocsp-update`,
+> which requires HAProxy >= 2.8. Set `haproxy_ocsp_stapling_enabled: false`
+> to use this role on older HAProxy.
+
 ## Install
 
 ### requirements.yml

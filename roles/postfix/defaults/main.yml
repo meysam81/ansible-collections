@@ -73,6 +73,32 @@ postfix_smtpd_tls_protocols: ">=TLSv1.2"
 postfix_smtpd_tls_cert_file: ""
 postfix_smtpd_tls_key_file: ""
 
+# Cipher tier for opportunistic and mandatory STARTTLS sessions. `high`
+# selects `tls_high_cipherlist` for both, which is what the role's
+# Internet.nl/NCSC-IT-grade default below is tuned for. Override only if
+# you genuinely need to interoperate with legacy MTAs that lack ECDHE.
+postfix_smtpd_tls_ciphers: "high"
+postfix_smtpd_tls_mandatory_ciphers: "high"
+
+# Internet.nl/NCSC-IT-grade cipher list, used when `*_tls_ciphers = high`:
+#   - ECDHE-only: zero DHE, so there are no Diffie-Hellman params to size
+#     or rotate; every modern MTA speaks ECDHE.
+#   - AEAD-only (AES-GCM, CHACHA20-POLY1305): no CBC, no SHA-1 MACs.
+#   - `@SECLEVEL=2` raises OpenSSL's security level, which forbids SHA-1
+#     in the TLS handshake's signature_algorithms extension as well as
+#     RSA <2048 / DH <2048. Cipher-suite filtering alone does not cover
+#     signature_algorithms, so the @SECLEVEL knob is load-bearing.
+# Order of preference within the list:
+#   AES-256-GCM > CHACHA20-POLY1305 > AES-128-GCM, with ECDSA preferred
+#   over RSA per algorithm so an ECDSA cert is fully utilised when present.
+postfix_tls_high_cipherlist: >-
+  @SECLEVEL=2:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
+
+# Lets OpenSSL pick the strongest curve from `postfix_tls_eecdh_auto_curves`
+# rather than pinning a single curve. `auto` is the recommended setting on
+# modern Postfix.
+postfix_smtpd_tls_eecdh_grade: "auto"
+
 # Virtual mail.
 postfix_virtual_mailbox_domains: []           # list of domain strings
 postfix_virtual_alias_maps: []                # list of {pattern, target}

@@ -6,6 +6,29 @@ to any specific backend technology.
 
 Depends on `haproxy_base` (user, dirs, error pages, systemd service).
 
+## Safe by default
+
+Defaults are tuned for production-grade public exposure:
+
+- **TLS posture targets SSL Labs A+ / Mozilla "Modern intermediate":**
+  TLS 1.2+1.3 only, ECDHE-only AEAD cipher list with `@SECLEVEL=2` (no DHE,
+  no CBC, no SHA-1 in handshake or MAC), session tickets disabled,
+  TLS_FALLBACK_SCSV honoured, OCSP stapling on by default.
+- **Dual-stack bind by default:** the frontend listens on every IPv4 and
+  every IPv6 address on the host. Override `haproxy_bind_addresses` to
+  pin to specific NICs or disable a family.
+- **Security headers default-on:** HSTS (2-year max-age, includeSubDomains,
+  preload), CSP, COEP/COOP/CORP, X-Frame-Options, Referrer-Policy,
+  Permissions-Policy. These apply to *every* response — backend, redirect,
+  errorfile, and inline-responder — via `http-after-response`.
+- **Rate limiting default-on** with conservative per-IP burst limits.
+
+Loosening any of these is the caller's explicit decision via overrides.
+
+> **HAProxy version:** OCSP stapling uses HAProxy's built-in `ocsp-update`,
+> which requires HAProxy >= 2.8. Set `haproxy_ocsp_stapling_enabled: false`
+> to use this role on older HAProxy.
+
 ## Install
 
 ### requirements.yml
@@ -106,6 +129,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_allow_options_all_origins](#haproxy_allow_options_all_origins)
   - [haproxy_alt_svc_enabled](#haproxy_alt_svc_enabled)
   - [haproxy_backends](#haproxy_backends)
+  - [haproxy_bind_addresses](#haproxy_bind_addresses)
   - [haproxy_blocked_extensions](#haproxy_blocked_extensions)
   - [haproxy_blocked_user_agents](#haproxy_blocked_user_agents)
   - [haproxy_bufsize](#haproxy_bufsize)
@@ -149,6 +173,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_listen_sections](#haproxy_listen_sections)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
+  - [haproxy_ocsp_stapling_enabled](#haproxy_ocsp_stapling_enabled)
   - [haproxy_option_forwardfor](#haproxy_option_forwardfor)
   - [haproxy_permissions_policy](#haproxy_permissions_policy)
   - [haproxy_quic_enabled](#haproxy_quic_enabled)
@@ -219,6 +244,16 @@ haproxy_alt_svc_enabled: true
 
 ```YAML
 haproxy_backends: []
+```
+
+### haproxy_bind_addresses
+
+#### Default value
+
+```YAML
+haproxy_bind_addresses:
+  - '*'
+  - '::'
 ```
 
 ### haproxy_blocked_extensions
@@ -593,6 +628,14 @@ haproxy_maxconn: 4096
 haproxy_maxrewrite: 8192
 ```
 
+### haproxy_ocsp_stapling_enabled
+
+#### Default value
+
+```YAML
+haproxy_ocsp_stapling_enabled: true
+```
+
 ### haproxy_option_forwardfor
 
 #### Default value
@@ -844,7 +887,7 @@ haproxy_timeout_tunnel: 3600s
 #### Default value
 
 ```YAML
-haproxy_tls_allow_dhe: true
+haproxy_tls_allow_dhe: false
 ```
 
 ### haproxy_tls_ciphers
@@ -853,7 +896,7 @@ haproxy_tls_allow_dhe: true
 
 ```YAML
 haproxy_tls_ciphers: >-
-  ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+  @SECLEVEL=2:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
 ```
 
 ### haproxy_tls_ciphersuites
@@ -861,7 +904,7 @@ haproxy_tls_ciphers: >-
 #### Default value
 
 ```YAML
-haproxy_tls_ciphersuites: TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+haproxy_tls_ciphersuites: TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256
 ```
 
 ### haproxy_tls_min_version

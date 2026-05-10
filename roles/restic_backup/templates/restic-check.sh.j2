@@ -4,4 +4,4 @@
 set -euo pipefail
 umask 0077
 
-restic check --read-data-subset={{ restic_check_read_data_subset | quote }} --quiet
+restic check --read-data-subset={{ restic_check_read_data_subset | quote }}

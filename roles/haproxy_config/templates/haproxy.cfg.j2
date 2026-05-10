@@ -96,8 +96,16 @@ frontend stats
 
 # ── Main web frontend ──────────────────────────────────────────────
 frontend web
-    bind *:80
-    bind *:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h2,http/1.1
+{% for addr in haproxy_bind_addresses %}
+{% set is_v6 = ':' in addr %}
+{% set bind_addr = ('[' ~ addr ~ ']') if is_v6 else addr %}
+    bind {{ bind_addr }}:80
+    bind {{ bind_addr }}:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h2,http/1.1{% if haproxy_ocsp_stapling_enabled %} ocsp-update on{% endif %}
+
+{% if haproxy_quic_enabled %}
+    bind quic{{ '6' if is_v6 else '4' }}@{{ bind_addr }}:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h3
+{% endif %}
+{% endfor %}
 
     http-request set-var(txn.req_hdrs) req.hdrs
 {% if haproxy_coraza_enabled %}
@@ -235,32 +243,37 @@ frontend web
 
 {% if haproxy_security_headers_enabled %}
     # --- Security headers (configurable, backend-respecting) ---
+    # `http-after-response` (vs `http-response`) so headers are also applied
+    # to responses synthesised by HAProxy itself — `http-request return`,
+    # `redirect`, `errorfile`, `deny`. `http-response` only fires for
+    # responses coming back from a real backend, which means HSTS/CSP/etc.
+    # silently disappear on inline responders, redirects, and error pages.
 {% if haproxy_alt_svc_enabled and haproxy_quic_enabled %}
-    http-response set-header Alt-Svc "h3=\":443\"; ma=86400"
+    http-after-response set-header Alt-Svc "h3=\":443\"; ma=86400"
 {% endif %}
-    http-response set-header Content-Security-Policy "{{ haproxy_csp }}" unless { res.hdr(Content-Security-Policy) -m found }
+    http-after-response set-header Content-Security-Policy "{{ haproxy_csp }}" unless { res.hdr(Content-Security-Policy) -m found }
 {% if haproxy_coep %}
-    http-response set-header Cross-Origin-Embedder-Policy "{{ haproxy_coep }}" unless { res.hdr(Cross-Origin-Embedder-Policy) -m found }
+    http-after-response set-header Cross-Origin-Embedder-Policy "{{ haproxy_coep }}" unless { res.hdr(Cross-Origin-Embedder-Policy) -m found }
 {% endif %}
 {% if haproxy_coop %}
-    http-response set-header Cross-Origin-Opener-Policy "{{ haproxy_coop }}" unless { res.hdr(Cross-Origin-Opener-Policy) -m found }
+    http-after-response set-header Cross-Origin-Opener-Policy "{{ haproxy_coop }}" unless { res.hdr(Cross-Origin-Opener-Policy) -m found }
 {% endif %}
 {% if haproxy_corp %}
-    http-response set-header Cross-Origin-Resource-Policy "{{ haproxy_corp }}" unless { res.hdr(Cross-Origin-Resource-Policy) -m found }
+    http-after-response set-header Cross-Origin-Resource-Policy "{{ haproxy_corp }}" unless { res.hdr(Cross-Origin-Resource-Policy) -m found }
 {% endif %}
-    http-response set-header Permissions-Policy "{{ haproxy_permissions_policy }}" unless { res.hdr(Permissions-Policy) -m found }
-    http-response set-header Referrer-Policy "{{ haproxy_referrer_policy }}" unless { res.hdr(Referrer-Policy) -m found }
-    http-response set-header Strict-Transport-Security "max-age={{ haproxy_hsts_max_age }}{% if haproxy_hsts_include_subdomains %}; includeSubDomains{% endif %}{% if haproxy_hsts_preload %}; preload{% endif %}" unless { res.hdr(Strict-Transport-Security) -m found }
-    http-response set-header X-Frame-Options "{{ haproxy_x_frame_options }}" unless { res.hdr(X-Frame-Options) -m found }
-    http-response set-header X-XSS-Protection "{{ haproxy_x_xss_protection }}" unless { res.hdr(X-XSS-Protection) -m found }
+    http-after-response set-header Permissions-Policy "{{ haproxy_permissions_policy }}" unless { res.hdr(Permissions-Policy) -m found }
+    http-after-response set-header Referrer-Policy "{{ haproxy_referrer_policy }}" unless { res.hdr(Referrer-Policy) -m found }
+    http-after-response set-header Strict-Transport-Security "max-age={{ haproxy_hsts_max_age }}{% if haproxy_hsts_include_subdomains %}; includeSubDomains{% endif %}{% if haproxy_hsts_preload %}; preload{% endif %}" unless { res.hdr(Strict-Transport-Security) -m found }
+    http-after-response set-header X-Frame-Options "{{ haproxy_x_frame_options }}" unless { res.hdr(X-Frame-Options) -m found }
+    http-after-response set-header X-XSS-Protection "{{ haproxy_x_xss_protection }}" unless { res.hdr(X-XSS-Protection) -m found }
 
     # --- Hardcoded headers (universally safe) ---
-    http-response set-header X-Content-Type-Options nosniff
-    http-response set-header X-DNS-Prefetch-Control off
-    http-response set-header X-Download-Options noopen
-    http-response set-header X-Permitted-Cross-Domain-Policies none
-    http-response del-header Server
-    http-response del-header X-Powered-By
+    http-after-response set-header X-Content-Type-Options nosniff
+    http-after-response set-header X-DNS-Prefetch-Control off
+    http-after-response set-header X-Download-Options noopen
+    http-after-response set-header X-Permitted-Cross-Domain-Policies none
+    http-after-response del-header Server
+    http-after-response del-header X-Powered-By
 {% endif %}
 
 {% if haproxy_cors_allowed_domains or haproxy_cors_subdomain_patterns %}

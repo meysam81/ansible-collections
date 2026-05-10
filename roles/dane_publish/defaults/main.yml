@@ -21,7 +21,7 @@ dane_record_ttl: 300
 
 # List of certs to publish TLSA records for. Each entry:
 #   cert_path: absolute path to the cert file (PEM)
-#   host:      DNS hostname the cert is bound to (e.g. mx.dmarcguard.io)
+#   host:      DNS hostname the cert is bound to (e.g. mx.example.com)
 #   port:      service port (default 25)
 #   protocol:  transport protocol (default tcp)
 dane_certs: []
