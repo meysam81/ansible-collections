@@ -29,7 +29,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Cache trivy db
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
             ~/.cache/trivy
@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-trivy-db-
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
+        uses: aquasecurity/trivy-action@314ff8b43182423b84c50b1670b0e10f858f2d98 # master
         with:
           format: sarif
           ignore-unfixed: true
@@ -48,7 +48,7 @@ jobs:
           severity: CRITICAL,HIGH
           trivy-config: trivy.yaml
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         with:
           sarif_file: "trivy-results.sarif"
 
@@ -80,11 +80,11 @@ jobs:
       contents: read
     services:
       prometheus:
-        image: prom/prometheus:v3.11.0
+        image: prom/prometheus:v3.11.3
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.7.1
+        image: grafana/loki:3.7.2
         ports:
           - 3100:3100
     strategy:
@@ -99,7 +99,7 @@ jobs:
       - name: Check ansible
         run: ansible --version
       - name: Cache Ansible collections
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
             ~/.ansible/collections
@@ -135,7 +135,7 @@ jobs:
     steps:
       - id: release-please
         name: Release please
-        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
 
   publish-galaxy:
     needs:
@@ -173,7 +173,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@5fac056c45595896c973fbde871f01f6cb14d74c # main
+        uses: ansible/ansible-lint@146de9b708d505f50ad473e1f97543d531fdcc9c # main
         with:
           setup_python: "true"
           requirements_file: requirements.yml
