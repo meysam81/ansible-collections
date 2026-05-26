@@ -13,8 +13,14 @@ server:
     do-daemonize: no
     use-syslog: no
     log-time-ascii: yes
-    log-queries: no
-    log-replies: no
+    # Per-query/reply access logging. Off by default — high-traffic resolvers
+    # flood journald and can starve the disk. Flip unbound_query_logging=true
+    # for debugging; lands in journalctl -u unbound via stderr.
+    log-queries: {{ 'yes' if unbound_query_logging else 'no' }}
+    log-replies: {{ 'yes' if unbound_query_logging else 'no' }}
+{% if unbound_query_logging %}
+    log-tag-queryreply: yes
+{% endif %}
 
     # Slab counts: power of 2, one per thread is the recommended
     # baseline for low contention.
@@ -30,7 +36,9 @@ server:
     # (Spamhaus, SenderScore) require this in their ToS.
     cache-min-ttl: {{ unbound_cache_min_ttl }}
     cache-max-ttl: {{ unbound_cache_max_ttl }}
-    cache-min-negative-ttl: 0
+{% if unbound_cache_min_negative_ttl is not none %}
+    cache-min-negative-ttl: {{ unbound_cache_min_negative_ttl }}
+{% endif %}
     prefetch: {{ 'yes' if unbound_prefetch else 'no' }}
     prefetch-key: no
     serve-expired: {{ 'yes' if unbound_serve_expired else 'no' }}
@@ -52,7 +60,7 @@ server:
 
 {% if unbound_refuse_any %}
     # Mitigate DNS amplification: refuse ANY queries.
-    refuse-any: yes
+    deny-any: yes
 {% endif %}
 
     # Performance tuning for multi-thread workloads.

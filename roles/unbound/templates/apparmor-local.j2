@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+#
+# Local override for /etc/apparmor.d/usr.sbin.unbound, sourced from the
+# stock Debian profile via `#include <local/usr.sbin.unbound>`.
+#
+# The stock profile permits /run/unbound.pid but not /run/unbound/** —
+# so binding the unbound-control unix socket inside the systemd
+# RuntimeDirectory= path fails with EACCES even though the directory
+# is chowned to the unbound user. Grant access here so confinement
+# stays enforcing for everything else.
+
+/run/unbound/ rw,
+/run/unbound/** rwk,

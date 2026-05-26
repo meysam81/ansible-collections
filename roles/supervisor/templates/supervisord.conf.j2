@@ -1,0 +1,66 @@
+; {{ ansible_managed }}
+;
+; Managed by meysam81.general.supervisor — manual edits will be overwritten.
+; Program list is rendered from the caller-supplied `supervisor_programs`.
+
+[unix_http_server]
+file = {{ supervisor_socket_path }}
+chmod = 0700
+username = {{ supervisor_socket_username }}
+password = {{ supervisor_socket_password }}
+
+[supervisord]
+logfile = {{ supervisor_home }}/supervisord.log
+logfile_maxbytes = {{ supervisor_logfile_maxbytes }}
+logfile_backups = {{ supervisor_logfile_backups }}
+loglevel = {{ supervisor_loglevel }}
+pidfile = /var/run/supervisord.pid
+childlogdir = {{ supervisor_home }}/log
+nodaemon = false
+minfds = {{ supervisor_minfds }}
+minprocs = {{ supervisor_minprocs }}
+user = {{ supervisor_user }}
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl = unix://{{ supervisor_socket_path }}
+username = {{ supervisor_socket_username }}
+password = {{ supervisor_socket_password }}
+
+{% for p in supervisor_programs %}
+[program:{{ p.name }}]
+command = {{ p.command }}
+{% if p.directory is defined %}directory = {{ p.directory }}
+{% endif %}
+{% if p.user is defined %}user = {{ p.user }}
+{% endif %}
+autostart = {{ (p.autostart | default(true)) | string | lower }}
+autorestart = {{ (p.autorestart | default(true)) | string | lower }}
+startsecs = {{ p.startsecs | default(5) }}
+startretries = {{ p.startretries | default(3) }}
+stopsignal = {{ p.stopsignal | default('TERM') }}
+stopwaitsecs = {{ p.stopwaitsecs | default(30) }}
+priority = {{ p.priority | default(999) }}
+{% if p.environment is defined %}environment = {{ p.environment }}
+{% endif %}
+{% if p.numprocs is defined %}numprocs = {{ p.numprocs }}
+process_name = {{ p.process_name | default('%(program_name)s_%(process_num)02d') }}
+{% endif %}
+redirect_stderr = {{ (p.redirect_stderr | default(false)) | string | lower }}
+stdout_logfile = {{ p.stdout_logfile | default(supervisor_home + '/log/' + p.name + '.out.log') }}
+stderr_logfile = {{ p.stderr_logfile | default(supervisor_home + '/log/' + p.name + '.err.log') }}
+stdout_logfile_maxbytes = {{ p.stdout_logfile_maxbytes | default('10MB') }}
+stderr_logfile_maxbytes = {{ p.stderr_logfile_maxbytes | default('10MB') }}
+stdout_logfile_backups = {{ p.stdout_logfile_backups | default(3) }}
+stderr_logfile_backups = {{ p.stderr_logfile_backups | default(3) }}
+{% if p.stdout_syslog is defined %}stdout_syslog = {{ (p.stdout_syslog | bool) | string | lower }}
+{% endif %}
+{% if p.stderr_syslog is defined %}stderr_syslog = {{ (p.stderr_syslog | bool) | string | lower }}
+{% endif %}
+{% if p.extra is defined %}
+{{ p.extra }}
+{% endif %}
+
+{% endfor %}

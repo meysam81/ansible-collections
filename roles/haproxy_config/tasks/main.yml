@@ -26,8 +26,9 @@
     that:
       - item.name is defined
       - item.name is regex('^[A-Za-z0-9_]+$')
-      - item.host is defined
-      - item.host | length > 0
+      - (item.host is defined and item.host | length > 0) or
+        (item.host_regex is defined and item.host_regex | length > 0)
+      - not (item.host is defined and item.host_regex is defined)
       - item.path is defined
       - item.path | length > 0
       - item.body is defined

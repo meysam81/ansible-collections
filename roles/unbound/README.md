@@ -100,6 +100,7 @@ Install and configure unbound as a fully-recursive local DNS resolver
 - [Default Variables](#default-variables)
   - [unbound_apt_package](#unbound_apt_package)
   - [unbound_cache_max_ttl](#unbound_cache_max_ttl)
+  - [unbound_cache_min_negative_ttl](#unbound_cache_min_negative_ttl)
   - [unbound_cache_min_ttl](#unbound_cache_min_ttl)
   - [unbound_disable_resolvers](#unbound_disable_resolvers)
   - [unbound_dnssec_enabled](#unbound_dnssec_enabled)
@@ -107,8 +108,8 @@ Install and configure unbound as a fully-recursive local DNS resolver
   - [unbound_exporter_binary_path](#unbound_exporter_binary_path)
   - [unbound_exporter_control_socket](#unbound_exporter_control_socket)
   - [unbound_exporter_deb_arch](#unbound_exporter_deb_arch)
+  - [unbound_exporter_disabled](#unbound_exporter_disabled)
   - [unbound_exporter_download_url](#unbound_exporter_download_url)
-  - [unbound_exporter_enabled](#unbound_exporter_enabled)
   - [unbound_exporter_listen](#unbound_exporter_listen)
   - [unbound_exporter_version](#unbound_exporter_version)
   - [unbound_extra_config](#unbound_extra_config)
@@ -120,6 +121,7 @@ Install and configure unbound as a fully-recursive local DNS resolver
   - [unbound_port](#unbound_port)
   - [unbound_prefetch](#unbound_prefetch)
   - [unbound_qname_minimisation](#unbound_qname_minimisation)
+  - [unbound_query_logging](#unbound_query_logging)
   - [unbound_refuse_any](#unbound_refuse_any)
   - [unbound_resolvconf_nameservers](#unbound_resolvconf_nameservers)
   - [unbound_root_hints_path](#unbound_root_hints_path)
@@ -152,6 +154,14 @@ unbound_apt_package: unbound
 
 ```YAML
 unbound_cache_max_ttl: 86400
+```
+
+### unbound_cache_min_negative_ttl
+
+#### Default value
+
+```YAML
+unbound_cache_min_negative_ttl:
 ```
 
 ### unbound_cache_min_ttl
@@ -211,6 +221,14 @@ unbound_exporter_deb_arch: >-
   {{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}
 ```
 
+### unbound_exporter_disabled
+
+#### Default value
+
+```YAML
+unbound_exporter_disabled: true
+```
+
 ### unbound_exporter_download_url
 
 #### Default value
@@ -220,14 +238,6 @@ unbound_exporter_download_url: >-
   https://github.com/letsencrypt/unbound_exporter/releases/download/v{{
   unbound_exporter_version }}/unbound_exporter-v{{ unbound_exporter_version
   }}.{{ unbound_exporter_deb_arch }}.deb
-```
-
-### unbound_exporter_enabled
-
-#### Default value
-
-```YAML
-unbound_exporter_enabled: true
 ```
 
 ### unbound_exporter_listen
@@ -316,6 +326,14 @@ unbound_prefetch: false
 
 ```YAML
 unbound_qname_minimisation: true
+```
+
+### unbound_query_logging
+
+#### Default value
+
+```YAML
+unbound_query_logging: false
 ```
 
 ### unbound_refuse_any

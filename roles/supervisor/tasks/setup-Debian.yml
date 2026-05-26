@@ -1,0 +1,33 @@
+---
+- name: Install supervisor package
+  ansible.builtin.apt:
+    name: "{{ supervisor_apt_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure supervisor home + log dirs exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ supervisor_home }}"
+    - "{{ supervisor_home }}/log"
+
+- name: Render supervisord.conf
+  ansible.builtin.template:
+    src: supervisord.conf.j2
+    dest: "{{ supervisor_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart supervisor
+
+- name: Ensure supervisor is enabled and running
+  ansible.builtin.systemd:
+    name: supervisor
+    enabled: true
+    state: started

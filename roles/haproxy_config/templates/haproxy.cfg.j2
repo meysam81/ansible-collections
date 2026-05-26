@@ -54,20 +54,17 @@ defaults
     timeout queue {{ haproxy_timeout_queue }}
     timeout tunnel {{ haproxy_timeout_tunnel }}
 
+{% if haproxy_compression_enabled %}
     compression algo gzip
     compression type {{ haproxy_compression_types | join(' ') }}
+{% endif %}
 
     log    global
-    option httplog
-    option log-health-checks
-    option dontlognull
 
-    option http-server-close
-    option redispatch
-    option splice-auto
-{% if haproxy_option_forwardfor %}
-    option forwardfor
-{% endif %}
+{% for option in haproxy_defaults_options %}
+    option {{ option | regex_replace('^\s+', '') | regex_replace('\s+$', '') }}
+{% endfor %}
+
     retries 3
 
     default-server check inter 10s fall 3 rise 2
@@ -162,7 +159,11 @@ frontend web
 {% if haproxy_inline_responders %}
     # --- Inline responders (host+path → static body, served before routing) ---
 {% for r in haproxy_inline_responders %}
+{% if r.host_regex is defined %}
+    acl ir_{{ r.name }}_host hdr(host) -m reg -i {{ r.host_regex }}
+{% else %}
     acl ir_{{ r.name }}_host hdr(host) -i {{ r.host }}
+{% endif %}
     acl ir_{{ r.name }}_path path {{ r.path }}
 {% set ir_cors = r.cors_allow_origin | default('') %}
 {% set ir_hdrs = ('hdr "Access-Control-Allow-Origin" "' ~ ir_cors ~ '" hdr "Vary" "Origin" ') if ir_cors | length > 0 else '' %}

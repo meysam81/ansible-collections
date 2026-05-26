@@ -37,6 +37,15 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
+# Reload AppArmor policy in-kernel. apparmor_parser -r applies to
+# already-running processes too, but unbound is typically dead by the
+# time we get here (the EACCES on the control socket is fatal), so
+# the "Restart unbound" handler below brings it back up.
+- name: Reload unbound apparmor profile
+  ansible.builtin.command:
+    cmd: apparmor_parser -r /etc/apparmor.d/usr.sbin.unbound
+  changed_when: true
+
 - name: Restart unbound
   ansible.builtin.systemd:
     name: unbound

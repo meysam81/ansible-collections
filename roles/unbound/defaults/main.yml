@@ -13,6 +13,9 @@ unbound_rrset_cache_size: "64m"
 # extending TTLs beyond the authoritative response or pre-fetching.
 unbound_cache_min_ttl: 0
 unbound_cache_max_ttl: 86400
+# Negative-response TTL floor. Requires Unbound >= 1.19.0; leave null on
+# older releases (e.g. Debian 12's 1.17.x) — the keyword will be omitted.
+unbound_cache_min_negative_ttl: null
 unbound_prefetch: false
 unbound_serve_expired: false
 
@@ -24,11 +27,15 @@ unbound_trust_anchor_path: "/var/lib/unbound/root.key"
 unbound_edns_buffer_size: 1232
 unbound_refuse_any: true
 
+# Per-query/reply access logging to journald. Off by default to avoid
+# flooding the journal on a busy resolver; enable for debugging.
+unbound_query_logging: false
+
 # Bundled Prometheus exporter (letsencrypt/unbound_exporter — actively
 # maintained fork of the original kumina/unbound_exporter). Upstream
 # only ships .deb packages, so we install via the dpkg-arch-named
 # asset URL. Binary lands at /usr/bin/unbound_exporter.
-unbound_exporter_enabled: true
+unbound_exporter_disabled: true
 unbound_exporter_version: "0.6.0"
 unbound_exporter_deb_arch: >-
   {{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}

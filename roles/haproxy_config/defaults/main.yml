@@ -12,6 +12,8 @@ haproxy_timeout_http_keep_alive: "15s"
 haproxy_timeout_queue: "30s"
 haproxy_timeout_tunnel: "3600s"
 
+haproxy_compression_enabled: true
+
 # TLS
 haproxy_tls_min_version: "TLSv1.2"
 haproxy_tls_ciphersuites: "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256"
@@ -38,6 +40,16 @@ haproxy_tls_allow_dhe: false
 haproxy_global_ciphers_extra: []
 
 haproxy_quic_enabled: false
+
+haproxy_defaults_options:
+  - dontlognull
+  - forwardfor
+  - http-server-close
+  - httplog
+  - log-health-checks
+  - redispatch
+  - splice-auto
+
 
 # Frontend bind addresses for ports 80/443. Default is dual-stack wildcard:
 # every IPv4 and every IPv6 address on the host. Override to bind to
@@ -109,7 +121,12 @@ haproxy_routes: []
 # Each entry:
 #   name:           (required) unique slug used to derive ACL names
 #                   (must match ^[A-Za-z0-9_]+$)
-#   host:           (required) exact host header match (case-insensitive)
+#   host:           (one-of, with host_regex) exact host header match
+#                   (case-insensitive)
+#   host_regex:     (one-of, with host) PCRE host header match
+#                   (case-insensitive); takes precedence over `host` if both
+#                   are set. Useful for serving the same body for a family of
+#                   hosts, e.g. `^mta-sts\.[^.]+\.example\.com$`.
 #   path:           (required) exact path match
 #   status:         (default 200) HTTP status code
 #   content_type:   (default "text/plain; charset=utf-8")
@@ -235,7 +252,6 @@ haproxy_default_redirect_url: ""
 
 # ── Misc ────────────────────────────────────────────────────────────
 haproxy_alt_svc_enabled: true
-haproxy_option_forwardfor: true
 
 # ── Escape hatches (raw lines injected into sections) ───────────────
 haproxy_global_extra: []

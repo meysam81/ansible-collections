@@ -142,6 +142,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cloudflare_enabled](#haproxy_cloudflare_enabled)
   - [haproxy_cloudflare_ips_file](#haproxy_cloudflare_ips_file)
   - [haproxy_coep](#haproxy_coep)
+  - [haproxy_compression_enabled](#haproxy_compression_enabled)
   - [haproxy_compression_types](#haproxy_compression_types)
   - [haproxy_coop](#haproxy_coop)
   - [haproxy_coraza_enabled](#haproxy_coraza_enabled)
@@ -158,6 +159,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_csp](#haproxy_csp)
   - [haproxy_default_redirect_url](#haproxy_default_redirect_url)
   - [haproxy_defaults_extra](#haproxy_defaults_extra)
+  - [haproxy_defaults_options](#haproxy_defaults_options)
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_frontend_extra_acls](#haproxy_frontend_extra_acls)
   - [haproxy_frontend_extra_rules](#haproxy_frontend_extra_rules)
@@ -174,7 +176,6 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_ocsp_stapling_enabled](#haproxy_ocsp_stapling_enabled)
-  - [haproxy_option_forwardfor](#haproxy_option_forwardfor)
   - [haproxy_permissions_policy](#haproxy_permissions_policy)
   - [haproxy_quic_enabled](#haproxy_quic_enabled)
   - [haproxy_rate_limit_api_count](#haproxy_rate_limit_api_count)
@@ -361,6 +362,14 @@ haproxy_cloudflare_ips_file: /etc/haproxy/cloudflare-ips.txt
 haproxy_coep: unsafe-none
 ```
 
+### haproxy_compression_enabled
+
+#### Default value
+
+```YAML
+haproxy_compression_enabled: true
+```
+
 ### haproxy_compression_types
 
 #### Default value
@@ -505,6 +514,21 @@ haproxy_default_redirect_url: ''
 haproxy_defaults_extra: []
 ```
 
+### haproxy_defaults_options
+
+#### Default value
+
+```YAML
+haproxy_defaults_options:
+  - dontlognull
+  - forwardfor
+  - http-server-close
+  - httplog
+  - log-health-checks
+  - redispatch
+  - splice-auto
+```
+
 ### haproxy_dh_param_bits
 
 #### Default value
@@ -634,14 +658,6 @@ haproxy_maxrewrite: 8192
 
 ```YAML
 haproxy_ocsp_stapling_enabled: true
-```
-
-### haproxy_option_forwardfor
-
-#### Default value
-
-```YAML
-haproxy_option_forwardfor: true
 ```
 
 ### haproxy_permissions_policy

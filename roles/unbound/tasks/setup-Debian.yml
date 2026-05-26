@@ -66,6 +66,42 @@
     mode: "0644"
   notify: Validate and activate unbound config
 
+# ── AppArmor local override ────────────────────────────────────────
+#
+# Debian ships /etc/apparmor.d/usr.sbin.unbound which permits
+# /run/unbound.pid but denies writes under /run/unbound/. That blocks
+# the unbound-control unix socket created inside the systemd
+# RuntimeDirectory= path with EACCES on bind(), regardless of
+# filesystem ownership. Land a local override so the runtime dir is
+# writable by the confined process; the rest of the profile stays
+# enforcing.
+
+- name: Detect AppArmor profile for unbound
+  ansible.builtin.stat:
+    path: /etc/apparmor.d/usr.sbin.unbound
+  register: unbound_apparmor_profile
+
+- name: Ensure AppArmor local override directory exists
+  ansible.builtin.file:
+    path: /etc/apparmor.d/local
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: unbound_apparmor_profile.stat.exists
+
+- name: Install AppArmor local override for unbound runtime dir
+  ansible.builtin.template:
+    src: apparmor-local.j2
+    dest: /etc/apparmor.d/local/usr.sbin.unbound
+    owner: root
+    group: root
+    mode: "0644"
+  when: unbound_apparmor_profile.stat.exists
+  notify:
+    - Reload unbound apparmor profile
+    - Restart unbound
+
 # ── Systemd unit (override Debian default) ─────────────────────────
 
 - name: Deploy unbound systemd service
@@ -83,7 +119,7 @@
 
 - name: Setup unbound_exporter
   ansible.builtin.include_tasks: setup-exporter.yml
-  when: unbound_exporter_enabled
+  when: not unbound_exporter_disabled
 
 # ── Kick handlers immediately so the service is up by end-of-play ──
 

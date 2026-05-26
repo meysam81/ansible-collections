@@ -1,0 +1,49 @@
+---
+# Package & paths
+supervisor_apt_package: supervisor
+supervisor_config_path: /etc/supervisor/supervisord.conf
+supervisor_socket_path: /var/run/supervisor.sock
+
+# Base directory for supervisord's own log, child stdout/stderr captures,
+# and any caller-managed state.
+supervisor_home: /opt/supervisor
+
+# supervisord process tunables
+supervisor_loglevel: info
+supervisor_logfile_maxbytes: "50MB"
+supervisor_logfile_backups: 10
+supervisor_minfds: 1024
+supervisor_minprocs: 200
+
+# User supervisord itself runs as. Stays root by default because supervisord
+# typically spawns child programs as other users (see per-program `user:`).
+# Declared explicitly so supervisord doesn't emit the "Privileges were not
+# dropped" CRIT at startup.
+supervisor_user: root
+
+# Auth on the unix_http_server. The socket is chmod 0700 (root-only), but
+# supervisord still emits a CRIT unless credentials are configured. Defaults
+# bind the password to the host machine-id — stable across runs, unique per
+# host, no extra state file. Override if you need something stronger.
+supervisor_socket_username: supervisor
+supervisor_socket_password: "{{ ansible_facts['machine_id'] | default('supervisor-change-me') }}"
+
+# Program definitions are supplied by the caller. The role does not ship
+# any business logic — every program block is rendered from this list.
+#
+# Per-item keys (all optional except name + command):
+#   name, command, directory, user, environment,
+#   autostart (bool), autorestart (bool|str), startsecs, startretries,
+#   stopsignal, stopwaitsecs, priority,
+#   numprocs, process_name,
+#   redirect_stderr (bool),
+#   stdout_logfile, stderr_logfile        (set to NONE to disable file logging)
+#   stdout_logfile_maxbytes, stderr_logfile_maxbytes,
+#   stdout_logfile_backups, stderr_logfile_backups,
+#   stdout_syslog (bool), stderr_syslog (bool)
+#     — when true, child output is routed to syslog (which journald listens
+#       on by default). Combine with stdout_logfile=NONE to skip files
+#       entirely. Each line lands in journalctl tagged with the program name
+#       (SYSLOG_IDENTIFIER), so `journalctl -t myprog` filters to one program.
+#   extra  (raw INI passthrough appended verbatim)
+supervisor_programs: []

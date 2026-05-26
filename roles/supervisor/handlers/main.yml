@@ -1,0 +1,6 @@
+---
+- name: Restart supervisor
+  ansible.builtin.systemd:
+    name: supervisor
+    state: restarted
+    daemon_reload: true
