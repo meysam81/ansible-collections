@@ -1,4 +1,4 @@
-ansible<14
+ansible<15
 ansible-doctor<9
 ansible-lint<27
 molecule<27
