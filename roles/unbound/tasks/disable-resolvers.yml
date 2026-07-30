@@ -1,5 +1,5 @@
 ---
-# ── Stop and mask all known services that bind port 53 ──────────────
+# ── Stop and mask everything that binds port 53 or steers unbound ───
 #
 # Each service is stopped, disabled, and masked. If the unit does not
 # exist on the target host the task succeeds silently.
@@ -18,7 +18,33 @@
     - named
     - stubby
     - systemd-resolved
+    # Ships with the Debian unbound package. Not a port-53 conflict: it
+    # pushes the DHCP-supplied nameservers into the RUNNING daemon via
+    # `unbound-control forward`, so a recursive resolver silently becomes
+    # a forwarder with no trace in unbound.conf. It re-applies on boot
+    # and on every DHCP renew, surviving a plain unbound restart.
+    # Forwarding also breaks per-IP DNSBL quotas: the blocklist sees the
+    # upstream resolver's egress IP, and shared resolvers get refused as
+    # open resolvers.
+    - unbound-resolvconf
   failed_when: false
+
+- name: Check for runtime-injected forwarders
+  ansible.builtin.command:
+    cmd: /usr/sbin/unbound-control list_forwards
+  register: unbound_runtime_forwards
+  changed_when: false
+  failed_when: false
+
+# Masking the unit prevents future injections; this clears one already
+# pushed into the live daemon, no restart needed.
+- name: Drop runtime-injected forwarders to restore full recursion
+  ansible.builtin.command:
+    cmd: /usr/sbin/unbound-control forward off
+  changed_when: true
+  when:
+    - unbound_runtime_forwards.rc == 0
+    - unbound_runtime_forwards.stdout | trim | length > 0
 
 - name: Stop and mask dnscrypt-proxy socket
   ansible.builtin.systemd:

@@ -91,3 +91,11 @@ The shipped systemd unit declares `Conflicts=` against the common port-53
 binders (`dnsproxy`, `systemd-resolved`, `dnsmasq`, `bind9`, `named`,
 `stubby`). Setting `unbound_disable_resolvers: true` (the default) also
 masks them at install time.
+
+Debian's `unbound` package additionally ships `unbound-resolvconf.service`,
+which is masked too. It binds no port — it pushes the DHCP-supplied
+nameservers into the *running* daemon via `unbound-control forward`, turning
+a recursive resolver into a forwarder with nothing to show for it in
+`unbound.conf`. Verify with `unbound-control list_forwards` (must be empty)
+and `dig +short TXT o-o.myaddr.l.google.com @127.0.0.1`, which must return
+one of the host's own addresses.

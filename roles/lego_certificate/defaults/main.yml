@@ -13,8 +13,15 @@ lego_certificate_cloudflare_dns_api_token: ""
 #   reload_commands: list of shell commands run if cert content changed after
 #                    renewal
 #   key_type:       lego --key-type value (rsa2048, rsa4096, ec256, ec384).
-#                   Applies at issue time only; renewals with --reuse-key
-#                   keep the original key. Omit to use lego's default (ec256).
+#                   ONE-SHOT: honoured only on initial issue. The renewal
+#                   script never passes --key-type, and `reuse_key: true`
+#                   preserves the existing key forever, so changing this
+#                   value on an existing install is a NO-OP. To rotate
+#                   algorithms on a deployed cert: stop services that hold
+#                   the key open, `rm` both `<name>.crt` and `<name>.key`
+#                   from `lego_certificate_cert_dir`, then re-run the role
+#                   to trigger a fresh issue with the new key_type.
+#                   Omit to use lego's default (ec256).
 #   reuse_key:      when true, lego renewal preserves the existing private
 #                   key. Required for DANE setups that pin SPKI (3 1 1) so
 #                   the published TLSA hash stays stable. Defaults to false.
