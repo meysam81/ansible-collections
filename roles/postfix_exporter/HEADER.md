@@ -29,6 +29,14 @@ collections:
 
 Metrics are served on `postfix_exporter_listen` (default `127.0.0.1:9154`). Scrape them with a local agent (see the `alloy` role) rather than exposing the port.
 
+`postfix_exporter_extra_groups` includes `postdrop` by default so the
+exporter can traverse into `/var/spool/postfix/public` to reach the showq
+socket. That same group membership also grants write access to
+`/var/spool/postfix/public/cleanup` (local mail injection, the same
+mechanism `postdrop`/`sendmail` use) — the standard price of reading
+showq, since Postfix does not offer a narrower group for one without the
+other.
+
 ### Journal unit
 
 `postfix_exporter_systemd_unit` defaults to `postfix@-.service` — on
