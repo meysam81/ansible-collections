@@ -43,16 +43,24 @@ expose auth, IMAP command and LMTP delivery counters:
         dovecot_metrics_enabled: true
 ```
 
-By default the stats listener binds the same addresses as `dovecot_listen`;
-scrape it on one of those (e.g. `[::1]:9900`) with a local agent (see the
-`alloy` role) — never exposed directly. Setting
-`dovecot_metrics_listen_address` emits an explicit `address =` line, which
-Dovecot 2.4.0-2.4.1 accept and 2.4.5+ reject (no per-listener bind setting
-exists in the 2.4.5 docs) — leave it empty on newer releases. The rendered
-config is validated both by `validate: "doveconf -c %s -n"` on the template
-task and the existing separate `doveconf -n` task, so a misconfigured
-`filter` (or an `address =` a newer Dovecot rejects) fails the play rather
-than the daemon.
+`dovecot_metrics_listen_address` defaults to `127.0.0.1` — loopback,
+**independent of `dovecot_listen`**, so widening `dovecot_listen` for real
+mail traffic never also widens this unauthenticated endpoint. Scrape it at
+`127.0.0.1:9900` (or `[::1]:9900` if you set it to `::1`) with a local
+agent — see the `alloy` role.
+
+Setting `dovecot_metrics_listen_address` emits an explicit `address =`
+line, which Dovecot 2.4.0-2.4.1 accept and 2.4.5+ reject (no per-listener
+bind setting exists in the 2.4.5 docs). The rendered config is validated
+both by `validate: "doveconf -c %s -n"` on the template task and the
+existing separate `doveconf -n` task, so on 2.4.5+ a non-empty
+`dovecot_metrics_listen_address` fails the play loudly rather than
+silently landing a config the daemon would reject or, worse, exposing the
+endpoint some other way. On 2.4.5+, clear it to `""` to inherit every
+`dovecot_listen` address instead of a single explicit one — this is the
+only way to scrape the endpoint at all on that version if you can't reach
+loopback, so firewall port 9900 yourself when you do this, since nothing
+in this role restricts it once it is bound to non-loopback addresses.
 
 Install and configure Dovecot 2.4 with virtual users (passwd-file), Maildir, IMAP, and LMTP for Postfix integration
 
@@ -234,7 +242,7 @@ dovecot_metrics_enabled: false
 #### Default value
 
 ```YAML
-dovecot_metrics_listen_address: ''
+dovecot_metrics_listen_address: 127.0.0.1
 ```
 
 ### dovecot_metrics_port
