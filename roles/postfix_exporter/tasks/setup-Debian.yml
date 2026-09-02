@@ -1,0 +1,107 @@
+---
+- name: Create group {{ postfix_exporter_group }}
+  ansible.builtin.group:
+    name: "{{ postfix_exporter_group }}"
+    state: present
+    system: true
+
+- name: Ensure postfix group exists (showq socket group; postfix creates it too)
+  ansible.builtin.group:
+    name: postfix
+    state: present
+    system: true
+
+- name: Create user {{ postfix_exporter_user }}
+  ansible.builtin.user:
+    name: "{{ postfix_exporter_user }}"
+    group: "{{ postfix_exporter_group }}"
+    groups: "{{ postfix_exporter_extra_groups }}"
+    append: true
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    state: present
+
+- name: Read release checksums
+  ansible.builtin.set_fact:
+    postfix_exporter_checksums: "{{ lookup('ansible.builtin.url', postfix_exporter_checksums_url, wantlist=True) }}"
+
+- name: Extract SHA256 for {{ postfix_exporter_download_url | basename }}
+  ansible.builtin.set_fact:
+    postfix_exporter_sha256: >-
+      {{ postfix_exporter_checksums
+      | select('search', postfix_exporter_download_url | basename)
+      | map('split', ' ') | map('first') | list | first }}
+
+- name: Create secure temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: postfix_exporter_
+  register: postfix_exporter_tmp_dir
+
+- name: Download postfix_exporter
+  ansible.builtin.get_url:
+    url: "{{ postfix_exporter_download_url }}"
+    dest: "{{ postfix_exporter_tmp_dir.path }}/{{ postfix_exporter_download_url | basename }}"
+    checksum: "sha256:{{ postfix_exporter_sha256 }}"
+    mode: "0644"
+  register: postfix_exporter_download
+
+- name: Unpack archive
+  ansible.builtin.unarchive:
+    src: "{{ postfix_exporter_download.dest }}"
+    dest: "{{ postfix_exporter_tmp_dir.path }}"
+    remote_src: true
+
+- name: Locate the binary inside the archive
+  ansible.builtin.find:
+    paths: "{{ postfix_exporter_tmp_dir.path }}"
+    patterns: postfix_exporter
+    recurse: true
+    file_type: file
+  register: postfix_exporter_found
+
+- name: Install binary
+  ansible.builtin.copy:
+    src: "{{ (postfix_exporter_found.files | map(attribute='path') | list | first) }}"
+    dest: "{{ postfix_exporter_bin }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart postfix-exporter
+
+- name: Clean up temp files
+  ansible.builtin.file:
+    path: "{{ postfix_exporter_tmp_dir.path }}"
+    state: absent
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: postfix-exporter.service.j2
+    dest: /etc/systemd/system/postfix-exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix-exporter
+
+- name: Start postfix-exporter
+  ansible.builtin.systemd:
+    name: postfix-exporter
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Do postfix-exporter HTTP healthcheck
+  ansible.builtin.uri:
+    url: "http://{{ postfix_exporter_listen }}/metrics"
+    status_code: 200
+    timeout: 3
+  register: postfix_exporter_healthcheck
+  until: postfix_exporter_healthcheck.status == 200
+  retries: 5
+  delay: 1
+  when: postfix_exporter_healthcheck_enabled | bool
+  failed_when:
+    - postfix_exporter_healthcheck.failed
+    - not (lookup('env', 'CI') | default('false') | bool)

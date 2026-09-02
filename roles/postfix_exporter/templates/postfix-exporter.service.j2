@@ -1,0 +1,75 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Prometheus Postfix Exporter
+Documentation=https://github.com/Hsn723/postfix_exporter
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+Type=simple
+
+ExecStart={{ postfix_exporter_bin }} \
+  --web.listen-address={{ postfix_exporter_listen }} \
+  --postfix.showq_path={{ postfix_exporter_showq_path }} \
+  --systemd.enable \
+  --systemd.unit={{ postfix_exporter_systemd_unit }}
+
+# ── Identity ──────────────────────────────────────────────────────────
+User={{ postfix_exporter_user }}
+Group={{ postfix_exporter_group }}
+SupplementaryGroups={{ postfix_exporter_extra_groups | join(' ') }}
+
+# ── Capabilities ──────────────────────────────────────────────────────
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadOnlyPaths=/var/spool/postfix/public /var/log/journal /run/log/journal
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+
+# ── Network isolation ────────────────────────────────────────────────
+# AF_UNIX: reads Postfix's showq socket for queue metrics.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=postfix-exporter
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

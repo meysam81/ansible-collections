@@ -1,0 +1,23 @@
+---
+# Hsn723/postfix_exporter — queue (showq socket) + journal-derived metrics.
+postfix_exporter_version: "0.20.4"
+postfix_exporter_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
+# The "systemd" build reads Postfix logs from journald; no log file needed.
+postfix_exporter_download_url: >-
+  https://github.com/Hsn723/postfix_exporter/releases/download/v{{
+  postfix_exporter_version }}/postfix_exporter_systemd_{{
+  postfix_exporter_version }}_linux_{{ postfix_exporter_arch }}.tar.gz
+postfix_exporter_checksums_url: "https://github.com/Hsn723/postfix_exporter/releases/download/v{{ postfix_exporter_version }}/checksums.txt"
+postfix_exporter_bin: /usr/local/bin/postfix_exporter
+
+postfix_exporter_user: postfix-exporter
+postfix_exporter_group: postfix-exporter
+# showq socket is group-readable by postfix's group; journal needs systemd-journal.
+postfix_exporter_extra_groups:
+  - postfix
+  - systemd-journal
+
+postfix_exporter_listen: "127.0.0.1:9154"
+postfix_exporter_showq_path: /var/spool/postfix/public/showq
+postfix_exporter_systemd_unit: postfix.service
+postfix_exporter_healthcheck_enabled: true
