@@ -96,6 +96,7 @@
     owner: root
     group: root
     mode: "0644"
+    validate: "doveconf -c %s -n"
   notify: Restart dovecot
 
 - name: Verify dovecot configuration
