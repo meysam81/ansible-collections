@@ -121,7 +121,8 @@ namespace inbox {
 }
 
 {% if dovecot_metrics_enabled %}
-# OpenMetrics endpoint — scraped by a local agent, never exposed.
+# OpenMetrics endpoint, scraped by a local agent, never exposed. Binds
+# dovecot_metrics_listen_address, or every `listen` address when unset.
 service stats {
   inet_listener http {
 {% if dovecot_metrics_listen_address | length > 0 %}
