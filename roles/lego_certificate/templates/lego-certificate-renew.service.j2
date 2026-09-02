@@ -14,8 +14,7 @@ ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
 PrivateDevices=yes
-ReadWritePaths=/etc/lego{% for p in lego_certificate_renew_extra_read_write_paths %} {{ p }}{% endfor %}
-
+ReadWritePaths=/etc/lego{% for p in lego_certificate_renew_extra_read_write_paths %} {{ p }}{% endfor +%}
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes
