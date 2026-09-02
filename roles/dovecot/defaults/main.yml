@@ -86,7 +86,9 @@ dovecot_extra_conf: ""
 # Off by default; when enabled it binds loopback only — scrape it with a
 # local agent, never expose it.
 dovecot_metrics_enabled: false
+# Address the OpenMetrics HTTP listener binds.
 dovecot_metrics_listen_address: "127.0.0.1"
+# Port the OpenMetrics HTTP listener binds.
 dovecot_metrics_port: 9900
 # Each entry renders one `metric` block. `filter` uses Dovecot's event
 # filter syntax; `group_by` is a list of event fields (each becomes a label).
