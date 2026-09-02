@@ -31,7 +31,7 @@
   ansible.builtin.set_fact:
     postfix_exporter_sha256: >-
       {{ postfix_exporter_checksums
-      | select('search', (postfix_exporter_download_url | basename | regex_escape) ~ '$')
+      | select('search', (postfix_exporter_download_url | basename | regex_escape) ~ '\s*$')
       | map('split', ' ') | map('first') | list | first }}
 
 - name: Create secure temp directory
