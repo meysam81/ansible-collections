@@ -54,12 +54,16 @@ unbound_manage_resolv_conf: true
 # Derived from unbound_listen so resolv.conf never advertises an address
 # unbound does not bind (a stray `nameserver ::1` next to a v4-only
 # listener makes every resolver library try ::1 first and eat an
-# ECONNREFUSED before falling back). A wildcard unbound_listen (0.0.0.0,
-# ::, ::0, *) is not itself a valid nameserver address, so that case falls
-# back to loopback instead of leaking the wildcard into resolv.conf. If
-# you bind to a specific NIC address as well as a wildcard, set this
-# explicitly. Override to list several servers.
-unbound_resolvconf_nameservers: "nameserver {{ '127.0.0.1' if unbound_listen in ['0.0.0.0', '::', '::0', '*'] else unbound_listen }}"
+# ECONNREFUSED before falling back). A wildcard unbound_listen is not
+# itself a valid nameserver address, so that case falls back to loopback
+# instead of leaking the wildcard into resolv.conf: an IPv6 wildcard (::,
+# ::0) falls back to ::1, an IPv4 wildcard (0.0.0.0, *) falls back to
+# 127.0.0.1. If you bind to a specific NIC address as well as a wildcard,
+# set this explicitly. Override to list several servers.
+unbound_resolvconf_nameservers: >-
+  nameserver {{ '::1' if unbound_listen in ['::', '::0'] else
+  ('127.0.0.1' if unbound_listen in ['0.0.0.0', '*'] else
+  unbound_listen) }}
 
 # Escape hatch
 unbound_extra_config: ""
