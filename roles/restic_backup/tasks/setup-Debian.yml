@@ -33,6 +33,15 @@
     group: root
     mode: "0700"
 
+- name: Ensure metrics textfile dir exists
+  ansible.builtin.file:
+    path: "{{ restic_metrics_textfile_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: restic_metrics_textfile_dir | length > 0
+
 - name: Render restic env file
   ansible.builtin.template:
     src: restic.env.j2

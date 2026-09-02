@@ -53,3 +53,10 @@ restic_snapshot_tag: "auto"
 # Initialise the repository on first run if it doesn't exist. Set to false
 # once your repo is established to fail loudly on accidental misconfig.
 restic_init_if_missing: true
+
+# When set, the backup and check scripts write node-exporter textfile
+# metrics (*.prom) into this directory after every run, so a stale or
+# failing backup can page: restic_backup_last_success_timestamp_seconds,
+# restic_backup_last_exit_code, and the restic_check_* equivalents.
+# Empty disables. Pair with the `alloy` role's alloy_textfile_dir.
+restic_metrics_textfile_dir: ""

@@ -12,7 +12,7 @@ ExecStart=/usr/local/bin/restic-check.sh
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths={{ restic_cache_dir }}
+ReadWritePaths={{ restic_cache_dir }}{% if restic_metrics_textfile_dir | length > 0 %} {{ restic_metrics_textfile_dir }}{% endif %}
 PrivateTmp=yes
 PrivateDevices=yes
 
