@@ -29,6 +29,16 @@ collections:
 
 Metrics are served on `postfix_exporter_listen` (default `127.0.0.1:9154`). Scrape them with a local agent (see the `alloy` role) rather than exposing the port.
 
+### Journal unit
+
+`postfix_exporter_systemd_unit` defaults to `postfix@-.service` — on
+Debian/Ubuntu, `postfix.service` is only a `RemainAfterExit` wrapper with no
+log lines of its own; every Postfix daemon (`smtpd`, `qmgr`, `lmtp`,
+`cleanup`, ...) actually logs under the instance unit `postfix@-.service`.
+Pointing this at `postfix.service` leaves every log-derived metric at zero.
+A multi-instance Postfix (`postmulti`) setup uses `postfix@<instance>.service`
+instead — set `postfix_exporter_systemd_unit` accordingly per instance.
+
 Install postfix_exporter (Hsn723) from GitHub releases with SHA256 verification
 
 ## Table of contents
@@ -141,7 +151,7 @@ postfix_exporter_showq_path: /var/spool/postfix/public/showq
 #### Default value
 
 ```YAML
-postfix_exporter_systemd_unit: postfix.service
+postfix_exporter_systemd_unit: postfix@-.service
 ```
 
 ### postfix_exporter_user
