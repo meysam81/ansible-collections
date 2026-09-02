@@ -33,3 +33,17 @@ collections:
           - api.example.com
         haproxy_tls_certificate_cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') }}"
 ```
+
+### Hosts running a local recursive resolver
+
+lego verifies DNS-01 propagation through the system resolver. A local
+recursive resolver (unbound, dnsmasq, systemd-resolved with caching)
+negatively caches `_acme-challenge.<domain>` for the zone's SOA minimum
+TTL, so the check keeps failing after the record is live and the renewal
+times out. Point the check at public resolvers instead:
+
+```yaml
+haproxy_tls_certificate_dns_resolvers:
+  - "1.1.1.1:53"
+  - "8.8.8.8:53"
+```

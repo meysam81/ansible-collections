@@ -16,9 +16,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
+{% set resolver_flags = [] %}
+{% for r in haproxy_tls_certificate_dns_resolvers %}
+{%   set _ = resolver_flags.append('--dns.resolvers ' ~ r) %}
+{% endfor %}
 {% for domain in haproxy_tls_certificate_served_domains %}
 # Renew {{ domain }}
 lego --accept-tos --email "{{ haproxy_tls_certificate_email }}" --dns cloudflare \
+{% if resolver_flags %}
+  {{ resolver_flags | join(' ') }} \
+{% endif %}
   --path /etc/lego -d '{{ domain }}' renew \
   || logger -t haproxy-certs "lego renewal returned non-zero for {{ domain }}"
 {% endfor %}

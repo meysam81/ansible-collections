@@ -16,6 +16,7 @@
       --accept-tos
       --email "{{ haproxy_tls_certificate_email }}"
       --dns cloudflare
+      {% for r in haproxy_tls_certificate_dns_resolvers %}--dns.resolvers {{ r }} {% endfor %}
       --path /etc/lego
       -d '{{ domain }}'
       run
