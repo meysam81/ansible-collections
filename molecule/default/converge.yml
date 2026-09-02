@@ -107,6 +107,13 @@
         promtail_allow_insecure_url: true
     - role: pushgateway
       tags: pushgateway
+    - role: alloy
+      tags: alloy
+      vars:
+        alloy_config: |
+          logging {
+            level = "info"
+          }
     - role: sysctl
       tags: sysctl
       vars:

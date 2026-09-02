@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+[Service]
+# The package unit already runs as the alloy user. Keep write access
+# limited to its state, and let it read the journal + textfile dir.
+ProtectSystem=strict
+ReadWritePaths=/var/lib/alloy
+ReadOnlyPaths={{ alloy_textfile_dir }}
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+Restart=always
+RestartSec=5
