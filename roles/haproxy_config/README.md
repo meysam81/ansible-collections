@@ -111,11 +111,21 @@ enabled by default. Cloudflare enforcement is opt-in:
 
 The stats/Prometheus frontend (`/metrics`, `/stats`) binds loopback only by
 default. Set `haproxy_stats_bind_address` to a private-NIC address to let an
-external scraper reach it — never a public address, the exporter has no auth:
+external scraper reach it:
 
 ```yaml
         haproxy_stats_bind_address: "192.0.2.10"  # private NIC, not loopback
+        haproxy_stats_auth_user: "prometheus"
+        haproxy_stats_auth_password: "{{ lookup('env', 'HAPROXY_STATS_PASSWORD') }}"
 ```
+
+`stats auth` only protects `/stats` (the HAProxy stats page), and only when
+`haproxy_stats_auth_password` is set — `/metrics` (the Prometheus exporter) is
+**always unauthenticated**, regardless of that setting. A non-loopback
+`haproxy_stats_bind_address` must therefore be a private NIC address
+protected by a firewall, never a public one. Setting
+`haproxy_stats_auth_user`/`haproxy_stats_auth_password` is recommended
+whenever you bind off loopback, to keep `/stats` from being wide open too.
 
 ### Escape hatches
 

@@ -100,7 +100,6 @@ postfix_exporter_download_url: >-
 
 ```YAML
 postfix_exporter_extra_groups:
-  - postfix
   - systemd-journal
 ```
 
