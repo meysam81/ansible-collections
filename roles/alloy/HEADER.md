@@ -47,3 +47,23 @@ collections:
 ```
 
 Textfile metrics: any `*.prom` file placed in `alloy_textfile_dir` (default `/var/lib/alloy/textfile`) is exposed by the `textfile` collector. Pair with `restic_backup`'s `restic_metrics_textfile_dir`.
+
+### Listen address
+
+`alloy_listen_addr` (default `127.0.0.1:12345`) is Alloy's own HTTP UI/API —
+unauthenticated, so keep it on loopback. `alloy_custom_args` and
+`alloy_healthcheck_url` both derive from it; set `alloy_listen_addr` rather
+than overriding those two separately:
+
+```yaml
+        alloy_listen_addr: "127.0.0.1:9999"  # only if 12345 conflicts
+```
+
+### Secrets
+
+`alloy_config` is written to disk without `no_log`, so its contents show up
+in `--diff` and verbose task output — it is expected to be non-secret River
+config text. Never inline a credential into `alloy_config`; put it in
+`alloy_secrets` instead (written separately, mode `0600`, with `no_log:
+true` on the task) and reference the file path from `alloy_config`, e.g.
+`bearer_token_file = "/etc/alloy/secrets/remote-write-token"`.
