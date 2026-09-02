@@ -10,7 +10,9 @@ alloy_apt_key_path: "/etc/apt/keyrings/grafana.asc"
 alloy_apt_repo: "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main"
 
 # Full Alloy configuration (River syntax). Required. The caller renders it
-# from its own template so this role stays deployment-agnostic.
+# from its own template so this role stays deployment-agnostic. Written
+# without no_log — it is not a secret itself, so it shows up in --diff;
+# put credentials in alloy_secrets instead, never inline in this string.
 alloy_config: ""
 alloy_config_path: "/etc/alloy/config.alloy"
 
@@ -26,9 +28,13 @@ alloy_secrets_dir: "/etc/alloy/secrets"
 # prometheus.exporter.unix { textfile { directory = ... } }.
 alloy_textfile_dir: "/var/lib/alloy/textfile"
 
+# Address Alloy's own HTTP UI/API listens on. Loopback only: that endpoint
+# has no auth. alloy_custom_args and alloy_healthcheck_url both derive from
+# this — change it here rather than overriding those two separately.
+alloy_listen_addr: "127.0.0.1:12345"
+
 # Extra flags appended to `alloy run` via CUSTOM_ARGS in /etc/default/alloy.
-# The listener stays on loopback: the Alloy UI/API has no auth.
-alloy_custom_args: "--server.http.listen-addr=127.0.0.1:12345 --disable-reporting"
+alloy_custom_args: "--server.http.listen-addr={{ alloy_listen_addr }} --disable-reporting"
 
 # Supplementary groups for the alloy user. systemd-journal is needed by
 # loki.source.journal, adm for /var/log on Debian.
@@ -40,4 +46,4 @@ alloy_user: alloy
 alloy_group: alloy
 
 alloy_healthcheck_enabled: true
-alloy_healthcheck_url: "http://127.0.0.1:12345/-/ready"
+alloy_healthcheck_url: "http://{{ alloy_listen_addr }}/-/ready"
