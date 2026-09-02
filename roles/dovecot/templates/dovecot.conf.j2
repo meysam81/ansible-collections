@@ -121,10 +121,12 @@ namespace inbox {
 }
 
 {% if dovecot_metrics_enabled %}
-# OpenMetrics endpoint — loopback only, scraped by a local agent.
+# OpenMetrics endpoint — scraped by a local agent, never exposed.
 service stats {
   inet_listener http {
+{% if dovecot_metrics_listen_address | length > 0 %}
     address = {{ dovecot_metrics_listen_address }}
+{% endif %}
     port = {{ dovecot_metrics_port }}
   }
 }

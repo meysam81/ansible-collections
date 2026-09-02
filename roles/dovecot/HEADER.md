@@ -43,7 +43,13 @@ expose auth, IMAP command and LMTP delivery counters:
         dovecot_metrics_enabled: true
 ```
 
-Scrape `http://127.0.0.1:9900/metrics` with a local agent (see the `alloy`
-role) — the listener binds loopback only and is never exposed directly. The
-rendered config is validated with `doveconf -n` (existing task), so a
-misconfigured `filter` fails the play rather than the daemon.
+By default the stats listener binds the same addresses as `dovecot_listen`;
+scrape it on one of those (e.g. `[::1]:9900`) with a local agent (see the
+`alloy` role) — never exposed directly. Setting
+`dovecot_metrics_listen_address` emits an explicit `address =` line, which
+Dovecot 2.4.0-2.4.1 accept and 2.4.5+ reject (no per-listener bind setting
+exists in the 2.4.5 docs) — leave it empty on newer releases. The rendered
+config is validated both by `validate: "doveconf -c %s -n"` on the template
+task and the existing separate `doveconf -n` task, so a misconfigured
+`filter` (or an `address =` a newer Dovecot rejects) fails the play rather
+than the daemon.

@@ -86,8 +86,12 @@ dovecot_extra_conf: ""
 # Off by default; when enabled it binds loopback only — scrape it with a
 # local agent, never expose it.
 dovecot_metrics_enabled: false
-# Address the OpenMetrics HTTP listener binds.
-dovecot_metrics_listen_address: "127.0.0.1"
+# Empty (default) = inherit dovecot_listen's addresses, the version-proof
+# path — scrape the stats port on one of those. Setting this renders an
+# explicit `address =` line, which Dovecot 2.4.0-2.4.1 accept and 2.4.5+
+# reject (no per-listener bind setting exists in the 2.4.5 docs). Leave
+# empty on 2.4.5+.
+dovecot_metrics_listen_address: ""
 # Port the OpenMetrics HTTP listener binds.
 dovecot_metrics_port: 9900
 # Each entry renders one `metric` block. `filter` uses Dovecot's event
