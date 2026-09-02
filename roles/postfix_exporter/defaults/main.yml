@@ -12,9 +12,11 @@ postfix_exporter_bin: /usr/local/bin/postfix_exporter
 
 postfix_exporter_user: postfix-exporter
 postfix_exporter_group: postfix-exporter
-# showq socket is group-readable by postfix's group; journal needs systemd-journal.
+# /var/spool/postfix/public/showq is srw-rw-rw- inside a world-traversable
+# directory, so no group membership is needed to reach it — only journal
+# access needs a group. Add "postfix" here yourself if your Postfix build
+# tightens that socket's permissions.
 postfix_exporter_extra_groups:
-  - postfix
   - systemd-journal
 
 postfix_exporter_listen: "127.0.0.1:9154"

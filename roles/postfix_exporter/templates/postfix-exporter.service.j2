@@ -30,7 +30,6 @@ ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
 PrivateDevices=yes
-ReadOnlyPaths=/var/spool/postfix/public /var/log/journal /run/log/journal
 
 # ── Kernel isolation ─────────────────────────────────────────────────
 ProtectKernelTunables=yes
@@ -41,7 +40,8 @@ ProtectHostname=yes
 ProtectClock=yes
 
 # ── Network isolation ────────────────────────────────────────────────
-# AF_UNIX: reads Postfix's showq socket for queue metrics.
+# AF_UNIX: reads Postfix's showq socket for queue metrics. Journal access
+# comes from systemd-journal group membership, not a filesystem path.
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 # ── Syscall filtering ───────────────────────────────────────────────

@@ -5,12 +5,6 @@
     state: present
     system: true
 
-- name: Ensure postfix group exists (showq socket group; postfix creates it too)
-  ansible.builtin.group:
-    name: postfix
-    state: present
-    system: true
-
 - name: Create user {{ postfix_exporter_user }}
   ansible.builtin.user:
     name: "{{ postfix_exporter_user }}"
@@ -30,7 +24,7 @@
   ansible.builtin.set_fact:
     postfix_exporter_sha256: >-
       {{ postfix_exporter_checksums
-      | select('search', postfix_exporter_download_url | basename)
+      | select('search', (postfix_exporter_download_url | basename | regex_escape) ~ '$')
       | map('split', ' ') | map('first') | list | first }}
 
 - name: Create secure temp directory
