@@ -88,11 +88,12 @@ resolver silently undoes the entire reason for installing this role.
 `/etc/resolv.conf` lists only `unbound_listen` — a NIC-address bind (e.g.
 `192.0.2.10`) puts that address in resolv.conf, so only hosts able to reach
 that NIC can resolve. Set `unbound_resolvconf_nameservers` explicitly if you
-want loopback in resolv.conf as well. A wildcard `unbound_listen` (`0.0.0.0`,
-`::`, `::0`, `*`) is not a valid nameserver address, so that case falls back
-to `127.0.0.1` automatically. If you bind unbound to an IPv6 address as
-well, set `unbound_resolvconf_nameservers` explicitly (one `nameserver`
-line per address).
+want loopback in resolv.conf as well. A wildcard `unbound_listen` is not a
+valid nameserver address, so that case falls back to loopback
+automatically: an IPv6 wildcard (`::`, `::0`) falls back to `::1`, an IPv4
+wildcard (`0.0.0.0`, `*`) falls back to `127.0.0.1`. If you bind unbound to
+an IPv6 address as well, set `unbound_resolvconf_nameservers` explicitly
+(one `nameserver` line per address).
 
 ## Conflicts
 
@@ -366,7 +367,10 @@ unbound_refuse_any: true
 #### Default value
 
 ```YAML
-unbound_resolvconf_nameservers: nameserver {{ '127.0.0.1' if unbound_listen in ['0.0.0.0', '::', '::0', '*'] else unbound_listen }}
+unbound_resolvconf_nameservers: >-
+  nameserver {{ '::1' if unbound_listen in ['::', '::0'] else
+  ('127.0.0.1' if unbound_listen in ['0.0.0.0', '*'] else
+  unbound_listen) }}
 ```
 
 ### unbound_root_hints_path

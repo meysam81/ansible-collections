@@ -126,6 +126,10 @@ external scraper reach it:
 protected by a firewall, never a public one. Setting
 `haproxy_stats_auth_user`/`haproxy_stats_auth_password` is recommended
 whenever you bind off loopback, to keep `/stats` from being wide open too.
+`haproxy.cfg` itself is written mode `0644`, so `haproxy_stats_auth_password`
+is readable by any local user on the host and shows up in `--diff` output —
+it is not a substitute for network-level protection. Prefer the
+firewall + private-NIC posture above over relying on `stats auth` alone.
 
 ### Escape hatches
 
