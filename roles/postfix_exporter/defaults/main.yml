@@ -17,12 +17,15 @@ postfix_exporter_bin: /usr/local/bin/postfix_exporter
 # System user/group the exporter runs as.
 postfix_exporter_user: postfix-exporter
 postfix_exporter_group: postfix-exporter
-# /var/spool/postfix/public/showq is srw-rw-rw- inside a world-traversable
-# directory, so no group membership is needed to reach it — only journal
-# access needs a group. Add "postfix" here yourself if your Postfix build
-# tightens that socket's permissions.
+# postdrop is Postfix's setgid group that owns /var/spool/postfix/public
+# (mode 0710, postfix:postdrop per upstream postfix-files) — without it,
+# traversing into that directory to reach the showq socket fails with
+# EACCES even though the socket itself is world-rw, and queue metrics
+# silently vanish while /metrics keeps returning 200. systemd-journal is
+# needed for journal-derived delivery metrics.
 postfix_exporter_extra_groups:
   - systemd-journal
+  - postdrop
 
 # Address the /metrics HTTP endpoint binds. Loopback by default — scrape it
 # with a local agent (see the alloy role) rather than exposing the port.

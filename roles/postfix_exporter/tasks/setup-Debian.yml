@@ -5,6 +5,13 @@
     state: present
     system: true
 
+- name: Ensure supplementary groups exist
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
+    system: true
+  loop: "{{ postfix_exporter_extra_groups }}"
+
 - name: Create user {{ postfix_exporter_user }}
   ansible.builtin.user:
     name: "{{ postfix_exporter_user }}"
