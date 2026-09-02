@@ -16,6 +16,7 @@
       --accept-tos
       --email {{ lego_certificate_email | quote }}
       --dns cloudflare
+      {% for r in lego_certificate_dns_resolvers %}--dns.resolvers {{ r | quote }} {% endfor %}
       {% if cert.key_type is defined %}--key-type {{ cert.key_type }}{% endif %}
       --path /etc/lego
       {% for d in cert.domains %} -d {{ d | quote }}{% endfor %}

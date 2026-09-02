@@ -10,6 +10,7 @@ umask 0077
 CERT_DIR="{{ lego_certificate_cert_dir }}"
 LEGO_BIN="{{ lego_certificate_lego_bin }}"
 EMAIL={{ lego_certificate_email | quote }}
+RESOLVER_ARGS=({% for r in lego_certificate_dns_resolvers %}--dns.resolvers {{ r | quote }} {% endfor %})
 
 RENEW_FAILURES=0
 RELOAD_FAILURES=0
@@ -40,6 +41,7 @@ renew_cert() {
   fi
 
   if ! "$LEGO_BIN" --accept-tos --email "$EMAIL" --dns cloudflare \
+        "${RESOLVER_ARGS[@]}" \
         --path /etc/lego "${domains_args[@]}" renew "${extra_args[@]}"; then
     log_failure "renew non-zero for $name"
     RENEW_FAILURES=$((RENEW_FAILURES + 1))
