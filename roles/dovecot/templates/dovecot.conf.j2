@@ -120,6 +120,27 @@ namespace inbox {
   separator = .
 }
 
+{% if dovecot_metrics_enabled %}
+# OpenMetrics endpoint — loopback only, scraped by a local agent.
+service stats {
+  inet_listener http {
+    address = {{ dovecot_metrics_listen_address }}
+    port = {{ dovecot_metrics_port }}
+  }
+}
+
+{% for m in dovecot_metrics %}
+metric {{ m.name }} {
+  filter = {{ m.filter }}
+{% for g in m.group_by | default([]) %}
+  group_by {{ g }} {
+  }
+{% endfor %}
+}
+
+{% endfor %}
+{% endif %}
+
 {% if dovecot_extra_conf | length > 0 %}
 {{ dovecot_extra_conf }}
 {% endif %}

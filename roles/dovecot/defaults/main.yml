@@ -81,3 +81,25 @@ dovecot_expunge_random_delay_sec: 600
 
 # Escape hatch (raw text appended to dovecot.conf).
 dovecot_extra_conf: ""
+
+# Dovecot 2.4 ships an OpenMetrics endpoint (service stats, HTTP listener).
+# Off by default; when enabled it binds loopback only — scrape it with a
+# local agent, never expose it.
+dovecot_metrics_enabled: false
+dovecot_metrics_listen_address: "127.0.0.1"
+dovecot_metrics_port: 9900
+# Each entry renders one `metric` block. `filter` uses Dovecot's event
+# filter syntax; `group_by` is a list of event fields (each becomes a label).
+# Exported as dovecot_<name>_total and dovecot_<name>_duration_seconds_total.
+dovecot_metrics:
+  - name: auth_success
+    filter: "event=auth_request_finished AND success=yes"
+  - name: auth_failure
+    filter: "event=auth_request_finished AND success=no"
+  - name: imap_command
+    filter: "event=imap_command_finished"
+    group_by: [cmd_name, tagged_reply_state]
+  - name: lmtp_delivery
+    filter: "event=mail_delivery_finished"
+  - name: lmtp_delivery_error
+    filter: "event=mail_delivery_finished AND error=*"

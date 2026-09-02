@@ -33,3 +33,17 @@ collections:
             home: /var/vmail/alice
         dovecot_default_mailboxes: ["INBOX", "PROCESSED"]
 ```
+
+## Metrics
+
+Dovecot 2.4's native OpenMetrics endpoint is off by default. Enable it to
+expose auth, IMAP command and LMTP delivery counters:
+
+```yaml
+        dovecot_metrics_enabled: true
+```
+
+Scrape `http://127.0.0.1:9900/metrics` with a local agent (see the `alloy`
+role) — the listener binds loopback only and is never exposed directly. The
+rendered config is validated with `doveconf -n` (existing task), so a
+misconfigured `filter` fails the play rather than the daemon.
