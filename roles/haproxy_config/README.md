@@ -107,6 +107,16 @@ enabled by default. Cloudflare enforcement is opt-in:
         haproxy_cache_control_enabled: true     # default
 ```
 
+### Stats
+
+The stats/Prometheus frontend (`/metrics`, `/stats`) binds loopback only by
+default. Set `haproxy_stats_bind_address` to a private-NIC address to let an
+external scraper reach it — never a public address, the exporter has no auth:
+
+```yaml
+        haproxy_stats_bind_address: "192.0.2.10"  # private NIC, not loopback
+```
+
 ### Escape hatches
 
 Inject raw HAProxy config lines into specific sections:
@@ -195,6 +205,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_static_extensions](#haproxy_static_extensions)
   - [haproxy_stats_auth_password](#haproxy_stats_auth_password)
   - [haproxy_stats_auth_user](#haproxy_stats_auth_user)
+  - [haproxy_stats_bind_address](#haproxy_stats_bind_address)
   - [haproxy_stats_port](#haproxy_stats_port)
   - [haproxy_threads](#haproxy_threads)
   - [haproxy_timeout_client](#haproxy_timeout_client)
@@ -824,6 +835,14 @@ haproxy_stats_auth_password: ''
 
 ```YAML
 haproxy_stats_auth_user: ''
+```
+
+### haproxy_stats_bind_address
+
+#### Default value
+
+```YAML
+haproxy_stats_bind_address: 127.0.0.1
 ```
 
 ### haproxy_stats_port

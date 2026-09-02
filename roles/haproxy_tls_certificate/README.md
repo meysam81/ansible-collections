@@ -34,12 +34,27 @@ collections:
         haproxy_tls_certificate_cloudflare_dns_api_token: "{{ lookup('env', 'CLOUDFLARE_DNS_API_TOKEN') }}"
 ```
 
+### Hosts running a local recursive resolver
+
+lego verifies DNS-01 propagation through the system resolver. A local
+recursive resolver (unbound, dnsmasq, systemd-resolved with caching)
+negatively caches `_acme-challenge.<domain>` for the zone's SOA minimum
+TTL, so the check keeps failing after the record is live and the renewal
+times out. Point the check at public resolvers instead:
+
+```yaml
+haproxy_tls_certificate_dns_resolvers:
+  - "1.1.1.1:53"
+  - "8.8.8.8:53"
+```
+
 TLS certificates for HAProxy via lego with Cloudflare DNS-01
 
 ## Table of contents
 
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
+  - [haproxy_tls_certificate_dns_resolvers](#haproxy_tls_certificate_dns_resolvers)
   - [haproxy_tls_certificate_email](#haproxy_tls_certificate_email)
   - [haproxy_tls_certificate_haproxy_certs_dir](#haproxy_tls_certificate_haproxy_certs_dir)
   - [haproxy_tls_certificate_lego_cert_dir](#haproxy_tls_certificate_lego_cert_dir)
@@ -55,6 +70,14 @@ TLS certificates for HAProxy via lego with Cloudflare DNS-01
 - Minimum Ansible version: `2.15`
 
 ## Default Variables
+
+### haproxy_tls_certificate_dns_resolvers
+
+#### Default value
+
+```YAML
+haproxy_tls_certificate_dns_resolvers: []
+```
 
 ### haproxy_tls_certificate_email
 

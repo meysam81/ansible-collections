@@ -85,6 +85,10 @@ crashes, systemd restarts it within 2 seconds. There is no fallback nameserver
 in `/etc/resolv.conf` — running a fallback that "works" but uses a public
 resolver silently undoes the entire reason for installing this role.
 
+`/etc/resolv.conf` lists only `unbound_listen`. If you bind unbound to an
+IPv6 address as well, set `unbound_resolvconf_nameservers` explicitly (one
+`nameserver` line per address).
+
 ## Conflicts
 
 The shipped systemd unit declares `Conflicts=` against the common port-53
@@ -357,9 +361,7 @@ unbound_refuse_any: true
 #### Default value
 
 ```YAML
-unbound_resolvconf_nameservers: |
-  nameserver 127.0.0.1
-  nameserver ::1
+unbound_resolvconf_nameservers: nameserver {{ unbound_listen }}
 ```
 
 ### unbound_root_hints_path

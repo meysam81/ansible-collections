@@ -27,6 +27,30 @@ and SFTP are supported.
   the caller's concern.
 - Does NOT restore. Restore is intentionally manual to prevent accidents.
 
+## Metrics
+
+Set `restic_metrics_textfile_dir` to have the backup and check scripts write
+node-exporter textfile metrics after every run:
+
+```yaml
+restic_metrics_textfile_dir: /var/lib/alloy/textfile  # pair with the alloy role
+```
+
+Metrics written:
+
+- `restic_backup_last_run_timestamp_seconds{tag}`
+- `restic_backup_last_exit_code{tag}`
+- `restic_backup_last_success_timestamp_seconds{tag}`
+- `restic_check_last_run_timestamp_seconds`
+- `restic_check_last_exit_code`
+- `restic_check_last_success_timestamp_seconds`
+
+Example alert for a stale or failing backup:
+
+```
+time() - restic_backup_last_success_timestamp_seconds > 36 * 3600
+```
+
 Encrypted, deduplicated backups via restic on a systemd timer with retention and periodic integrity checks. S3-compatible backends supported.
 
 ## Table of contents
@@ -49,6 +73,7 @@ Encrypted, deduplicated backups via restic on a systemd timer with retention and
   - [restic_keep_monthly](#restic_keep_monthly)
   - [restic_keep_weekly](#restic_keep_weekly)
   - [restic_keep_yearly](#restic_keep_yearly)
+  - [restic_metrics_textfile_dir](#restic_metrics_textfile_dir)
   - [restic_password](#restic_password)
   - [restic_paths](#restic_paths)
   - [restic_repo_url](#restic_repo_url)
@@ -191,6 +216,14 @@ restic_keep_weekly: 4
 
 ```YAML
 restic_keep_yearly: 0
+```
+
+### restic_metrics_textfile_dir
+
+#### Default value
+
+```YAML
+restic_metrics_textfile_dir: ''
 ```
 
 ### restic_password
