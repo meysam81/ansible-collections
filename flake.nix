@@ -20,7 +20,11 @@
       devShells = forAllSystems (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+
         in
         {
           default = pkgs.mkShell {
@@ -35,6 +39,8 @@
 
               # YAML processor (used in Justfile)
               yq-go
+
+              vagrant
 
               # Linters
               ruff
