@@ -81,6 +81,24 @@
     path: /etc/apparmor.d/usr.sbin.unbound
   register: unbound_apparmor_profile
 
+# The profile file is no proof that AppArmor confines anything: the
+# unbound package ships it, but minimal cloud images (Hetzner's among
+# them) leave out the `apparmor` package, so no policy is ever loaded
+# and apparmor_parser does not exist. `ansible_apparmor.status` is not
+# the test either -- it reports the kernel LSM flag, which reads
+# "enabled" on exactly those hosts. Relax the profile only where a
+# parser can load it; elsewhere unbound already runs unconfined and
+# there is nothing to relax.
+- name: Detect AppArmor policy parser
+  ansible.builtin.stat:
+    path: /sbin/apparmor_parser
+  register: unbound_apparmor_parser
+
+- name: Record whether AppArmor confinement is live
+  ansible.builtin.set_fact:
+    unbound_apparmor_active: >-
+      {{ unbound_apparmor_profile.stat.exists and unbound_apparmor_parser.stat.exists }}
+
 - name: Ensure AppArmor local override directory exists
   ansible.builtin.file:
     path: /etc/apparmor.d/local
@@ -88,7 +106,7 @@
     owner: root
     group: root
     mode: "0755"
-  when: unbound_apparmor_profile.stat.exists
+  when: unbound_apparmor_active | bool
 
 - name: Install AppArmor local override for unbound runtime dir
   ansible.builtin.template:
@@ -97,7 +115,7 @@
     owner: root
     group: root
     mode: "0644"
-  when: unbound_apparmor_profile.stat.exists
+  when: unbound_apparmor_active | bool
   notify:
     - Reload unbound apparmor profile
     - Restart unbound

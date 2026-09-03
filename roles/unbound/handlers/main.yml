@@ -52,8 +52,9 @@
 # the "Restart unbound" handler below brings it back up.
 - name: Reload unbound apparmor profile
   ansible.builtin.command:
-    cmd: apparmor_parser -r /etc/apparmor.d/usr.sbin.unbound
+    cmd: /sbin/apparmor_parser -r /etc/apparmor.d/usr.sbin.unbound
   changed_when: true
+  when: unbound_apparmor_active | default(false) | bool
 
 - name: Restart unbound
   ansible.builtin.systemd:
