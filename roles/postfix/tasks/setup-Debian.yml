@@ -53,9 +53,27 @@
     group: root
     mode: "0644"
   when: postfix_virtual_alias_maps | length > 0
-  notify:
-    - Postmap virtual aliases
-    - Reload postfix
+  register: postfix_virtual_aliases_source
+  notify: Reload postfix
+
+- name: Stat the compiled virtual aliases map
+  ansible.builtin.stat:
+    path: /etc/postfix/virtual_aliases.db
+  register: postfix_virtual_aliases_db
+  when: postfix_virtual_alias_maps | length > 0
+
+# Compiled right here, not from a handler: a play that aborts after this role
+# would otherwise leave the source without its .db and Postfix answering every
+# RCPT with "451 4.3.0 Temporary lookup failure" — and a re-run would not
+# notice, because the source file no longer changes.
+- name: Compile virtual aliases map
+  ansible.builtin.command:
+    cmd: postmap /etc/postfix/virtual_aliases
+  when:
+    - postfix_virtual_alias_maps | length > 0
+    - postfix_virtual_aliases_source is changed or not postfix_virtual_aliases_db.stat.exists
+  changed_when: true
+  notify: Reload postfix
 
 - name: Remove /etc/postfix/virtual_aliases when no maps configured
   ansible.builtin.file:
@@ -117,3 +135,9 @@
     name: postfix
     state: started
     enabled: true
+
+# Run the notified postmap/reload now rather than at the end of the play: a
+# later role failing would otherwise leave a rendered-but-unmapped table and
+# Postfix answering every RCPT with "451 4.3.0 Temporary lookup failure".
+- name: Flush handlers so Postfix is serving the new config before the play moves on
+  ansible.builtin.meta: flush_handlers

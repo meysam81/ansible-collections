@@ -85,6 +85,16 @@ crashes, systemd restarts it within 2 seconds. There is no fallback nameserver
 in `/etc/resolv.conf` — running a fallback that "works" but uses a public
 resolver silently undoes the entire reason for installing this role.
 
+`/etc/resolv.conf` lists only `unbound_listen` — a NIC-address bind (e.g.
+`192.0.2.10`) puts that address in resolv.conf, so only hosts able to reach
+that NIC can resolve. Set `unbound_resolvconf_nameservers` explicitly if you
+want loopback in resolv.conf as well. A wildcard `unbound_listen` is not a
+valid nameserver address, so that case falls back to loopback
+automatically: an IPv6 wildcard (`::`, `::0`) falls back to `::1`, an IPv4
+wildcard (`0.0.0.0`, `*`) falls back to `127.0.0.1`. If you bind unbound to
+an IPv6 address as well, set `unbound_resolvconf_nameservers` explicitly
+(one `nameserver` line per address).
+
 ## Conflicts
 
 The shipped systemd unit declares `Conflicts=` against the common port-53
@@ -115,9 +125,10 @@ Install and configure unbound as a fully-recursive local DNS resolver
   - [unbound_edns_buffer_size](#unbound_edns_buffer_size)
   - [unbound_exporter_binary_path](#unbound_exporter_binary_path)
   - [unbound_exporter_control_socket](#unbound_exporter_control_socket)
-  - [unbound_exporter_deb_arch](#unbound_exporter_deb_arch)
   - [unbound_exporter_disabled](#unbound_exporter_disabled)
   - [unbound_exporter_download_url](#unbound_exporter_download_url)
+  - [unbound_exporter_go_bin](#unbound_exporter_go_bin)
+  - [unbound_exporter_install_method](#unbound_exporter_install_method)
   - [unbound_exporter_listen](#unbound_exporter_listen)
   - [unbound_exporter_version](#unbound_exporter_version)
   - [unbound_extra_config](#unbound_extra_config)
@@ -220,15 +231,6 @@ unbound_exporter_binary_path: /usr/bin/unbound_exporter
 unbound_exporter_control_socket: /run/unbound/control.sock
 ```
 
-### unbound_exporter_deb_arch
-
-#### Default value
-
-```YAML
-unbound_exporter_deb_arch: >-
-  {{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}
-```
-
 ### unbound_exporter_disabled
 
 #### Default value
@@ -245,7 +247,23 @@ unbound_exporter_disabled: true
 unbound_exporter_download_url: >-
   https://github.com/letsencrypt/unbound_exporter/releases/download/v{{
   unbound_exporter_version }}/unbound_exporter-v{{ unbound_exporter_version
-  }}.{{ unbound_exporter_deb_arch }}.deb
+  }}.x86_64.deb
+```
+
+### unbound_exporter_go_bin
+
+#### Default value
+
+```YAML
+unbound_exporter_go_bin: /usr/local/go/bin/go
+```
+
+### unbound_exporter_install_method
+
+#### Default value
+
+```YAML
+unbound_exporter_install_method: "{{ 'deb' if ansible_facts['architecture'] == 'x86_64' else 'source' }}"
 ```
 
 ### unbound_exporter_listen
@@ -357,9 +375,10 @@ unbound_refuse_any: true
 #### Default value
 
 ```YAML
-unbound_resolvconf_nameservers: |
-  nameserver 127.0.0.1
-  nameserver ::1
+unbound_resolvconf_nameservers: >-
+  nameserver {{ '::1' if unbound_listen in ['::', '::0'] else
+  ('127.0.0.1' if unbound_listen in ['0.0.0.0', '*'] else
+  unbound_listen) }}
 ```
 
 ### unbound_root_hints_path

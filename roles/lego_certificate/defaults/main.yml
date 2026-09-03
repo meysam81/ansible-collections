@@ -50,3 +50,9 @@ lego_certificate_renew_random_delay_sec: 600
 #   /etc/dane            — DANE TLSA publisher state
 # /etc/lego is always required and prepended automatically.
 lego_certificate_renew_extra_read_write_paths: []
+
+# Resolvers lego uses for the DNS-01 propagation check ("host:port").
+# Empty = system resolver. Required on hosts with a local recursive
+# resolver, which negatively caches _acme-challenge (RFC 2308) and makes
+# the propagation check time out. Example: ["1.1.1.1:53", "8.8.8.8:53"]
+lego_certificate_dns_resolvers: []

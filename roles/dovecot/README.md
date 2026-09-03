@@ -34,6 +34,34 @@ collections:
         dovecot_default_mailboxes: ["INBOX", "PROCESSED"]
 ```
 
+## Metrics
+
+Dovecot 2.4's native OpenMetrics endpoint is off by default. Enable it to
+expose auth, IMAP command and LMTP delivery counters:
+
+```yaml
+        dovecot_metrics_enabled: true
+```
+
+`dovecot_metrics_listen_address` defaults to `127.0.0.1` — loopback,
+**independent of `dovecot_listen`**, so widening `dovecot_listen` for real
+mail traffic never also widens this unauthenticated endpoint. Scrape it at
+`127.0.0.1:9900` (or `[::1]:9900` if you set it to `::1`) with a local
+agent — see the `alloy` role.
+
+Setting `dovecot_metrics_listen_address` emits an explicit `address =`
+line, which Dovecot 2.4.0-2.4.1 accept and 2.4.5+ reject (no per-listener
+bind setting exists in the 2.4.5 docs). The rendered config is validated
+both by `validate: "doveconf -c %s -n"` on the template task and the
+existing separate `doveconf -n` task, so on 2.4.5+ a non-empty
+`dovecot_metrics_listen_address` fails the play loudly rather than
+silently landing a config the daemon would reject or, worse, exposing the
+endpoint some other way. On 2.4.5+, clear it to `""` to inherit every
+`dovecot_listen` address instead of a single explicit one — this is the
+only way to scrape the endpoint at all on that version if you can't reach
+loopback, so firewall port 9900 yourself when you do this, since nothing
+in this role restricts it once it is bound to non-loopback addresses.
+
 Install and configure Dovecot 2.4 with virtual users (passwd-file), Maildir, IMAP, and LMTP for Postfix integration
 
 ## Table of contents
@@ -52,6 +80,10 @@ Install and configure Dovecot 2.4 with virtual users (passwd-file), Maildir, IMA
   - [dovecot_lmtp_catchall_enabled](#dovecot_lmtp_catchall_enabled)
   - [dovecot_mail_driver](#dovecot_mail_driver)
   - [dovecot_mail_path](#dovecot_mail_path)
+  - [dovecot_metrics](#dovecot_metrics)
+  - [dovecot_metrics_enabled](#dovecot_metrics_enabled)
+  - [dovecot_metrics_listen_address](#dovecot_metrics_listen_address)
+  - [dovecot_metrics_port](#dovecot_metrics_port)
   - [dovecot_passwd_file](#dovecot_passwd_file)
   - [dovecot_passwd_scheme](#dovecot_passwd_scheme)
   - [dovecot_postfix_lmtp_socket_group](#dovecot_postfix_lmtp_socket_group)
@@ -176,6 +208,49 @@ dovecot_mail_driver: maildir
 
 ```YAML
 dovecot_mail_path: ~/Maildir
+```
+
+### dovecot_metrics
+
+#### Default value
+
+```YAML
+dovecot_metrics:
+  - name: auth_success
+    filter: event=auth_request_finished AND success=yes
+  - name: auth_failure
+    filter: event=auth_request_finished AND NOT success=yes
+  - name: imap_command
+    filter: event=imap_command_finished
+    group_by: [cmd_name, tagged_reply_state]
+  - name: lmtp_delivery
+    filter: event=mail_delivery_finished
+  - name: lmtp_delivery_error
+    filter: event=mail_delivery_finished AND error=*
+```
+
+### dovecot_metrics_enabled
+
+#### Default value
+
+```YAML
+dovecot_metrics_enabled: false
+```
+
+### dovecot_metrics_listen_address
+
+#### Default value
+
+```YAML
+dovecot_metrics_listen_address: 127.0.0.1
+```
+
+### dovecot_metrics_port
+
+#### Default value
+
+```YAML
+dovecot_metrics_port: 9900
 ```
 
 ### dovecot_passwd_file

@@ -1,0 +1,6 @@
+---
+- name: Restart postfix-exporter
+  ansible.builtin.systemd:
+    name: postfix-exporter
+    state: restarted
+    daemon_reload: true

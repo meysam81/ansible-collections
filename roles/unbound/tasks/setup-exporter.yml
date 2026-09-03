@@ -1,12 +1,15 @@
 ---
-# letsencrypt/unbound_exporter upstream only ships .deb packages
-# (verified against GitHub releases API, 2026-05-02). On Debian
-# targets the cleanest install path is to download the .deb and
-# let apt handle dependencies and binary placement.
+# letsencrypt/unbound_exporter upstream ships only an x86_64 .deb (verified
+# against the GitHub releases API, 2026-09-03). x86_64 hosts install it and
+# let apt handle placement; every other architecture builds the same tag
+# from source, which lands the binary at the same path.
 
 - name: Check installed unbound_exporter version
   ansible.builtin.command:
-    cmd: "{{ unbound_exporter_binary_path }} -version"
+    cmd: >-
+      {{ 'dpkg-query -W -f=${Version} unbound_exporter'
+         if unbound_exporter_install_method == 'deb'
+         else unbound_exporter_go_bin ~ ' version -m ' ~ unbound_exporter_binary_path }}
   register: unbound_exporter_installed_version
   changed_when: false
   failed_when: false
@@ -15,28 +18,46 @@
   ansible.builtin.set_fact:
     unbound_exporter_needs_install: >-
       {{ unbound_exporter_installed_version.rc != 0 or
-         unbound_exporter_version not in
-         (unbound_exporter_installed_version.stderr | default('') +
-          unbound_exporter_installed_version.stdout | default('')) }}
+         unbound_exporter_version not in (unbound_exporter_installed_version.stdout | default('')) }}
 
-- name: Download unbound_exporter {{ unbound_exporter_version }} .deb
-  ansible.builtin.get_url:
-    url: "{{ unbound_exporter_download_url }}"
-    dest: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
-    mode: "0644"
-  when: unbound_exporter_needs_install
+- name: Install unbound_exporter from the upstream .deb
+  when: unbound_exporter_needs_install and unbound_exporter_install_method == 'deb'
+  block:
+    - name: Download unbound_exporter .deb
+      ansible.builtin.get_url:
+        url: "{{ unbound_exporter_download_url }}"
+        dest: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
+        mode: "0644"
 
-- name: Install unbound_exporter from .deb
-  ansible.builtin.apt:
-    deb: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
-  when: unbound_exporter_needs_install
-  notify: Restart unbound_exporter
+    - name: Install unbound_exporter from .deb
+      ansible.builtin.apt:
+        deb: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
+      notify: Restart unbound_exporter
 
-- name: Remove downloaded .deb
-  ansible.builtin.file:
-    path: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
-    state: absent
-  when: unbound_exporter_needs_install
+    - name: Remove downloaded .deb
+      ansible.builtin.file:
+        path: "/tmp/unbound_exporter_{{ unbound_exporter_version }}.deb"
+        state: absent
+
+- name: Build unbound_exporter from source
+  when: unbound_exporter_needs_install and unbound_exporter_install_method == 'source'
+  block:
+    - name: Install the Go toolchain
+      ansible.builtin.include_role:
+        name: golang
+
+    - name: Build and install unbound_exporter with go install
+      ansible.builtin.command:
+        cmd: "{{ unbound_exporter_go_bin }} install -trimpath github.com/letsencrypt/unbound_exporter@v{{ unbound_exporter_version }}"
+      environment:
+        GOBIN: "{{ unbound_exporter_binary_path | dirname }}"
+        GOPATH: /root/go
+        GOCACHE: /root/.cache/go-build
+        GOFLAGS: -mod=mod
+        GOTOOLCHAIN: local
+        CGO_ENABLED: "0"
+      changed_when: true
+      notify: Restart unbound_exporter
 
 - name: Deploy unbound_exporter systemd service
   ansible.builtin.template:

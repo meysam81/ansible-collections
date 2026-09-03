@@ -107,6 +107,30 @@ enabled by default. Cloudflare enforcement is opt-in:
         haproxy_cache_control_enabled: true     # default
 ```
 
+### Stats
+
+The stats/Prometheus frontend (`/metrics`, `/stats`) binds loopback only by
+default. Set `haproxy_stats_bind_address` to a private-NIC address to let an
+external scraper reach it:
+
+```yaml
+        haproxy_stats_bind_address: "192.0.2.10"  # private NIC, not loopback
+        haproxy_stats_auth_user: "prometheus"
+        haproxy_stats_auth_password: "{{ lookup('env', 'HAPROXY_STATS_PASSWORD') }}"
+```
+
+`stats auth` only protects `/stats` (the HAProxy stats page), and only when
+`haproxy_stats_auth_password` is set — `/metrics` (the Prometheus exporter) is
+**always unauthenticated**, regardless of that setting. A non-loopback
+`haproxy_stats_bind_address` must therefore be a private NIC address
+protected by a firewall, never a public one. Setting
+`haproxy_stats_auth_user`/`haproxy_stats_auth_password` is recommended
+whenever you bind off loopback, to keep `/stats` from being wide open too.
+`haproxy.cfg` itself is written mode `0644`, so `haproxy_stats_auth_password`
+is readable by any local user on the host and shows up in `--diff` output —
+it is not a substitute for network-level protection. Prefer the
+firewall + private-NIC posture above over relying on `stats auth` alone.
+
 ### Escape hatches
 
 Inject raw HAProxy config lines into specific sections:
@@ -195,6 +219,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_static_extensions](#haproxy_static_extensions)
   - [haproxy_stats_auth_password](#haproxy_stats_auth_password)
   - [haproxy_stats_auth_user](#haproxy_stats_auth_user)
+  - [haproxy_stats_bind_address](#haproxy_stats_bind_address)
   - [haproxy_stats_port](#haproxy_stats_port)
   - [haproxy_threads](#haproxy_threads)
   - [haproxy_timeout_client](#haproxy_timeout_client)
@@ -824,6 +849,14 @@ haproxy_stats_auth_password: ''
 
 ```YAML
 haproxy_stats_auth_user: ''
+```
+
+### haproxy_stats_bind_address
+
+#### Default value
+
+```YAML
+haproxy_stats_bind_address: 127.0.0.1
 ```
 
 ### haproxy_stats_port

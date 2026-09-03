@@ -25,12 +25,21 @@
     name: unbound
     state: reloaded
   register: unbound_reload
-  # On a fresh install the service may not be running yet — let the
-  # later "Restart unbound" handler bring it up. Any other failure
-  # is real.
-  failed_when: >-
-    unbound_reload is failed and
-    'is not active' not in (unbound_reload.msg | default(''))
+  failed_when: false
+  listen: Validate and activate unbound config
+
+# A reload cannot apply a config that moves the control socket: the running
+# daemon (on a fresh install, the one the package postinst started with the
+# stock Debian config) listens elsewhere, so unbound-control cannot reach it
+# and systemd reports the reload job failed. A restart picks up the swapped
+# config; every other reload failure surfaces here too instead of being lost.
+- name: Restart unbound when reload could not apply the config
+  ansible.builtin.systemd:
+    name: unbound
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  when: unbound_reload.msg | default('') is search('Unable to reload')
   listen: Validate and activate unbound config
 
 - name: Reload systemd

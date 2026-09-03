@@ -85,6 +85,16 @@ crashes, systemd restarts it within 2 seconds. There is no fallback nameserver
 in `/etc/resolv.conf` — running a fallback that "works" but uses a public
 resolver silently undoes the entire reason for installing this role.
 
+`/etc/resolv.conf` lists only `unbound_listen` — a NIC-address bind (e.g.
+`192.0.2.10`) puts that address in resolv.conf, so only hosts able to reach
+that NIC can resolve. Set `unbound_resolvconf_nameservers` explicitly if you
+want loopback in resolv.conf as well. A wildcard `unbound_listen` is not a
+valid nameserver address, so that case falls back to loopback
+automatically: an IPv6 wildcard (`::`, `::0`) falls back to `::1`, an IPv4
+wildcard (`0.0.0.0`, `*`) falls back to `127.0.0.1`. If you bind unbound to
+an IPv6 address as well, set `unbound_resolvconf_nameservers` explicitly
+(one `nameserver` line per address).
+
 ## Conflicts
 
 The shipped systemd unit declares `Conflicts=` against the common port-53

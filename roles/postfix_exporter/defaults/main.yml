@@ -1,0 +1,45 @@
+---
+# Hsn723/postfix_exporter — queue (showq socket) + journal-derived metrics.
+# Release version to install.
+postfix_exporter_version: "0.20.4"
+# Debian/Ubuntu architecture name used in the release asset filename.
+postfix_exporter_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
+# The "systemd" build reads Postfix logs from journald; no log file needed.
+postfix_exporter_download_url: >-
+  https://github.com/Hsn723/postfix_exporter/releases/download/v{{
+  postfix_exporter_version }}/postfix_exporter_systemd_{{
+  postfix_exporter_version }}_linux_{{ postfix_exporter_arch }}.tar.gz
+# Checksums file used to verify the downloaded archive.
+postfix_exporter_checksums_url: "https://github.com/Hsn723/postfix_exporter/releases/download/v{{ postfix_exporter_version }}/checksums.txt"
+# Where the extracted binary is installed.
+postfix_exporter_bin: /usr/local/bin/postfix_exporter
+
+# System user/group the exporter runs as.
+postfix_exporter_user: postfix-exporter
+postfix_exporter_group: postfix-exporter
+# postdrop is Postfix's setgid group that owns /var/spool/postfix/public
+# (mode 0710, postfix:postdrop per upstream postfix-files) — without it,
+# traversing into that directory to reach the showq socket fails with
+# EACCES even though the socket itself is world-rw, and queue metrics
+# silently vanish while /metrics keeps returning 200. systemd-journal is
+# needed for journal-derived delivery metrics.
+postfix_exporter_extra_groups:
+  - systemd-journal
+  - postdrop
+
+# Address the /metrics HTTP endpoint binds. Loopback by default — scrape it
+# with a local agent (see the alloy role) rather than exposing the port.
+postfix_exporter_listen: "127.0.0.1:9154"
+# Path to Postfix's showq socket, read for queue-size metrics.
+postfix_exporter_showq_path: /var/spool/postfix/public/showq
+# systemd unit whose journal entries are parsed for delivery metrics (the
+# exporter filters journald on _SYSTEMD_UNIT=<this>). Empty = detect: Debian
+# 12 / Ubuntu 24.04 run the daemons under the instance unit "postfix@-.service"
+# (postfix.service is a RemainAfterExit wrapper with no log lines of its own),
+# while Debian 13's postfix.service is the main instance itself and
+# postfix@-.service stays inactive; pointing at the wrong one silently zeroes
+# every log-derived metric. Set explicitly only for a postmulti instance
+# ("postfix@<instance>.service").
+postfix_exporter_systemd_unit: ""
+# Whether to block until /metrics returns 200 after deploy.
+postfix_exporter_healthcheck_enabled: true

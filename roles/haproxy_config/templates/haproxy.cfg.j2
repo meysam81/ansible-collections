@@ -84,7 +84,8 @@ defaults
 
 # ── Stats frontend ──────────────────────────────────────────────────
 frontend stats
-    bind 127.0.0.1:{{ haproxy_stats_port }}
+{% set stats_bind = ('[' ~ haproxy_stats_bind_address ~ ']') if ':' in haproxy_stats_bind_address else haproxy_stats_bind_address %}
+    bind {{ stats_bind }}:{{ haproxy_stats_port }}
     stats enable
     stats uri /stats
     stats refresh 30s

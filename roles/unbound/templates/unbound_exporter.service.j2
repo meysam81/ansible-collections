@@ -6,7 +6,12 @@
 [Unit]
 Description=unbound_exporter — Prometheus metrics for unbound
 Documentation=https://github.com/letsencrypt/unbound_exporter
-After=unbound.service
+# network-online.target: unbound_exporter_listen may be a specific NIC
+# address (not loopback); the Go listener has no ip-freebind and exits if
+# that address isn't present yet at boot. Restart=always below recovers it,
+# but starting after the network is up avoids the initial failed start.
+After=network-online.target unbound.service
+Wants=network-online.target
 Requires=unbound.service
 
 [Service]

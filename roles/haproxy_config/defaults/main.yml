@@ -83,6 +83,13 @@ haproxy_ssl_cachesize: 100000
 
 # Stats
 haproxy_stats_port: 8404
+# Address the stats/Prometheus frontend binds. Loopback by default; set a
+# private-NIC address (e.g. 192.0.2.10) to let an external scraper reach
+# /metrics. This bind serves BOTH /metrics (Prometheus, always unauthenticated)
+# and /stats (the HAProxy stats page — auth'd only when haproxy_stats_auth_password
+# is set). Never a public address: a non-loopback bind must be a private NIC
+# behind a firewall, and haproxy_stats_auth_user/_password should be set too.
+haproxy_stats_bind_address: "127.0.0.1"
 haproxy_stats_auth_user: ""
 haproxy_stats_auth_password: ""
 

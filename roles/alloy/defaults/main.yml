@@ -1,0 +1,57 @@
+---
+# Grafana Alloy: one agent for metrics, logs and probes on a plain host.
+
+# Pin an exact package version ("1.11.0"); empty installs the latest from
+# the Grafana APT repository and lets unattended-upgrades track it.
+alloy_version: ""
+
+# URL of the Grafana APT signing key.
+alloy_apt_key_url: "https://apt.grafana.com/gpg-full.key"
+# Where the signing key is installed, referenced by alloy_apt_repo's signed-by=.
+alloy_apt_key_path: "/etc/apt/keyrings/grafana.asc"
+# APT source line for the Grafana package repository.
+alloy_apt_repo: "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main"
+
+# Full Alloy configuration (River syntax). Required. The caller renders it
+# from its own template so this role stays deployment-agnostic. Written
+# without no_log — it is not a secret itself, so it shows up in --diff;
+# put credentials in alloy_secrets instead, never inline in this string.
+alloy_config: ""
+# Path the rendered alloy_config is written to.
+alloy_config_path: "/etc/alloy/config.alloy"
+
+# Files written under alloy_secrets_dir (mode 0600, owned by the alloy
+# user) — bearer tokens, passwords. Keys are file names, values contents.
+# Reference them from alloy_config, e.g.
+#   bearer_token_file = "/etc/alloy/secrets/remote-write-token"
+alloy_secrets: {}
+# Directory alloy_secrets entries are written into.
+alloy_secrets_dir: "/etc/alloy/secrets"
+
+# Directory for node-exporter-style textfile metrics (*.prom). Producers
+# (cron jobs, backup scripts) write here; alloy reads it via
+# prometheus.exporter.unix { textfile { directory = ... } }.
+alloy_textfile_dir: "/var/lib/alloy/textfile"
+
+# Address Alloy's own HTTP UI/API listens on. Loopback only: that endpoint
+# has no auth. alloy_custom_args and alloy_healthcheck_url both derive from
+# this — change it here rather than overriding those two separately.
+alloy_listen_addr: "127.0.0.1:12345"
+
+# Extra flags appended to `alloy run` via CUSTOM_ARGS in /etc/default/alloy.
+alloy_custom_args: "--server.http.listen-addr={{ alloy_listen_addr }} --disable-reporting"
+
+# Supplementary groups for the alloy user. systemd-journal is needed by
+# loki.source.journal, adm for /var/log on Debian.
+alloy_extra_groups:
+  - systemd-journal
+  - adm
+
+# System user/group Alloy runs as (created by the upstream package).
+alloy_user: alloy
+alloy_group: alloy
+
+# Whether to block until Alloy's /-/ready endpoint returns 200 after deploy.
+alloy_healthcheck_enabled: true
+# Readiness endpoint polled when alloy_healthcheck_enabled is true.
+alloy_healthcheck_url: "http://{{ alloy_listen_addr }}/-/ready"

@@ -1,0 +1,128 @@
+---
+- name: Assert alloy_config is provided
+  ansible.builtin.assert:
+    that:
+      - alloy_config | length > 0
+    fail_msg: "alloy_config is required (full River configuration text)"
+
+- name: Ensure apt keyring directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install Grafana APT signing key
+  ansible.builtin.get_url:
+    url: "{{ alloy_apt_key_url }}"
+    dest: "{{ alloy_apt_key_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add Grafana APT repository
+  ansible.builtin.apt_repository:
+    repo: "{{ alloy_apt_repo }}"
+    filename: grafana
+    state: present
+    update_cache: true
+
+- name: Install alloy
+  ansible.builtin.apt:
+    name: "{{ 'alloy=' ~ alloy_version if alloy_version | length > 0 else 'alloy' }}"
+    state: present
+  notify: Restart alloy
+
+- name: Add alloy user to supplementary groups
+  ansible.builtin.user:
+    name: "{{ alloy_user }}"
+    groups: "{{ alloy_extra_groups }}"
+    append: true
+  notify: Restart alloy
+
+- name: Ensure alloy directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ alloy_config_path | dirname }}", owner: root, group: "{{ alloy_group }}", mode: "0750" }
+    - { path: "{{ alloy_secrets_dir }}", owner: "{{ alloy_user }}", group: "{{ alloy_group }}", mode: "0700" }
+    - { path: "{{ alloy_textfile_dir }}", owner: root, group: root, mode: "0755" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Write secret files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ alloy_secrets_dir }}/{{ item.key }}"
+    owner: "{{ alloy_user }}"
+    group: "{{ alloy_group }}"
+    mode: "0600"
+  loop: "{{ alloy_secrets | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  no_log: true
+  notify: Restart alloy
+
+- name: Write alloy configuration
+  ansible.builtin.copy:
+    content: "{{ alloy_config }}"
+    dest: "{{ alloy_config_path }}"
+    owner: root
+    group: "{{ alloy_group }}"
+    mode: "0640"
+  notify: Restart alloy
+
+- name: Write /etc/default/alloy
+  ansible.builtin.template:
+    src: alloy.env.j2
+    dest: /etc/default/alloy
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart alloy
+
+- name: Ensure systemd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/alloy.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy systemd hardening drop-in
+  ansible.builtin.template:
+    src: override.conf.j2
+    dest: /etc/systemd/system/alloy.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart alloy
+
+- name: Start alloy
+  ansible.builtin.systemd:
+    name: alloy
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Flush handlers so the healthcheck sees the new config
+  ansible.builtin.meta: flush_handlers
+
+- name: Do alloy readiness healthcheck
+  ansible.builtin.uri:
+    url: "{{ alloy_healthcheck_url }}"
+    status_code: 200
+    timeout: 3
+  register: alloy_healthcheck
+  until: alloy_healthcheck.status == 200
+  retries: 10
+  delay: 2
+  when: alloy_healthcheck_enabled | bool
+  failed_when:
+    - alloy_healthcheck.failed
+    - not (lookup('env', 'CI') | default('false') | bool)

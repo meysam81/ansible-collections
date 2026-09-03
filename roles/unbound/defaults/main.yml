@@ -33,16 +33,18 @@ unbound_query_logging: false
 
 # Bundled Prometheus exporter (letsencrypt/unbound_exporter — actively
 # maintained fork of the original kumina/unbound_exporter). Upstream
-# only ships .deb packages, so we install via the dpkg-arch-named
-# asset URL. Binary lands at /usr/bin/unbound_exporter.
+# only ships an x86_64 .deb (every release to v0.6.0; checked 2026-09-03).
+# Other architectures build the same tag from source with the golang role.
 unbound_exporter_disabled: true
 unbound_exporter_version: "0.6.0"
-unbound_exporter_deb_arch: >-
-  {{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}
+# "deb" installs the upstream package; "source" runs `go install` of the tag.
+unbound_exporter_install_method: "{{ 'deb' if ansible_facts['architecture'] == 'x86_64' else 'source' }}"
 unbound_exporter_download_url: >-
   https://github.com/letsencrypt/unbound_exporter/releases/download/v{{
   unbound_exporter_version }}/unbound_exporter-v{{ unbound_exporter_version
-  }}.{{ unbound_exporter_deb_arch }}.deb
+  }}.x86_64.deb
+# Go toolchain used by the source build (installed by the golang role).
+unbound_exporter_go_bin: /usr/local/go/bin/go
 unbound_exporter_binary_path: "/usr/bin/unbound_exporter"
 unbound_exporter_listen: "127.0.0.1:9167"
 unbound_exporter_control_socket: "/run/unbound/control.sock"
@@ -50,9 +52,20 @@ unbound_exporter_control_socket: "/run/unbound/control.sock"
 # Hygiene
 unbound_disable_resolvers: true
 unbound_manage_resolv_conf: true
-unbound_resolvconf_nameservers: |
-  nameserver 127.0.0.1
-  nameserver ::1
+# Contents of /etc/resolv.conf when unbound_manage_resolv_conf is true.
+# Derived from unbound_listen so resolv.conf never advertises an address
+# unbound does not bind (a stray `nameserver ::1` next to a v4-only
+# listener makes every resolver library try ::1 first and eat an
+# ECONNREFUSED before falling back). A wildcard unbound_listen is not
+# itself a valid nameserver address, so that case falls back to loopback
+# instead of leaking the wildcard into resolv.conf: an IPv6 wildcard (::,
+# ::0) falls back to ::1, an IPv4 wildcard (0.0.0.0, *) falls back to
+# 127.0.0.1. If you bind to a specific NIC address as well as a wildcard,
+# set this explicitly. Override to list several servers.
+unbound_resolvconf_nameservers: >-
+  nameserver {{ '::1' if unbound_listen in ['::', '::0'] else
+  ('127.0.0.1' if unbound_listen in ['0.0.0.0', '*'] else
+  unbound_listen) }}
 
 # Escape hatch
 unbound_extra_config: ""

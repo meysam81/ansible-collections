@@ -120,6 +120,32 @@ namespace inbox {
   separator = .
 }
 
+{% if dovecot_metrics_enabled %}
+# OpenMetrics endpoint, scraped by a local agent, never exposed. Binds
+# dovecot_metrics_listen_address, or every global `listen` address when unset
+# (a per-listener `listen` overrides the global one in 2.4; `address` was the
+# 2.3 spelling and 2.4 rejects it).
+service stats {
+  inet_listener http {
+{% if dovecot_metrics_listen_address | length > 0 %}
+    listen = {{ dovecot_metrics_listen_address }}
+{% endif %}
+    port = {{ dovecot_metrics_port }}
+  }
+}
+
+{% for m in dovecot_metrics %}
+metric {{ m.name }} {
+  filter = {{ m.filter }}
+{% for g in m.group_by | default([]) %}
+  group_by {{ g }} {
+  }
+{% endfor %}
+}
+
+{% endfor %}
+{% endif %}
+
 {% if dovecot_extra_conf | length > 0 %}
 {{ dovecot_extra_conf }}
 {% endif %}
