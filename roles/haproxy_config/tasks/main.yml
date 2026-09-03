@@ -67,3 +67,14 @@
     mode: "0644"
     validate: "haproxy -f %s -c"
   notify: Reload haproxy service
+
+# The haproxy role only starts the service from a change-triggered handler;
+# after an aborted first run (or a stopped unit) nothing would bring it back
+# on re-run. The config above is already validated, so starting here is safe;
+# a changed config is still applied by the reload handler.
+- name: Ensure haproxy is enabled and started
+  ansible.builtin.systemd:
+    name: haproxy
+    state: started
+    enabled: true
+    daemon_reload: true

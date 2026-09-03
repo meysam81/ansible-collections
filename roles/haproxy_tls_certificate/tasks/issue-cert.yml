@@ -38,10 +38,15 @@
   register: haproxy_tls_certificate_tls_key
   no_log: true
 
+# Same file name the renewal script (prepare-haproxy-certs.sh) maintains:
+# the domain with the wildcard prefix stripped and no extension. HAProxy
+# loads every file in the directory, so a second name for the same SANs
+# would leave a copy the renewal never refreshes and, sorting first, the
+# one HAProxy keeps serving after the real one is renewed.
 - name: Create HAProxy compatible TLS cert
   ansible.builtin.copy:
     content: "{{ haproxy_tls_certificate_tls_cert.content | b64decode }}{{ haproxy_tls_certificate_tls_key.content | b64decode }}"
-    dest: "{{ haproxy_tls_certificate_haproxy_certs_dir }}/{{ domain | regex_replace('^\\*\\.', '_.') }}.pem"
+    dest: "{{ haproxy_tls_certificate_haproxy_certs_dir }}/{{ domain | regex_replace('^\\*\\.', '') }}"
     owner: haproxy
     group: haproxy
     mode: "0600"

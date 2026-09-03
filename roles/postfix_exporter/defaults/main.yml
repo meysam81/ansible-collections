@@ -33,12 +33,13 @@ postfix_exporter_listen: "127.0.0.1:9154"
 # Path to Postfix's showq socket, read for queue-size metrics.
 postfix_exporter_showq_path: /var/spool/postfix/public/showq
 # systemd unit whose journal entries are parsed for delivery metrics (the
-# exporter filters journald on _SYSTEMD_UNIT=<this>). On Debian/Ubuntu every
-# Postfix daemon (smtpd, qmgr, lmtp, cleanup, ...) logs under the instance
-# unit "postfix@-.service" — "postfix.service" is only a RemainAfterExit
-# wrapper with no log lines of its own, so leaving this at "postfix.service"
-# silently zeroes every log-derived metric. A multi-instance Postfix setup
-# (postmulti) uses "postfix@<instance>.service" instead.
-postfix_exporter_systemd_unit: "postfix@-.service"
+# exporter filters journald on _SYSTEMD_UNIT=<this>). Empty = detect: Debian
+# 12 / Ubuntu 24.04 run the daemons under the instance unit "postfix@-.service"
+# (postfix.service is a RemainAfterExit wrapper with no log lines of its own),
+# while Debian 13's postfix.service is the main instance itself and
+# postfix@-.service stays inactive; pointing at the wrong one silently zeroes
+# every log-derived metric. Set explicitly only for a postmulti instance
+# ("postfix@<instance>.service").
+postfix_exporter_systemd_unit: ""
 # Whether to block until /metrics returns 200 after deploy.
 postfix_exporter_healthcheck_enabled: true

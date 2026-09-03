@@ -23,59 +23,96 @@
     create_home: false
     state: present
 
-- name: Read release checksums
+- name: Check installed postfix_exporter version
+  ansible.builtin.command:
+    cmd: "{{ postfix_exporter_bin }} --version"
+  register: postfix_exporter_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Set postfix_exporter install needed flag
   ansible.builtin.set_fact:
-    postfix_exporter_checksums: "{{ lookup('ansible.builtin.url', postfix_exporter_checksums_url, wantlist=True) }}"
+    postfix_exporter_needs_install: >-
+      {{ postfix_exporter_installed_version.rc != 0 or
+         ('version ' ~ postfix_exporter_version ~ ' ') not in
+         (postfix_exporter_installed_version.stdout | default('') ~ postfix_exporter_installed_version.stderr | default('')) }}
 
-- name: Extract SHA256 for {{ postfix_exporter_download_url | basename }}
+# Skipped once the installed binary already reports this version, so a
+# re-run neither hits GitHub nor reports four changed tasks.
+- name: Install postfix_exporter
+  when: postfix_exporter_needs_install
+  block:
+    - name: Read release checksums
+      ansible.builtin.set_fact:
+        postfix_exporter_checksums: "{{ lookup('ansible.builtin.url', postfix_exporter_checksums_url, wantlist=True) }}"
+
+    - name: Extract SHA256 for {{ postfix_exporter_download_url | basename }}
+      ansible.builtin.set_fact:
+        postfix_exporter_sha256: >-
+          {{ postfix_exporter_checksums
+          | select('search', (postfix_exporter_download_url | basename | regex_escape) ~ '\s*$')
+          | map('split', ' ') | map('first') | list | first }}
+
+    - name: Create secure temp directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: postfix_exporter_
+      register: postfix_exporter_tmp_dir
+
+    - name: Download postfix_exporter
+      ansible.builtin.get_url:
+        url: "{{ postfix_exporter_download_url }}"
+        dest: "{{ postfix_exporter_tmp_dir.path }}/{{ postfix_exporter_download_url | basename }}"
+        checksum: "sha256:{{ postfix_exporter_sha256 }}"
+        mode: "0644"
+      register: postfix_exporter_download
+
+    - name: Unpack archive
+      ansible.builtin.unarchive:
+        src: "{{ postfix_exporter_download.dest }}"
+        dest: "{{ postfix_exporter_tmp_dir.path }}"
+        remote_src: true
+
+    - name: Locate the binary inside the archive
+      ansible.builtin.find:
+        paths: "{{ postfix_exporter_tmp_dir.path }}"
+        patterns: postfix_exporter
+        recurse: true
+        file_type: file
+      register: postfix_exporter_found
+
+    - name: Install binary
+      ansible.builtin.copy:
+        src: "{{ (postfix_exporter_found.files | map(attribute='path') | list | first) }}"
+        dest: "{{ postfix_exporter_bin }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Restart postfix-exporter
+
+    - name: Clean up temp files
+      ansible.builtin.file:
+        path: "{{ postfix_exporter_tmp_dir.path }}"
+        state: absent
+
+# RemainAfterExit=yes marks the wrapper-style postfix.service (Debian 12,
+# Ubuntu 24.04) whose daemons log under postfix@-.service; Debian 13's
+# postfix.service is the real instance (Type=forking, RemainAfterExit=no).
+- name: Inspect postfix.service to find the unit that owns the Postfix daemons
+  ansible.builtin.systemd:
+    name: postfix.service
+  register: postfix_exporter_unit_probe
+  failed_when: false
+  when: postfix_exporter_systemd_unit | length == 0
+
+- name: Resolve postfix_exporter_systemd_unit
   ansible.builtin.set_fact:
-    postfix_exporter_sha256: >-
-      {{ postfix_exporter_checksums
-      | select('search', (postfix_exporter_download_url | basename | regex_escape) ~ '\s*$')
-      | map('split', ' ') | map('first') | list | first }}
-
-- name: Create secure temp directory
-  ansible.builtin.tempfile:
-    state: directory
-    prefix: postfix_exporter_
-  register: postfix_exporter_tmp_dir
-
-- name: Download postfix_exporter
-  ansible.builtin.get_url:
-    url: "{{ postfix_exporter_download_url }}"
-    dest: "{{ postfix_exporter_tmp_dir.path }}/{{ postfix_exporter_download_url | basename }}"
-    checksum: "sha256:{{ postfix_exporter_sha256 }}"
-    mode: "0644"
-  register: postfix_exporter_download
-
-- name: Unpack archive
-  ansible.builtin.unarchive:
-    src: "{{ postfix_exporter_download.dest }}"
-    dest: "{{ postfix_exporter_tmp_dir.path }}"
-    remote_src: true
-
-- name: Locate the binary inside the archive
-  ansible.builtin.find:
-    paths: "{{ postfix_exporter_tmp_dir.path }}"
-    patterns: postfix_exporter
-    recurse: true
-    file_type: file
-  register: postfix_exporter_found
-
-- name: Install binary
-  ansible.builtin.copy:
-    src: "{{ (postfix_exporter_found.files | map(attribute='path') | list | first) }}"
-    dest: "{{ postfix_exporter_bin }}"
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0755"
-  notify: Restart postfix-exporter
-
-- name: Clean up temp files
-  ansible.builtin.file:
-    path: "{{ postfix_exporter_tmp_dir.path }}"
-    state: absent
+    postfix_exporter_systemd_unit: >-
+      {{ 'postfix@-.service'
+         if (postfix_exporter_unit_probe.status.RemainAfterExit | default('no')) == 'yes'
+         else 'postfix.service' }}
+  when: postfix_exporter_systemd_unit | length == 0
 
 - name: Deploy systemd service
   ansible.builtin.template:

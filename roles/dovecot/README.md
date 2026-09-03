@@ -219,7 +219,7 @@ dovecot_metrics:
   - name: auth_success
     filter: event=auth_request_finished AND success=yes
   - name: auth_failure
-    filter: event=auth_request_finished AND success=no
+    filter: event=auth_request_finished AND NOT success=yes
   - name: imap_command
     filter: event=imap_command_finished
     group_by: [cmd_name, tagged_reply_state]

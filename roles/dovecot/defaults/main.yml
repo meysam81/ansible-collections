@@ -88,12 +88,11 @@ dovecot_extra_conf: ""
 dovecot_metrics_enabled: false
 # Safe by default: loopback, independent of dovecot_listen (widening
 # dovecot_listen for real mail traffic must NOT also widen this
-# unauthenticated endpoint). Renders an explicit `address =` line, which
-# Dovecot 2.4.0-2.4.1 accept and 2.4.5+ reject — doveconf -n then fails the
-# play loudly (see the validate: task) rather than silently exposing the
-# endpoint. Clear to "" to inherit every dovecot_listen address instead
-# (required on 2.4.5+ if you need a non-loopback scrape target); firewall
-# port 9900 yourself if you do, since nothing here restricts it.
+# unauthenticated endpoint). Rendered as a per-listener `listen =` line, which
+# overrides the global `listen` for this listener only (verified on Dovecot
+# 2.4.1; the 2.3 `address =` key is rejected by 2.4 and the validate: task
+# fails the play). Clear to "" to inherit every dovecot_listen address instead;
+# firewall port 9900 yourself if you do, since nothing here restricts it.
 dovecot_metrics_listen_address: "127.0.0.1"
 # Port the OpenMetrics HTTP listener binds.
 dovecot_metrics_port: 9900
@@ -103,8 +102,10 @@ dovecot_metrics_port: 9900
 dovecot_metrics:
   - name: auth_success
     filter: "event=auth_request_finished AND success=yes"
+  # A failed login emits auth_request_finished with no `success` field at all
+  # (verified on 2.4.1), so `success=no` never matches; negate instead.
   - name: auth_failure
-    filter: "event=auth_request_finished AND success=no"
+    filter: "event=auth_request_finished AND NOT success=yes"
   - name: imap_command
     filter: "event=imap_command_finished"
     group_by: [cmd_name, tagged_reply_state]

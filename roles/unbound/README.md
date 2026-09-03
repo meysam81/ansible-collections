@@ -125,9 +125,10 @@ Install and configure unbound as a fully-recursive local DNS resolver
   - [unbound_edns_buffer_size](#unbound_edns_buffer_size)
   - [unbound_exporter_binary_path](#unbound_exporter_binary_path)
   - [unbound_exporter_control_socket](#unbound_exporter_control_socket)
-  - [unbound_exporter_deb_arch](#unbound_exporter_deb_arch)
   - [unbound_exporter_disabled](#unbound_exporter_disabled)
   - [unbound_exporter_download_url](#unbound_exporter_download_url)
+  - [unbound_exporter_go_bin](#unbound_exporter_go_bin)
+  - [unbound_exporter_install_method](#unbound_exporter_install_method)
   - [unbound_exporter_listen](#unbound_exporter_listen)
   - [unbound_exporter_version](#unbound_exporter_version)
   - [unbound_extra_config](#unbound_extra_config)
@@ -230,15 +231,6 @@ unbound_exporter_binary_path: /usr/bin/unbound_exporter
 unbound_exporter_control_socket: /run/unbound/control.sock
 ```
 
-### unbound_exporter_deb_arch
-
-#### Default value
-
-```YAML
-unbound_exporter_deb_arch: >-
-  {{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}
-```
-
 ### unbound_exporter_disabled
 
 #### Default value
@@ -255,7 +247,23 @@ unbound_exporter_disabled: true
 unbound_exporter_download_url: >-
   https://github.com/letsencrypt/unbound_exporter/releases/download/v{{
   unbound_exporter_version }}/unbound_exporter-v{{ unbound_exporter_version
-  }}.{{ unbound_exporter_deb_arch }}.deb
+  }}.x86_64.deb
+```
+
+### unbound_exporter_go_bin
+
+#### Default value
+
+```YAML
+unbound_exporter_go_bin: /usr/local/go/bin/go
+```
+
+### unbound_exporter_install_method
+
+#### Default value
+
+```YAML
+unbound_exporter_install_method: "{{ 'deb' if ansible_facts['architecture'] == 'x86_64' else 'source' }}"
 ```
 
 ### unbound_exporter_listen

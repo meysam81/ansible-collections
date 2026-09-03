@@ -82,7 +82,7 @@ golang_checksum_url: '{{ golang_download_url }}.sha256'
 #### Default value
 
 ```YAML
-golang_download_url: https://go.dev/dl/go{{ golang_version }}.{{ golang_os }}-{{ golang_arch }}.tar.gz
+golang_download_url: https://dl.google.com/go/go{{ golang_version }}.{{ golang_os }}-{{ golang_arch }}.tar.gz
 ```
 
 ### golang_install_dir

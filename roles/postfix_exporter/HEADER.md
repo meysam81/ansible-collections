@@ -39,10 +39,13 @@ other.
 
 ### Journal unit
 
-`postfix_exporter_systemd_unit` defaults to `postfix@-.service` — on
-Debian/Ubuntu, `postfix.service` is only a `RemainAfterExit` wrapper with no
-log lines of its own; every Postfix daemon (`smtpd`, `qmgr`, `lmtp`,
-`cleanup`, ...) actually logs under the instance unit `postfix@-.service`.
-Pointing this at `postfix.service` leaves every log-derived metric at zero.
-A multi-instance Postfix (`postmulti`) setup uses `postfix@<instance>.service`
-instead — set `postfix_exporter_systemd_unit` accordingly per instance.
+`postfix_exporter_systemd_unit` is detected when left empty: on Debian 12 and
+Ubuntu 24.04, `postfix.service` is only a `RemainAfterExit` wrapper and every
+Postfix daemon (`smtpd`, `qmgr`, `lmtp`, `cleanup`, ...) logs under the
+instance unit `postfix@-.service`; on Debian 13, `postfix.service` is the main
+instance itself and `postfix@-.service` stays inactive. The role reads
+`RemainAfterExit` off `postfix.service` to pick the right one, because the
+wrong unit leaves every log-derived metric at zero while `/metrics` keeps
+returning 200. A multi-instance setup (`postmulti`) uses
+`postfix@<instance>.service` instead — set `postfix_exporter_systemd_unit`
+explicitly per instance.
