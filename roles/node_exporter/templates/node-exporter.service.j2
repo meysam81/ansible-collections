@@ -11,13 +11,16 @@ StartLimitBurst=5
 Type=simple
 
 ExecStart=/usr/local/bin/node_exporter \
-  --web.listen-address=127.0.0.1:9110 \
+  --web.listen-address={{ node_exporter_listen_address }} \
 {% for collector in node_exporter_extra_collectors %}
   --collector.{{ collector }} \
 {% endfor %}
 {% if node_exporter_supervisord_enabled %}
   --collector.supervisord \
   --collector.supervisord.url="{{ node_exporter_supervisord_url }}" \
+{% endif %}
+{% if node_exporter_textfile_dir | length > 0 %}
+  --collector.textfile.directory={{ node_exporter_textfile_dir }} \
 {% endif %}
   --web.disable-exporter-metrics
 
@@ -36,6 +39,9 @@ ProtectHome=yes
 PrivateTmp=yes
 PrivateDevices=yes
 ReadWritePaths=
+{% if node_exporter_textfile_dir | length > 0 %}
+ReadOnlyPaths={{ node_exporter_textfile_dir }}
+{% endif %}
 
 # ── Kernel isolation ─────────────────────────────────────────────────
 # ProtectKernelTunables=yes is safe: node_exporter only READS /proc/sys.

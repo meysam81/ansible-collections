@@ -134,3 +134,23 @@
           - "'http-probing' in crowdsec_collections.stdout"
           - "'iptables' in crowdsec_collections.stdout"
       tags: crowdsec_agent
+
+    # ── node_textfile_metrics ──────────────────────
+    - name: Check node_textfile_metrics textfile exists
+      ansible.builtin.stat:
+        path: /var/lib/node-textfile-metrics/node_textfile_metrics.prom
+      register: node_textfile_metrics_file
+      tags: node_textfile_metrics
+
+    - name: Read node_textfile_metrics textfile content
+      ansible.builtin.slurp:
+        src: /var/lib/node-textfile-metrics/node_textfile_metrics.prom
+      register: node_textfile_metrics_content
+      tags: node_textfile_metrics
+
+    - name: Assert node_textfile_metrics textfile exists and reports node_reboot_required
+      ansible.builtin.assert:
+        that:
+          - node_textfile_metrics_file.stat.exists
+          - "'node_reboot_required' in (node_textfile_metrics_content.content | b64decode)"
+      tags: node_textfile_metrics

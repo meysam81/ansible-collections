@@ -1,0 +1,45 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Host hygiene metrics for the node-exporter textfile collector
+
+[Service]
+Type=oneshot
+ExecStart={{ node_textfile_metrics_script_path }}
+
+# Textfile directories are commonly owned by the collector that reads
+# them (e.g. the alloy or node_exporter service user), not root. Keep only
+# CAP_DAC_OVERRIDE so mktemp/mv can create and replace files there even
+# though everything else root could normally do is dropped.
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
+NoNewPrivileges=yes
+
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths={{ node_textfile_metrics_dir }}
+PrivateTmp=yes
+PrivateDevices=yes
+
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# No network access needed: apt-get -s only inspects the local cache.
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=node-textfile-metrics
+
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0022

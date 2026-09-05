@@ -4,12 +4,21 @@ node_exporter_create_user: true
 node_exporter_download_url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version | regex_replace('^v', '') }}/node_exporter-{{ node_exporter_version | regex_replace('^v', '') }}.{{ node_exporter_os }}-{{ node_exporter_arch }}.tar.gz # yamllint disable-line rule:line-length
 node_exporter_group: node-exporter
 node_exporter_healthcheck_enabled: true
+# Loopback by default: node_exporter has no built-in auth, so exposing it
+# beyond localhost is the caller's explicit decision (e.g. behind a
+# scrape-only firewall rule). The healthcheck task targets this same
+# address, so overriding it here is enough — no second var to keep in sync.
+node_exporter_listen_address: "127.0.0.1:9110"
 node_exporter_os: linux
 node_exporter_owner: node-exporter
 node_exporter_sha256sum_url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version | regex_replace('^v', '') }}/sha256sums.txt
-node_exporter_version: 1.8.2
 node_exporter_supervisord_enabled: false
 node_exporter_supervisord_url: "http://localhost:9001/RPC2"
+# Directory for node-exporter-style textfile metrics (*.prom), e.g. from
+# the node_textfile_metrics role. Empty disables the textfile collector —
+# no default coupling to another role's directory.
+node_exporter_textfile_dir: ""
+node_exporter_version: 1.8.2
 node_exporter_extra_collectors:
   - tcpstat
   - systemd

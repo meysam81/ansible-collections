@@ -56,6 +56,14 @@
   ansible.builtin.file:
     path: "{{ node_exporter_tmp_dir.path }}"
     state: absent
+- name: Ensure textfile collector directory exists
+  ansible.builtin.file:
+    path: "{{ node_exporter_textfile_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755" # NOSONAR: node_exporter runs as its own user and must read this directory
+  when: node_exporter_textfile_dir | length > 0
 - name: Deploy systemd service from template
   ansible.builtin.template:
     src: node-exporter.service.j2
@@ -72,7 +80,7 @@
     daemon_reload: true
 - name: Do node-exporter HTTP healthcheck
   ansible.builtin.uri:
-    url: http://localhost:9110/metrics
+    url: "http://{{ node_exporter_listen_address }}/metrics" # NOSONAR: loopback, node_exporter serves plain HTTP
     status_code: 200
     timeout: 2
   register: node_exporter_healthcheck

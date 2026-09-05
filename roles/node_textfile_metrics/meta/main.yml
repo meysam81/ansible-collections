@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: node_textfile_metrics
+  description: Host-hygiene metrics (pending reboot, pending apt upgrades, held packages) in node-exporter textfile format on a systemd timer.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - monitoring
+    - metrics
+    - prometheus
+    - systemd
+allow_duplicates: false
+
+dependencies: []

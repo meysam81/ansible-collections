@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Periodic host hygiene metrics collection
+
+[Timer]
+OnCalendar={{ node_textfile_metrics_on_calendar }}
+Persistent=true
+RandomizedDelaySec={{ node_textfile_metrics_random_delay_sec }}
+
+[Install]
+WantedBy=timers.target
