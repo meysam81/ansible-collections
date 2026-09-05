@@ -6,10 +6,11 @@ Description=Host hygiene metrics for the node-exporter textfile collector
 Type=oneshot
 ExecStart={{ node_textfile_metrics_script_path }}
 
-# apt-get -s -o Debug::NoLocking=true only reads /var/lib/dpkg and
-# /var/cache/apt (both world-readable) and never takes the apt lock, so
-# root needs no capabilities at all to run this script.
-CapabilityBoundingSet=
+# Textfile directories are commonly owned by the collector that reads
+# them (e.g. the alloy or node_exporter service user), not root. Keep only
+# CAP_DAC_OVERRIDE so mktemp/mv can create and replace files there even
+# though everything else root could normally do is dropped.
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
 NoNewPrivileges=yes
 
 ProtectSystem=strict
