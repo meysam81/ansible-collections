@@ -20,7 +20,9 @@ fi
 
 reboot_required_pkgs=0
 if [ -f /run/reboot-required.pkgs ]; then
-  reboot_required_pkgs=$(wc -l < /run/reboot-required.pkgs)
+  # grep -c '' counts lines regardless of a missing trailing newline;
+  # wc -l would undercount a file whose last line isn't newline-terminated.
+  reboot_required_pkgs=$(grep -c '' /run/reboot-required.pkgs || true)
 fi
 
 # -o Debug::NoLocking=true skips the dpkg/apt lock entirely, so the
@@ -47,6 +49,9 @@ now=$(date +%s)
 # Atomic write: render to a temp file in the same directory, then rename,
 # so a collector scraping mid-write never sees a truncated .prom file.
 tmp=$(mktemp "${METRICS_FILE}.XXXXXX")
+# The mv below makes this a no-op on success; on a failed/aborted write it
+# removes the leftover temp file instead of littering the metrics dir.
+trap 'rm -f "${tmp}"' EXIT
 {
   echo '# HELP node_reboot_required 1 if the host has a pending reboot, 0 otherwise.'
   echo '# TYPE node_reboot_required gauge'
