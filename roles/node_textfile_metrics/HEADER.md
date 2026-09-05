@@ -68,9 +68,14 @@ systemd timer, so any textfile collector — node_exporter's
     node_textfile_metrics_dir: /var/lib/alloy/textfile
 ```
 
-Both directories must already exist and be readable by the collector —
-`node_exporter_textfile_dir` and `alloy_textfile_dir` create theirs; this
-role only needs the path to match.
+This role creates `node_textfile_metrics_dir` (root:root, mode
+`node_textfile_metrics_dir_mode`) only if it doesn't already exist yet —
+if `node_exporter_textfile_dir` or `alloy_textfile_dir` already created it
+(commonly owned by their own service user), it's left untouched. The
+metrics script itself always writes as root, with just enough capability
+(`CAP_DAC_OVERRIDE`) to create files in a directory it doesn't own, and
+the `.prom` file it produces is mode `0644` so any collector user can
+read it.
 
 ## Install
 

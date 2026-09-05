@@ -9,13 +9,23 @@
       --collector.textfile.directory or Alloy's prometheus.exporter.unix
       textfile block).
 
-- name: Ensure textfile metrics dir exists
+- name: Check whether the textfile metrics dir already exists
+  ansible.builtin.stat:
+    path: "{{ node_textfile_metrics_dir }}"
+  register: node_textfile_metrics_dir_stat
+
+# Don't reassert ownership/mode on every run: the directory is commonly
+# owned by whatever collector reads it (e.g. alloy or node_exporter), and
+# the unit writes as root with CAP_DAC_OVERRIDE regardless of who owns it.
+# Only create it (root:root) the first time, when it's missing.
+- name: Create textfile metrics dir if missing
   ansible.builtin.file:
     path: "{{ node_textfile_metrics_dir }}"
     state: directory
     owner: root
     group: root
     mode: "{{ node_textfile_metrics_dir_mode }}"
+  when: not node_textfile_metrics_dir_stat.stat.exists
 
 - name: Deploy host hygiene metrics script
   ansible.builtin.template:
