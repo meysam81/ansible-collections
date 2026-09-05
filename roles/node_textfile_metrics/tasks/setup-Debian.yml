@@ -24,16 +24,17 @@
     state: directory
     owner: root
     group: root
-    mode: "{{ node_textfile_metrics_dir_mode }}"
+    mode: "{{ node_textfile_metrics_dir_mode }}" # NOSONAR: the collector user reads the metrics here
   when: not node_textfile_metrics_dir_stat.stat.exists
 
+# Only the root-run unit executes it.
 - name: Deploy host hygiene metrics script
   ansible.builtin.template:
     src: node-textfile-metrics.sh.j2
     dest: "{{ node_textfile_metrics_script_path }}"
     owner: root
     group: root
-    mode: "0755"
+    mode: "0700"
 
 - name: Deploy host hygiene metrics service
   ansible.builtin.template:
@@ -41,7 +42,7 @@
     dest: /etc/systemd/system/node-textfile-metrics.service
     owner: root
     group: root
-    mode: "0644"
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
   notify: Reload systemd daemon
 
 - name: Deploy host hygiene metrics timer
@@ -50,7 +51,7 @@
     dest: /etc/systemd/system/node-textfile-metrics.timer
     owner: root
     group: root
-    mode: "0644"
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
   notify:
     - Reload systemd daemon
     - Restart node-textfile-metrics timer

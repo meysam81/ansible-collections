@@ -62,7 +62,7 @@
     state: directory
     owner: root
     group: root
-    mode: "0755"
+    mode: "0755" # NOSONAR: node_exporter runs as its own user and must read this directory
   when: node_exporter_textfile_dir | length > 0
 - name: Deploy systemd service from template
   ansible.builtin.template:
@@ -80,7 +80,7 @@
     daemon_reload: true
 - name: Do node-exporter HTTP healthcheck
   ansible.builtin.uri:
-    url: "http://{{ node_exporter_listen_address }}/metrics"
+    url: "http://{{ node_exporter_listen_address }}/metrics" # NOSONAR: loopback, node_exporter serves plain HTTP
     status_code: 200
     timeout: 2
   register: node_exporter_healthcheck
