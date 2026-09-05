@@ -93,6 +93,10 @@
       tags: crowdsec_haproxy_bouncer
     - role: node_exporter
       tags: node_exporter
+    - role: node_textfile_metrics
+      tags: node_textfile_metrics
+      vars:
+        node_textfile_metrics_dir: /var/lib/node-textfile-metrics
     - role: vmagent
       tags: vmagent
       vars:

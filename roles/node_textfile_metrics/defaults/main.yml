@@ -1,0 +1,21 @@
+---
+# Directory a textfile collector reads from — node_exporter's
+# --collector.textfile.directory or Alloy's prometheus.exporter.unix
+# textfile block. Required; no default, since defaulting to another role's
+# directory here would couple this role to that role's internal layout.
+node_textfile_metrics_dir: ""
+
+# systemd OnCalendar expression. Default: every 15 minutes.
+node_textfile_metrics_on_calendar: "*:0/15"
+
+# Spreads collection across hosts so scrapers don't all see updates land
+# in the same 15-minute window.
+node_textfile_metrics_random_delay_sec: 120
+
+node_textfile_metrics_script_path: /usr/local/bin/node-textfile-metrics.sh
+
+# Filename inside node_textfile_metrics_dir. node_exporter's textfile
+# collector only reads files ending in .prom.
+node_textfile_metrics_file_name: node_textfile_metrics.prom
+
+node_textfile_metrics_dir_mode: "0755"

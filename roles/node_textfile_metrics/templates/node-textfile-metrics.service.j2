@@ -1,0 +1,44 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Host hygiene metrics for the node-exporter textfile collector
+
+[Service]
+Type=oneshot
+ExecStart={{ node_textfile_metrics_script_path }}
+
+# apt-get -s -o Debug::NoLocking=true only reads /var/lib/dpkg and
+# /var/cache/apt (both world-readable) and never takes the apt lock, so
+# root needs no capabilities at all to run this script.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths={{ node_textfile_metrics_dir }}
+PrivateTmp=yes
+PrivateDevices=yes
+
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# No network access needed: apt-get -s only inspects the local cache.
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=node-textfile-metrics
+
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0022

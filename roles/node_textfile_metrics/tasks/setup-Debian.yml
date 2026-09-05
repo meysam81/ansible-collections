@@ -1,0 +1,66 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - node_textfile_metrics_dir | length > 0
+    fail_msg: >-
+      node_textfile_metrics_dir is required: set it to the directory a
+      textfile collector reads from (node_exporter's
+      --collector.textfile.directory or Alloy's prometheus.exporter.unix
+      textfile block).
+
+- name: Ensure textfile metrics dir exists
+  ansible.builtin.file:
+    path: "{{ node_textfile_metrics_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ node_textfile_metrics_dir_mode }}"
+
+- name: Deploy host hygiene metrics script
+  ansible.builtin.template:
+    src: node-textfile-metrics.sh.j2
+    dest: "{{ node_textfile_metrics_script_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy host hygiene metrics service
+  ansible.builtin.template:
+    src: node-textfile-metrics.service.j2
+    dest: /etc/systemd/system/node-textfile-metrics.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Deploy host hygiene metrics timer
+  ansible.builtin.template:
+    src: node-textfile-metrics.timer.j2
+    dest: /etc/systemd/system/node-textfile-metrics.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd daemon
+    - Restart node-textfile-metrics timer
+
+- name: Enable host hygiene metrics timer
+  ansible.builtin.systemd:
+    name: node-textfile-metrics.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+
+# A bare `Type=oneshot` unit with no RemainAfterExit=yes reports "inactive"
+# again the instant it finishes, so driving it through the systemd module
+# (state: started) would show changed on every single run. Running the
+# script directly and gating on `creates:` gets the same result — the
+# metrics file exists right after this role applies instead of waiting for
+# the timer's first fire (up to on_calendar's ~15 minute window) — while
+# staying idempotent: once the file exists, this task is skipped and the
+# timer alone keeps it fresh.
+- name: Run host hygiene metrics once so the textfile exists immediately
+  ansible.builtin.command:
+    cmd: "{{ node_textfile_metrics_script_path }}"
+    creates: "{{ node_textfile_metrics_dir }}/{{ node_textfile_metrics_file_name }}"

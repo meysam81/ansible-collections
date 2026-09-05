@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Writes node-exporter textfile metrics describing host update hygiene:
+# pending reboot, pending apt upgrades (with a security-update subset),
+# and packages held back from upgrading.
+#
+# Deliberately does NOT run `apt-get update` — this script has no network
+# side effects and only reports what the last cache refresh (unattended
+# upgrades, cron, or a human) already left on disk.
+set -euo pipefail
+umask 0077
+
+METRICS_DIR="{{ node_textfile_metrics_dir }}"
+METRICS_FILE="${METRICS_DIR}/{{ node_textfile_metrics_file_name }}"
+
+reboot_required=0
+if [ -f /run/reboot-required ]; then
+  reboot_required=1
+fi
+
+reboot_required_pkgs=0
+if [ -f /run/reboot-required.pkgs ]; then
+  reboot_required_pkgs=$(wc -l < /run/reboot-required.pkgs)
+fi
+
+# -o Debug::NoLocking=true skips the dpkg/apt lock entirely, so the
+# simulation needs no write access and never contends with a real
+# apt-get or unattended-upgrades run happening at the same time.
+apt_error=0
+if apt_sim=$(apt-get -s -o Debug::NoLocking=true upgrade 2>/dev/null); then
+  apt_error=0
+else
+  apt_error=1
+  apt_sim=""
+fi
+
+# grep -c exits 1 on zero matches even though it correctly printed "0";
+# `|| true` stops that from tripping `set -e` while keeping the count.
+apt_upgrades_pending=$(grep -c '^Inst ' <<<"${apt_sim}" || true)
+apt_security_upgrades_pending=$(grep '^Inst ' <<<"${apt_sim}" | grep -Ec -- '-security|Debian-Security' || true)
+
+held=$(apt-mark showhold 2>/dev/null || true)
+apt_upgrades_held=$(grep -c '.' <<<"${held}" || true)
+
+now=$(date +%s)
+
+# Atomic write: render to a temp file in the same directory, then rename,
+# so a collector scraping mid-write never sees a truncated .prom file.
+tmp=$(mktemp "${METRICS_FILE}.XXXXXX")
+{
+  echo '# HELP node_reboot_required 1 if the host has a pending reboot, 0 otherwise.'
+  echo '# TYPE node_reboot_required gauge'
+  echo "node_reboot_required ${reboot_required}"
+
+  echo '# HELP node_reboot_required_pkgs Number of packages that triggered the pending reboot.'
+  echo '# TYPE node_reboot_required_pkgs gauge'
+  echo "node_reboot_required_pkgs ${reboot_required_pkgs}"
+
+  echo '# HELP apt_upgrades_pending Number of package upgrades available in the local apt cache.'
+  echo '# TYPE apt_upgrades_pending gauge'
+  echo "apt_upgrades_pending ${apt_upgrades_pending}"
+
+  echo '# HELP apt_security_upgrades_pending Number of pending upgrades tagged as security updates.'
+  echo '# TYPE apt_security_upgrades_pending gauge'
+  echo "apt_security_upgrades_pending ${apt_security_upgrades_pending}"
+
+  echo '# HELP apt_upgrades_held Number of packages held back from upgrading (apt-mark hold).'
+  echo '# TYPE apt_upgrades_held gauge'
+  echo "apt_upgrades_held ${apt_upgrades_held}"
+
+  echo '# HELP node_textfile_metrics_apt_error 1 if the apt-get upgrade simulation failed (e.g. empty/corrupt cache), 0 otherwise.'
+  echo '# TYPE node_textfile_metrics_apt_error gauge'
+  echo "node_textfile_metrics_apt_error ${apt_error}"
+
+  echo '# HELP node_textfile_metrics_last_run_timestamp_seconds Unix time this script last completed.'
+  echo '# TYPE node_textfile_metrics_last_run_timestamp_seconds gauge'
+  echo "node_textfile_metrics_last_run_timestamp_seconds ${now}"
+} > "${tmp}"
+chmod 0644 "${tmp}"
+mv "${tmp}" "${METRICS_FILE}"

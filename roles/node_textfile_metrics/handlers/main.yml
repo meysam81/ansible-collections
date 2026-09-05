@@ -1,0 +1,9 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart node-textfile-metrics timer
+  ansible.builtin.systemd:
+    name: node-textfile-metrics.timer
+    state: restarted
