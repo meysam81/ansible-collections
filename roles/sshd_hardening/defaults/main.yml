@@ -1,0 +1,59 @@
+---
+# Where the drop-in is written. Sorts (lexically, within sshd_config.d/)
+# before any other fragment a caller or another role might add, so its
+# directives are the FIRST match sshd sees — and in sshd_config, first
+# match wins, unlike most config formats where the last one does.
+sshd_hardening_dropin_path: /etc/ssh/sshd_config.d/00-hardening.conf
+
+# "prohibit-password" (pubkey/keyboard-interactive only, no password) is
+# the safe middle ground: root can still log in with a key (needed for
+# recovery consoles and some bootstrap flows) but never with a password.
+# Set to "no" where root access is never required (see sshd_hardening_allow_users).
+sshd_hardening_permit_root_login: prohibit-password
+sshd_hardening_password_authentication: "no"
+sshd_hardening_kbd_interactive_authentication: "no"
+sshd_hardening_pubkey_authentication: "yes"
+sshd_hardening_permit_empty_passwords: "no"
+sshd_hardening_max_auth_tries: 4
+sshd_hardening_max_sessions: 10
+sshd_hardening_login_grace_time: 30
+sshd_hardening_client_alive_interval: 300
+sshd_hardening_client_alive_count_max: 2
+
+# TCP/agent forwarding are the two settings devsec-style hardening roles
+# lock to "no" — safe as a *default* here, but that breaks ProxyJump
+# bastions and agent-forwarded git/deploy flows outright. Callers that need
+# either (e.g. a bastion box) override explicitly; this role does not
+# special-case any host.
+sshd_hardening_allow_tcp_forwarding: "no"
+sshd_hardening_allow_agent_forwarding: "no"
+sshd_hardening_x11_forwarding: "no"
+
+sshd_hardening_log_level: VERBOSE
+
+# Empty means no AllowUsers directive is rendered (sshd's own default: all
+# system users with a valid shell may attempt to log in).
+sshd_hardening_allow_users: []
+
+# Modern algorithm lists confirmed accepted by OpenSSH 9.2, 9.6, and 10.0 —
+# no PQ/hybrid kex (mlkem/sntrup) since not all three versions support it.
+sshd_hardening_ciphers:
+  - chacha20-poly1305@openssh.com
+  - aes256-gcm@openssh.com
+  - aes128-gcm@openssh.com
+  - aes256-ctr
+  - aes192-ctr
+  - aes128-ctr
+sshd_hardening_kex_algorithms:
+  - curve25519-sha256
+  - curve25519-sha256@libssh.org
+  - diffie-hellman-group16-sha512
+  - diffie-hellman-group18-sha512
+sshd_hardening_macs:
+  - hmac-sha2-512-etm@openssh.com
+  - hmac-sha2-256-etm@openssh.com
+  - umac-128-etm@openssh.com
+
+# Escape hatch: { Keyword: "value" } pairs appended verbatim after the
+# managed directives above, for anything this role doesn't expose.
+sshd_hardening_extra_options: {}

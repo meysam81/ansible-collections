@@ -1,6 +1,8 @@
 ---
+# crowdsecurity/http-probing was folded into base-http-scenarios upstream and
+# no longer installs on its own.
 crowdsec_agent_collections:
-  - crowdsecurity/http-probing
+  - crowdsecurity/linux
   - crowdsecurity/iptables
 
 crowdsec_agent_enrollment_key: ""
@@ -13,5 +15,32 @@ crowdsec_agent_acquis_filename: egress
 crowdsec_agent_lapi_listen: "127.0.0.1:8080"
 
 # Override apt codename when the detected release isn't available upstream.
-# e.g. set to "bookworm" on Debian Trixie where CrowdSec lacks a repo.
-crowdsec_agent_apt_codename: "{{ ansible_facts['distribution_release'] }}"
+# Debian Trixie has no packagecloud.io/crowdsec/crowdsec suite yet, so it
+# falls back to bookworm's; any other release is used as detected.
+crowdsec_agent_apt_codename: "{{ {'trixie': 'bookworm'}[ansible_facts['distribution_release']] | default(ansible_facts['distribution_release']) }}"
+
+# journald acquisition sources, one file per entry under /etc/crowdsec/acquis.d/.
+# Each entry:
+#   name:        (required) safe filename stem (alphanumeric, dash, underscore, dot —
+#                dots allowed so a name can match/replace a hand-made acquisition
+#                file of the same name, e.g. "setup.haproxy-journald")
+#   type:        (required) labels.type value CrowdSec parsers key off (e.g. sshd, haproxy)
+#   units:       [] systemd unit names -> "_SYSTEMD_UNIT=<unit>" filters (OR'd together)
+#   identifiers: [] syslog identifiers -> "SYSLOG_IDENTIFIER=<id>" filters (OR'd together)
+# At least one of units/identifiers is required. Setting both on the same entry
+# ANDs the two filter kinds (journalctl's own semantics: same field ORs,
+# different fields AND) — use separate entries if you need cross-field OR.
+crowdsec_agent_journal_acquisitions: []
+
+# IPs/CIDRs CrowdSec should never flag as an attacker source, regardless of
+# scenario — own infra ranges, loopback, monitoring egress. Rendered into a
+# s02-enrich whitelist parser so it applies fleet-wide, not per-bouncer.
+crowdsec_agent_whitelist_cidrs: []
+crowdsec_agent_whitelist_ips: []
+
+crowdsec_agent_prometheus_enabled: true
+crowdsec_agent_prometheus_listen_addr: "127.0.0.1"
+crowdsec_agent_prometheus_listen_port: 6060
+# "full" exposes bucket/parser/scenario metrics on top of the basics
+# "aggregated" would drop the highest-cardinality series.
+crowdsec_agent_prometheus_level: full

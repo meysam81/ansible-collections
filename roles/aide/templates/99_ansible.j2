@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# Filename has no extension on purpose: Debian's aide.conf pulls this
+# directory in via `@@x_include /etc/aide/aide.conf.d ^[a-zA-Z0-9_-]+$` —
+# a name containing a "." would silently never be read.
+{% for path in (aide_exclude_paths + aide_exclude_paths_extra) | unique %}
+!{{ path }}
+{% endfor %}
+{% if aide_config_extra | length > 0 %}
+{{ aide_config_extra }}
+{% endif %}

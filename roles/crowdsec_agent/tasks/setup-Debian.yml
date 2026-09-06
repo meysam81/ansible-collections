@@ -19,6 +19,10 @@
     url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
     dest: /etc/apt/keyrings/crowdsec.asc
     mode: "0644"
+  register: crowdsec_agent_gpg_key_download
+  until: crowdsec_agent_gpg_key_download is succeeded
+  retries: 5
+  delay: 5
 
 - name: Dearmor CrowdSec GPG key
   ansible.builtin.command:
@@ -39,6 +43,24 @@
     name: crowdsec
     state: present
     update_cache: true
+
+# Best effort: the hub index only matters for items not yet cached locally,
+# and a play must not fail (and drop its queued handlers) because
+# hub.crowdsec.net was unreachable for a moment.
+- name: Update CrowdSec hub index
+  ansible.builtin.command:
+    cmd: cscli hub update
+  register: crowdsec_agent_hub_update
+  changed_when: false
+  failed_when: false
+  retries: 3
+  delay: 5
+  until: crowdsec_agent_hub_update.rc == 0
+
+- name: Warn when the hub index could not be refreshed
+  ansible.builtin.debug:
+    msg: "cscli hub update failed ({{ crowdsec_agent_hub_update.stderr | default('') | trim }}); continuing with the cached index"
+  when: crowdsec_agent_hub_update.rc != 0
 
 - name: Install CrowdSec collections
   ansible.builtin.command:
@@ -72,6 +94,37 @@
     group: root
     mode: "0644"
   when: crowdsec_agent_acquis_extra | length > 0
+  notify: Restart crowdsec
+
+- name: Deploy journald acquisition configs
+  ansible.builtin.template:
+    src: journal-acquisition.yaml.j2
+    dest: "/etc/crowdsec/acquis.d/{{ item.name }}.yaml"
+    owner: root
+    group: root
+    mode: "0640"
+  loop: "{{ crowdsec_agent_journal_acquisitions }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Restart crowdsec
+
+- name: Deploy whitelist parser
+  ansible.builtin.template:
+    src: whitelist.yaml.j2
+    dest: /etc/crowdsec/parsers/s02-enrich/ansible-whitelist.yaml
+    owner: root
+    group: root
+    mode: "0640"
+  when: (crowdsec_agent_whitelist_ips | length > 0) or (crowdsec_agent_whitelist_cidrs | length > 0)
+  notify: Restart crowdsec
+
+- name: Deploy config.yaml.local overlay (prometheus, LAPI listen)
+  ansible.builtin.template:
+    src: config.yaml.local.j2
+    dest: /etc/crowdsec/config.yaml.local
+    owner: root
+    group: root
+    mode: "0640"
   notify: Restart crowdsec
 
 - name: Enable and start CrowdSec service

@@ -1,0 +1,9 @@
+---
+# A restart, not a reload: ssh.service runs with KillMode=process on
+# Debian/Ubuntu, so established sessions (including Ansible's own) survive
+# it, and it also works when the unit is not active yet (fresh images,
+# socket-activated sshd that has not accepted a connection).
+- name: Reload sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted

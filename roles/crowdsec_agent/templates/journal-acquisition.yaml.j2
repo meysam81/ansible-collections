@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+source: journalctl
+journalctl_filter:
+{% for unit in item.units | default([]) %}
+  - "_SYSTEMD_UNIT={{ unit }}"
+{% endfor %}
+{% for identifier in item.identifiers | default([]) %}
+  - "SYSLOG_IDENTIFIER={{ identifier }}"
+{% endfor %}
+labels:
+  type: {{ item.type }}

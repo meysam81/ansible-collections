@@ -1,36 +1,39 @@
 ---
-# NOTE: This role installs the CrowdSec HAProxy bouncer but does NOT wire it
-# into haproxy.cfg. The role is a stub for future enablement.
-#
-# To enable CrowdSec:
-# 1. Uncomment the crowdsec_haproxy_bouncer role in your playbook
-# 2. Add the following to your haproxy.cfg.j2:
-#    Global section:
-#      lua-load {{ crowdsec_haproxy_bouncer_lua_dir }}/crowdsec.lua
-#    Frontend https section:
-#      filter spoe engine crowdsec config {{ crowdsec_haproxy_bouncer_config_dir }}/crowdsec.cfg
-#      http-request set-header X-CrowdSec-Remediation %[var(txn.crowdsec.remediation)]
-#      http-request redirect code 302 location %[var(txn.crowdsec.redirect)]
-#        if { var(txn.crowdsec.remediation) -m str "allow" }
-#        { var(txn.crowdsec.redirect) -m found }
-#      http-request lua.crowdsec_handle if { var(txn.crowdsec.remediation) -m str "captcha" }
-#      http-request lua.crowdsec_handle if { var(txn.crowdsec.remediation) -m str "ban" }
-#      http-after-response set-header Set-Cookie
-#        %[var(txn.crowdsec.captcha_cookie)]
-#        if { var(txn.crowdsec.captcha_status) -m found }
-#        { var(txn.crowdsec.captcha_cookie) -m found }
-#      http-after-response set-header Set-Cookie
-#        %[var(txn.crowdsec.captcha_cookie)]
-#        if { var(txn.crowdsec.captcha_cookie) -m found }
-#        !{ var(txn.crowdsec.captcha_status) -m found }
-#    Backends section:
-#      backend crowdsec-spoa
-#          mode tcp
-#          server s1 {{ crowdsec_haproxy_bouncer_spoa_addr }}:{{ crowdsec_haproxy_bouncer_spoa_port }}
-#
-crowdsec_haproxy_bouncer_enabled: true
-crowdsec_haproxy_bouncer_spoa_addr: "127.0.0.1"
-crowdsec_haproxy_bouncer_spoa_port: 9001
-crowdsec_haproxy_bouncer_lua_dir: "/usr/lib/crowdsec-haproxy-spoa-bouncer/lua"
-crowdsec_haproxy_bouncer_html_dir: "/var/lib/crowdsec-haproxy-spoa-bouncer/html"
-crowdsec_haproxy_bouncer_config_dir: "/etc/haproxy"
+# Override apt codename when the detected release isn't available upstream
+# (same rationale as crowdsec_agent_apt_codename — kept independent so this
+# role stands alone).
+crowdsec_haproxy_bouncer_apt_codename: "{{ {'trixie': 'bookworm'}[ansible_facts['distribution_release']] | default(ansible_facts['distribution_release']) }}"
+
+# TCP loopback only — Coraza's SPOA already owns 127.0.0.1:9000 on the same
+# host, so this bouncer gets the next port.
+crowdsec_haproxy_bouncer_listen_addr: "127.0.0.1:9001"
+
+crowdsec_haproxy_bouncer_api_url: "http://127.0.0.1:8080/"
+
+# Required secret must default empty (CLAUDE.md rule 5). When empty, the
+# key the crowdsec-haproxy-spoa-bouncer package's postinst auto-registered
+# with the local LAPI is slurped from the config file it wrote, and reused.
+crowdsec_haproxy_bouncer_api_key: ""
+
+crowdsec_haproxy_bouncer_prometheus_enabled: true
+crowdsec_haproxy_bouncer_prometheus_listen: "127.0.0.1:60602"
+
+crowdsec_haproxy_bouncer_log_level: info
+
+crowdsec_haproxy_bouncer_haproxy_config_dir: /etc/haproxy
+
+# Ban/captcha HTML templates. The package installs its own copies here;
+# override only if you relocate them.
+
+# Forward-looking hook, off by default: adds the crowdsec-http-body SPOE
+# message/group (full request body forwarded for CrowdSec AppSec scoring).
+# AppSec itself is deferred (needs an AppSec-enabled LAPI). Turning this on
+# only makes the message available to send — the frontend must still fire
+# it explicitly (e.g. via haproxy_frontend_extra_rules); haproxy_config's
+# own crowdsec wiring only ever sends crowdsec-ip and crowdsec-http-no-body.
+crowdsec_haproxy_bouncer_appsec_enabled: false
+
+# HAProxy reads crowdsec.cfg only at (re)load. Name its systemd unit here
+# (e.g. "haproxy") to reload it whenever this role changes the SPOE config;
+# empty leaves the reload to the consumer.
+crowdsec_haproxy_bouncer_haproxy_reload_unit: ""

@@ -1,0 +1,50 @@
+---
+# Directory a textfile collector reads from — node_exporter's
+# --collector.textfile.directory or Alloy's prometheus.exporter.unix
+# textfile block. Required; no default (see node_textfile_metrics for why).
+aide_textfile_dir: ""
+
+aide_on_calendar: daily
+aide_randomized_delay: 1h
+
+aide_script_path: /usr/local/bin/aide-check-metrics
+aide_file_name: aide.prom
+
+# Recursive excludes (AIDE "!/regex" rules) for paths that churn constantly
+# and carry no integrity signal: log rotation, package cache, temp dirs,
+# AIDE's own database, its own backups, and /run (tmpfs — recreated empty
+# on every boot, so nothing there can be a persistent tamper; every
+# service (re)start also touches files under it — e.g.
+# /run/credentials/<unit>.service, /run/<daemon>/<socket> mtimes —
+# confirmed live: an untouched box still reported 2-3 "changed" entries
+# under /run per run, purely from normal service activity between checks).
+aide_exclude_paths:
+  - /var/log
+  - /var/cache
+  - /var/tmp
+  - /tmp
+  - /var/lib/apt/lists
+  - /var/lib/aide
+  - /var/backups
+  - /run
+  # devtmpfs: node permissions and ACLs flip at runtime (/dev/kmsg was seen
+  # alternating between consecutive runs), no integrity value.
+  - /dev
+
+# Host-specific excludes merged with aide_exclude_paths (mail spools, state
+# directories of other services, ...). Set this rather than overriding the
+# list above so future default additions still apply.
+aide_exclude_paths_extra: []
+
+# Raw lines appended verbatim to the conf.d fragment, for selection rules
+# this role doesn't curate.
+aide_config_extra: ""
+
+# When true, a clean `aide --update` run installs its new database
+# (aide.db.new -> aide.db) automatically, so a detected change alerts once
+# instead of on every run until someone manually re-baselines.
+aide_auto_accept: true
+
+# Where the full report of the last run is kept (mode 0640 root:adm), so an
+# "entries changed" alert can be traced to the actual files afterwards.
+aide_report_path: /var/log/aide/aide-check.log

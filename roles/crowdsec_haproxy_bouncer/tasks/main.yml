@@ -1,61 +1,19 @@
 ---
-# NOTE: This role installs CrowdSec bouncer components but does NOT wire them
-# into haproxy.cfg. See defaults/main.yml for enablement instructions.
-- name: Install and configure CrowdSec HAProxy bouncer
-  when: crowdsec_haproxy_bouncer_enabled
-  block:
-    - name: Install CrowdSec HAProxy bouncer
-      ansible.builtin.apt:
-        name:
-          - crowdsec-haproxy-bouncer
-        state: present
-        update_cache: true
+- name: Assert prometheus listen address format
+  ansible.builtin.assert:
+    that:
+      - crowdsec_haproxy_bouncer_prometheus_listen is match('^[^:]+:[0-9]+$')
+    fail_msg: >-
+      crowdsec_haproxy_bouncer_prometheus_listen must be 'host:port'
+      (got: {{ crowdsec_haproxy_bouncer_prometheus_listen }})
 
-    - name: Create Lua script directory
-      ansible.builtin.file:
-        path: "{{ crowdsec_haproxy_bouncer_lua_dir }}"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
+- name: Setup CrowdSec HAProxy SPOA bouncer on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
 
-    - name: Deploy CrowdSec Lua scripts
-      ansible.builtin.copy:
-        src: "lua/"
-        dest: "{{ crowdsec_haproxy_bouncer_lua_dir }}/"
-        owner: root
-        group: root
-        mode: "0644"
-      notify: Restart crowdsec-bouncer service
-
-    - name: Create HTML template directory
-      ansible.builtin.file:
-        path: "{{ crowdsec_haproxy_bouncer_html_dir }}"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Deploy CrowdSec HTML templates
-      ansible.builtin.copy:
-        src: "html/"
-        dest: "{{ crowdsec_haproxy_bouncer_html_dir }}/"
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Deploy CrowdSec SPOE config
-      ansible.builtin.template:
-        src: crowdsec.cfg.j2
-        dest: "{{ crowdsec_haproxy_bouncer_config_dir }}/crowdsec.cfg"
-        owner: haproxy
-        group: haproxy
-        mode: "0644"
-      notify: Restart crowdsec-bouncer service
-
-    - name: Enable CrowdSec HAProxy bouncer service
-      ansible.builtin.systemd:
-        name: crowdsec-haproxy-bouncer.service
-        state: started
-        enabled: true
-        daemon_reload: true
+# Ansible drops queued handlers when a play fails later on, and the next run
+# sees the file already in place and never re-notifies: the config on disk
+# and the running daemon silently diverge. Flushing here keeps the reload
+# inside this role's own blast radius.
+- name: Apply pending service reloads before leaving the role
+  ansible.builtin.meta: flush_handlers

@@ -2,7 +2,7 @@
 galaxy_info:
   author: Meysam Azad
   role_name: crowdsec_haproxy_bouncer
-  description: CrowdSec HAProxy bouncer (Lua-based SPOE)
+  description: Install the CrowdSec HAProxy SPOA bouncer (0.3.x, no Lua) for IP-based ban remediation
   min_ansible_version: "2.15"
   platforms:
     - name: Debian
@@ -13,7 +13,12 @@ galaxy_info:
         - jammy
         - noble
   license: Apache-2.0
+  galaxy_tags:
+    - crowdsec
+    - haproxy
+    - security
+    - spoe
+
 allow_duplicates: false
 
-dependencies:
-  - role: haproxy
+dependencies: []

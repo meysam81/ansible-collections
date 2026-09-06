@@ -1,0 +1,9 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart aide-check timer
+  ansible.builtin.systemd:
+    name: aide-check.timer
+    state: restarted

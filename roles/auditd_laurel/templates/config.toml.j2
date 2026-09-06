@@ -1,0 +1,39 @@
+# {{ ansible_managed }}
+# https://github.com/threathunters-io/laurel/blob/main/etc/laurel/config.toml
+directory = "{{ auditd_laurel_log_dir }}"
+user = "{{ auditd_laurel_user }}"
+statusreport-period = 0
+input = "stdin"
+
+[auditlog]
+file = "audit.log"
+size = {{ auditd_laurel_log_size }}
+generations = {{ auditd_laurel_log_generations }}
+{% if auditd_laurel_read_users | length > 0 %}
+read-users = [{% for u in auditd_laurel_read_users %}"{{ u }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endif %}
+
+[state]
+file = "state"
+generations = 0
+max-age = 60
+
+[transform]
+execve-argv = [{% for t in auditd_laurel_transform_execve_argv %}"{{ t }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+
+[translate]
+universal = false
+user-db = false
+drop-raw = false
+
+[enrich]
+pid = true
+spawned-by = true
+container = true
+systemd = true
+script = true
+user-groups = true
+
+[filter]
+filter-null-keys = false
+filter-action = "drop"

@@ -10,3 +10,17 @@ coraza_spoa_port: 9000
 coraza_config_dir: "/etc/coraza-spoa"
 coraza_go_install_dir: "/usr/local"
 coraza_haproxy_config_dir: "/etc/haproxy"
+
+# SPOE "log global" writes one journal line per request/response exchanged
+# with the coraza-spoa agent — on a busy frontend this can dwarf every other
+# log source. Off by default; the WAF verdict itself still reaches the
+# access log via haproxy_config's spoa-error:/waf-hit: log-format fields
+# whenever haproxy_coraza_enabled is true, regardless of this setting.
+coraza_spoe_log_events: false
+
+# SecRuleEngine mode written into coraza.conf after download. Upstream's
+# coraza.conf-recommended ships DetectionOnly (matches are logged, nothing is
+# blocked, and the SPOA never sets txn.coraza.fail); that stays the default
+# so upgrading this role never flips a WAF into blocking by surprise. Set
+# "On" once the CRS exclusions have been tuned on your traffic.
+coraza_rule_engine: DetectionOnly

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Runs a Lynis security audit and writes node-exporter textfile metrics
+# summarising the result: hardening index, warning/suggestion counts, and
+# whether the run itself succeeded.
+set -uo pipefail
+umask 0077
+
+REPORT_FILE=/var/log/lynis-report.dat
+METRICS_DIR="{{ lynis_textfile_dir }}"
+METRICS_FILE="${METRICS_DIR}/{{ lynis_file_name }}"
+
+run_success=1
+if ! lynis audit system --cronjob --quiet --no-colors >/dev/null 2>&1; then
+  run_success=0
+fi
+
+hardening_index=0
+warnings_total=0
+suggestions_total=0
+lynis_version=""
+
+if [ -f "${REPORT_FILE}" ]; then
+  hardening_index=$(grep -m1 '^hardening_index=' "${REPORT_FILE}" | cut -d= -f2)
+  hardening_index=${hardening_index:-0}
+  # grep -c exits 1 on zero matches even though it correctly printed "0";
+  # `|| true` stops that from tripping non-zero exits under `pipefail`.
+  warnings_total=$(grep -c '^warning\[\]=' "${REPORT_FILE}" || true)
+  suggestions_total=$(grep -c '^suggestion\[\]=' "${REPORT_FILE}" || true)
+  lynis_version=$(grep -m1 '^lynis_version=' "${REPORT_FILE}" | cut -d= -f2)
+else
+  run_success=0
+fi
+
+now=$(date +%s)
+
+# Atomic write: render to a temp file in the same directory, then rename,
+# so a collector scraping mid-write never sees a truncated .prom file.
+tmp=$(mktemp "${METRICS_FILE}.XXXXXX")
+trap 'rm -f "${tmp}"' EXIT
+{
+  echo '# HELP lynis_hardening_index Lynis hardening index (0-100) from the last completed run.'
+  echo '# TYPE lynis_hardening_index gauge'
+  echo "lynis_hardening_index ${hardening_index}"
+
+  echo '# HELP lynis_warnings_total Number of warnings in the last completed run.'
+  echo '# TYPE lynis_warnings_total gauge'
+  echo "lynis_warnings_total ${warnings_total}"
+
+  echo '# HELP lynis_suggestions_total Number of suggestions in the last completed run.'
+  echo '# TYPE lynis_suggestions_total gauge'
+  echo "lynis_suggestions_total ${suggestions_total}"
+
+  echo '# HELP lynis_last_run_timestamp_seconds Unix time this script last completed.'
+  echo '# TYPE lynis_last_run_timestamp_seconds gauge'
+  echo "lynis_last_run_timestamp_seconds ${now}"
+
+  echo '# HELP lynis_last_run_success 1 if the Lynis audit and report parsing both succeeded, 0 otherwise.'
+  echo '# TYPE lynis_last_run_success gauge'
+  echo "lynis_last_run_success ${run_success}"
+
+  echo '# HELP lynis_info Lynis version that produced the last report, as a label.'
+  echo '# TYPE lynis_info gauge'
+  echo "lynis_info{version=\"${lynis_version}\"} 1"
+} > "${tmp}"
+chmod 0644 "${tmp}"
+mv "${tmp}" "${METRICS_FILE}"

@@ -108,11 +108,23 @@ frontend web
 {% endif %}
 {% endfor %}
 
+{% if haproxy_log_request_headers %}
+    # Verbatim request/response headers in the log line, Authorization and
+    # Cookie included. Opt-in only — never a standing production setting.
     http-request set-var(txn.req_hdrs) req.hdrs
+    http-response set-var(txn.resp_hdrs) res.hdrs
+{% endif %}
+{% set _log_extra = [] %}
 {% if haproxy_coraza_enabled %}
-    log-format "${HAPROXY_HTTP_LOG_FMT} spoa-error:\ %[var(txn.coraza.error)]\ waf-hit:\ %[var(txn.coraza.fail)] req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+{% set _ = _log_extra.append('spoa-error:\\ %[var(txn.coraza.error)]\\ waf-hit:\\ %[var(txn.coraza.fail)]') %}
+{% endif %}
+{% if haproxy_log_request_headers %}
+{% set _ = _log_extra.append('req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]') %}
+{% endif %}
+{% if _log_extra %}
+    log-format "${HAPROXY_HTTP_LOG_FMT} {{ _log_extra | join(' ') }}"
 {% else %}
-    log-format "${HAPROXY_HTTP_LOG_FMT} req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+    log-format "${HAPROXY_HTTP_LOG_FMT}"
 {% endif %}
 
 {% if haproxy_cloudflare_enabled %}
@@ -211,12 +223,37 @@ frontend web
 {% if haproxy_coraza_enabled %}
     filter spoe engine coraza config {{ haproxy_base_config_dir }}/coraza.cfg
 {% endif %}
+{% if haproxy_crowdsec_enabled %}
+    filter spoe engine crowdsec config {{ haproxy_crowdsec_config_file }}
+{% endif %}
+
 {% if haproxy_coraza_enabled %}
+    # --- Coraza WAF (explicit fire, after set-src above; see the coraza role) ---
     http-request set-var(txn.coraza.app) str(app)
+    http-request send-spoe-group coraza coraza-req
     http-request return status 403 if { var(txn.coraza.fail) -m int eq 1 }
     http-response return status 403 if { var(txn.coraza.fail) -m int eq 1 }
     http-request return status 503 if { var(txn.coraza.error) -m int gt 0 }
     http-response return status 503 if { var(txn.coraza.error) -m int gt 0 }
+{% endif %}
+
+{% if haproxy_crowdsec_enabled %}
+    # --- CrowdSec IP ban (explicit fire; see the crowdsec_haproxy_bouncer role) ---
+    acl crowdsec_render_html req.hdr_cnt(Accept) eq 0
+    acl crowdsec_render_html req.hdr(Accept) -m sub text/html
+    acl crowdsec_render_html req.hdr(Accept) -m sub */*
+    # A bare, unescaped "$" here trips HAProxy's own env-var expansion inside
+    # the double-quoted string ("forbidden first char in environment
+    # variable name") — escape it so the regex still sees a literal
+    # end-of-string anchor. Verified against HAProxy 3.4.3.
+    acl crowdsec_html_rejected req.hdr(Accept) -m reg -i "text/html[[:space:]]*;[[:space:]]*q=0(\.0+)?([,[:space:]]|\$)"
+
+    http-request send-spoe-group crowdsec crowdsec-ip
+    http-request send-spoe-group crowdsec crowdsec-http-no-body
+
+    http-request return status 403 content-type "text/html; charset=utf-8" hdr Cache-Control "no-cache, no-store" lf-file {{ haproxy_crowdsec_html_dir }}/ban.html if { var(txn.crowdsec.remediation) -m str "ban" } crowdsec_render_html !crowdsec_html_rejected
+    http-request return status 403 content-type text/plain hdr Cache-Control "no-cache, no-store" string "Forbidden\n" if { var(txn.crowdsec.remediation) -m str "ban" } !crowdsec_render_html
+    http-request return status 403 content-type text/plain hdr Cache-Control "no-cache, no-store" string "Forbidden\n" if { var(txn.crowdsec.remediation) -m str "ban" } crowdsec_html_rejected
 {% endif %}
 
 {% if haproxy_cdn_domains %}
@@ -372,4 +409,10 @@ backend not_found
 backend coraza-spoa
     mode tcp
     server s1 {{ haproxy_coraza_spoa_addr }}:{{ haproxy_coraza_spoa_port }} check inter 3000 rise 1 fall 3
+{% endif %}
+
+{% if haproxy_crowdsec_enabled %}
+backend crowdsec-spoa
+    mode tcp
+    server s1 {{ haproxy_crowdsec_spoa_addr }}:{{ haproxy_crowdsec_spoa_port }} check inter 3000 rise 1 fall 3
 {% endif %}

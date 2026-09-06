@@ -1,0 +1,17 @@
+---
+- name: Assert backend is supported
+  ansible.builtin.assert:
+    that:
+      - crowdsec_firewall_bouncer_backend in ['nftables', 'iptables']
+    fail_msg: "crowdsec_firewall_bouncer_backend must be 'nftables' or 'iptables' (got: {{ crowdsec_firewall_bouncer_backend }})"
+
+- name: Setup CrowdSec firewall bouncer on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+# Ansible drops queued handlers when a play fails later on, and the next run
+# sees the file already in place and never re-notifies: the config on disk
+# and the running daemon silently diverge. Flushing here keeps the reload
+# inside this role's own blast radius.
+- name: Apply pending service reloads before leaving the role
+  ansible.builtin.meta: flush_handlers

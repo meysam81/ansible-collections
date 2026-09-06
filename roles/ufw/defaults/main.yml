@@ -16,3 +16,11 @@ ufw_logging: low
 ufw_rules: []
 
 ufw_reset_before_apply: false
+
+# `ufw enable` re-applies /etc/ufw/sysctl.conf on every run (not just the
+# first disabled->enabled transition) — it sets several net.ipv4/net.ipv6
+# sysctls (log_martians, accept_redirects, icmp_echo_ignore_broadcasts,
+# ...) unconditionally. True (default) preserves that stock ufw behaviour.
+# Set false when a dedicated sysctl role/policy owns net.* sysctls
+# elsewhere — otherwise ufw silently fights it on every idempotent re-run.
+ufw_manage_sysctl: true

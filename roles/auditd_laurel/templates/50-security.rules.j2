@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+-D
+-b {{ auditd_laurel_backlog_limit }}
+-f {{ auditd_laurel_failure_mode }}
+--backlog_wait_time 60000
+
+{% for line in auditd_laurel_rules %}
+{{ line }}
+{% endfor %}
+{% if auditd_laurel_rules_extra | length > 0 %}
+{{ auditd_laurel_rules_extra }}
+{% endif %}

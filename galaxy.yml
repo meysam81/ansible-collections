@@ -18,7 +18,12 @@ tags:
   - security
   - storage
   - tools
-dependencies: {}
+# ansible.posix.sysctl (roles/sysctl) is the first role in this collection
+# to need a collection dependency outside amazon.aws-lookup-only consumers
+# already carry incidentally; declare it so `ansible-galaxy collection
+# install meysam81.general` pulls it in transitively.
+dependencies:
+  ansible.posix: ">=1.5.0"
 repository: https://github.com/meysam81/ansible-collections
 documentation: https://meysam81.github.io/ansible-collections
 homepage: https://meysam81.github.io/ansible-collections

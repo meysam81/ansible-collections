@@ -1,0 +1,45 @@
+---
+# nftables or iptables. Determines both the apt package
+# (crowdsec-firewall-bouncer-{{ backend }}) and which config section
+# (nftables/iptables) is rendered.
+crowdsec_firewall_bouncer_backend: nftables
+
+# Override apt codename when the detected release isn't available upstream
+# (same rationale as crowdsec_agent_apt_codename — kept independent so this
+# role stands alone).
+crowdsec_firewall_bouncer_apt_codename: "{{ {'trixie': 'bookworm'}[ansible_facts['distribution_release']] | default(ansible_facts['distribution_release']) }}"
+
+# Required secret must default empty (CLAUDE.md rule 5). When empty, the
+# key the crowdsec-firewall-bouncer-{{ backend }} package's postinst
+# auto-registered with the local LAPI (via `cscli bouncers add`) is slurped
+# from the config file it wrote, and reused. Set this explicitly when the
+# bouncer talks to a remote/central LAPI that this host cannot self-register
+# against.
+crowdsec_firewall_bouncer_api_key: ""
+
+crowdsec_firewall_bouncer_api_url: "http://127.0.0.1:8080/"
+crowdsec_firewall_bouncer_update_frequency: "10s"
+
+# DROP silently discards; REJECT would send a TCP RST / ICMP unreachable,
+# telling banned clients their probe landed on a live host.
+crowdsec_firewall_bouncer_deny_action: DROP
+crowdsec_firewall_bouncer_deny_log: true
+crowdsec_firewall_bouncer_deny_log_prefix: "crowdsec: "
+
+# nftables hooks the crowdsec chain attaches to.
+crowdsec_firewall_bouncer_hooks:
+  - input
+  - forward
+
+# nftables priority for the crowdsec table's base chains. Negative runs
+# before the default filter table (priority 0), so bans apply before ufw's
+# own rules — the two coexist without either needing to know about the other.
+crowdsec_firewall_bouncer_nftables_priority: -10
+
+crowdsec_firewall_bouncer_disable_ipv6: false
+
+crowdsec_firewall_bouncer_prometheus_enabled: true
+crowdsec_firewall_bouncer_prometheus_listen_addr: "127.0.0.1"
+crowdsec_firewall_bouncer_prometheus_listen_port: 60601
+
+crowdsec_firewall_bouncer_log_level: info

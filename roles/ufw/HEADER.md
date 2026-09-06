@@ -68,3 +68,11 @@ on hosts where you can recover access through an out-of-band console.
 **Stale rules:** This role only _adds_ rules. Removing a rule from
 `ufw_rules` and re-running will **not** delete it from the host. Use
 `ufw_reset_before_apply: true` to converge to the exact declared rule set.
+
+**Sysctl side effect:** `ufw enable` re-applies `/etc/ufw/sysctl.conf`
+(several net.ipv4/net.ipv6 sysctls — log_martians, accept_redirects,
+icmp_echo_ignore_broadcasts, ...) on **every** run, not just the first
+disabled->enabled transition. If another role or policy also manages
+overlapping sysctl keys, ufw's re-apply on every idempotent run will
+silently fight it — set `ufw_manage_sysctl: false` to stop ufw from
+touching sysctls at all and let the other policy be authoritative.

@@ -59,6 +59,13 @@
     group: coraza-spoa
     mode: "0644"
 
+- name: Set SecRuleEngine mode
+  ansible.builtin.lineinfile:
+    path: "{{ coraza_config_dir }}/coraza.conf"
+    regexp: '^\s*#?\s*SecRuleEngine\s'
+    line: "SecRuleEngine {{ coraza_rule_engine }}"
+  notify: Restart coraza-spoa service
+
 - name: Clone CRS rules
   ansible.builtin.git:
     repo: https://github.com/coreruleset/coreruleset

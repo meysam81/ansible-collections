@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+[Unit]
+Description=AIDE file integrity check for the node-exporter textfile collector
+
+[Service]
+Type=oneshot
+ExecStart={{ aide_script_path }}
+
+NoNewPrivileges=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aide-check

@@ -1,0 +1,61 @@
+# {{ ansible_managed }}
+mode: {{ crowdsec_firewall_bouncer_backend }}
+update_frequency: {{ crowdsec_firewall_bouncer_update_frequency }}
+log_mode: file
+log_dir: /var/log/
+log_level: {{ crowdsec_firewall_bouncer_log_level }}
+log_compression: true
+log_max_size: 100
+log_max_backups: 3
+log_max_age: 30
+api_url: {{ crowdsec_firewall_bouncer_api_url }}
+api_key: {{ crowdsec_firewall_bouncer_effective_api_key }}
+insecure_skip_verify: false
+disable_ipv6: {{ crowdsec_firewall_bouncer_disable_ipv6 | lower }}
+deny_action: {{ crowdsec_firewall_bouncer_deny_action }}
+deny_log: {{ crowdsec_firewall_bouncer_deny_log | lower }}
+supported_decisions_types:
+  - ban
+{% if crowdsec_firewall_bouncer_deny_log %}
+deny_log_prefix: "{{ crowdsec_firewall_bouncer_deny_log_prefix }}"
+{% endif %}
+{% if crowdsec_firewall_bouncer_backend == 'nftables' %}
+blacklists_ipv4: crowdsec-blacklists
+blacklists_ipv6: crowdsec6-blacklists
+
+nftables:
+  ipv4:
+    enabled: true
+    set-only: false
+    table: crowdsec
+    chain: crowdsec-chain
+    priority: {{ crowdsec_firewall_bouncer_nftables_priority }}
+  ipv6:
+    enabled: {{ (not crowdsec_firewall_bouncer_disable_ipv6) | lower }}
+    set-only: false
+    table: crowdsec6
+    chain: crowdsec6-chain
+    priority: {{ crowdsec_firewall_bouncer_nftables_priority }}
+
+nftables_hooks:
+{% for hook in crowdsec_firewall_bouncer_hooks %}
+  - {{ hook }}
+{% endfor %}
+{% else %}
+blacklists_ipv4: crowdsec-blacklists
+blacklists_ipv6: crowdsec6-blacklists
+ipset_type: nethash
+iptables_chains:
+{% for hook in crowdsec_firewall_bouncer_hooks %}
+  - {{ hook | upper }}
+{% endfor %}
+iptables_add_rule_comments: true
+{% endif %}
+
+pf:
+  anchor_name: ""
+
+prometheus:
+  enabled: {{ crowdsec_firewall_bouncer_prometheus_enabled | lower }}
+  listen_addr: {{ crowdsec_firewall_bouncer_prometheus_listen_addr }}
+  listen_port: {{ crowdsec_firewall_bouncer_prometheus_listen_port }}

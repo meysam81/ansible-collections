@@ -1,7 +1,17 @@
 ---
-- name: Restart crowdsec-bouncer service
+# The actual systemd unit shipped by the crowdsec-haproxy-spoa-bouncer
+# package is crowdsec-spoa-bouncer.service (its internal $BOUNCER name),
+# not crowdsec-haproxy-spoa-bouncer.service.
+- name: Restart crowdsec-spoa-bouncer
   ansible.builtin.systemd:
-    name: crowdsec-haproxy-bouncer.service
+    name: crowdsec-spoa-bouncer
     state: restarted
-    enabled: true
     daemon_reload: true
+    enabled: true
+
+# HAProxy reads the SPOE config only at (re)load; opt in by naming its unit.
+- name: Reload HAProxy for the SPOE config
+  ansible.builtin.systemd:
+    name: "{{ crowdsec_haproxy_bouncer_haproxy_reload_unit }}"
+    state: reloaded
+  when: crowdsec_haproxy_bouncer_haproxy_reload_unit | length > 0

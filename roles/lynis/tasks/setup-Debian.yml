@@ -1,0 +1,75 @@
+---
+- name: Install lynis
+  ansible.builtin.apt:
+    name: lynis
+    state: present
+    update_cache: true
+
+- name: Check whether the textfile metrics dir already exists
+  ansible.builtin.stat:
+    path: "{{ lynis_textfile_dir }}"
+  register: lynis_textfile_dir_stat
+
+# Mirrors node_textfile_metrics: only create it (root:root) the first time,
+# since it's commonly owned by whatever collector reads it.
+- name: Create textfile metrics dir if missing
+  ansible.builtin.file:
+    path: "{{ lynis_textfile_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755" # NOSONAR: the collector user reads the metrics here
+  when: not lynis_textfile_dir_stat.stat.exists
+
+- name: Deploy Lynis custom profile
+  ansible.builtin.template:
+    src: custom.prf.j2
+    dest: /etc/lynis/custom.prf
+    owner: root
+    group: root
+    mode: "0640"
+  when: (lynis_skip_tests | length > 0) or (lynis_profile_extra | length > 0)
+
+- name: Deploy Lynis metrics script
+  ansible.builtin.template:
+    src: lynis-metrics.sh.j2
+    dest: "{{ lynis_script_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Deploy lynis-metrics service
+  ansible.builtin.template:
+    src: lynis-metrics.service.j2
+    dest: /etc/systemd/system/lynis-metrics.service
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+  notify: Reload systemd daemon
+
+- name: Deploy lynis-metrics timer
+  ansible.builtin.template:
+    src: lynis-metrics.timer.j2
+    dest: /etc/systemd/system/lynis-metrics.timer
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+  notify:
+    - Reload systemd daemon
+    - Restart lynis-metrics timer
+
+- name: Enable lynis-metrics timer
+  ansible.builtin.systemd:
+    name: lynis-metrics.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+
+# See node_textfile_metrics for why `creates:` (rather than the systemd
+# module) is the idempotent way to run this once immediately: a bare
+# Type=oneshot unit reports "inactive" again the instant it finishes, so
+# driving it through `state: started` would show changed on every run.
+- name: Run Lynis once so the textfile exists immediately
+  ansible.builtin.command:
+    cmd: "{{ lynis_script_path }}"
+    creates: "{{ lynis_textfile_dir }}/{{ lynis_file_name }}"

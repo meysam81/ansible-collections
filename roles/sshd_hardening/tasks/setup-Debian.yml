@@ -1,0 +1,73 @@
+---
+# sshd_config.d/*.conf is only read if sshd_config itself Includes it.
+# Debian/Ubuntu OpenSSH packages ship this by default (OpenSSH >= 8.2), but
+# a hand-edited sshd_config could have dropped it — in which case this
+# entire role would silently do nothing.
+# First match wins in sshd_config, so the Include must also come before any
+# other directive: a hand-edited file with e.g. "PasswordAuthentication yes"
+# above the Include would silently beat the drop-in for that keyword.
+- name: Locate the Include line and the first other directive in sshd_config
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      inc=$(grep -nE '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config | head -1 | cut -d: -f1);
+      first=$(grep -nE '^[[:space:]]*[A-Za-z]' /etc/ssh/sshd_config | grep -vE '^[0-9]+:[[:space:]]*Include[[:space:]]' | head -1 | cut -d: -f1);
+      echo "${inc:-0} ${first:-0}"
+    executable: /bin/bash
+  register: sshd_hardening_include_check
+  changed_when: false
+
+- name: Assert the drop-in directory is included before any other directive
+  ansible.builtin.assert:
+    that:
+      - (sshd_hardening_include_check.stdout.split()[0] | int) > 0
+      - (sshd_hardening_include_check.stdout.split()[1] | int) == 0 or
+        (sshd_hardening_include_check.stdout.split()[0] | int) < (sshd_hardening_include_check.stdout.split()[1] | int)
+    fail_msg: >-
+      /etc/ssh/sshd_config must contain 'Include /etc/ssh/sshd_config.d/*.conf'
+      before any other directive (line numbers: Include={{ sshd_hardening_include_check.stdout.split()[0] }},
+      first directive={{ sshd_hardening_include_check.stdout.split()[1] }}); otherwise
+      {{ sshd_hardening_dropin_path }} loses to the earlier value for that keyword.
+
+# sshd -t (and -T) refuse to run without the privilege-separation directory,
+# which only exists while sshd has been started at least once since boot
+# (fresh images, CI runners). Creating it is what the sshd unit does itself.
+- name: Ensure the sshd privilege separation directory exists
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755" # NOSONAR: sshd requires exactly this (tmpfiles: d /run/sshd 0755 root root)
+
+- name: Deploy sshd hardening drop-in
+  ansible.builtin.template:
+    src: 00-hardening.conf.j2
+    dest: "{{ sshd_hardening_dropin_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload sshd
+
+# A bad drop-in must never survive to the next sshd restart/reload — that
+# would lock out SSH access entirely. Validate against the real
+# /etc/ssh/sshd_config (which now Includes the drop-in) immediately, and
+# roll back on failure rather than leaving a broken file in place.
+- name: Validate sshd configuration
+  block:
+    - name: Run sshd -t
+      ansible.builtin.command:
+        cmd: sshd -t
+      changed_when: false
+  rescue:
+    - name: Remove invalid drop-in
+      ansible.builtin.file:
+        path: "{{ sshd_hardening_dropin_path }}"
+        state: absent
+
+    - name: Fail after rolling back the invalid drop-in
+      ansible.builtin.fail:
+        msg: >-
+          sshd -t failed after deploying {{ sshd_hardening_dropin_path }};
+          the drop-in was removed to avoid locking out SSH access. See the
+          'Run sshd -t' task output above for the actual syntax error.
