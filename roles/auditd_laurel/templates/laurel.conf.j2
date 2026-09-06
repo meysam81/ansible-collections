@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+# auditd plugin registration — auditd 3+ layout (/etc/audit/plugins.d/).
+active = yes
+direction = out
+type = always
+path = {{ auditd_laurel_install_path }}
+args = --config /etc/laurel/config.toml
+format = string

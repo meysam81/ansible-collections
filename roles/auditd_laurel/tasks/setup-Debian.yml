@@ -1,0 +1,104 @@
+---
+- name: Assert a checksum is known for this architecture
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] in auditd_laurel_checksums
+    fail_msg: >-
+      auditd_laurel has no checksum for architecture
+      {{ ansible_facts['architecture'] }}; add one to auditd_laurel_checksums.
+
+- name: Install auditd
+  ansible.builtin.apt:
+    name: auditd
+    state: present
+    update_cache: true
+
+- name: Create the _laurel system user
+  ansible.builtin.user:
+    name: "{{ auditd_laurel_user }}"
+    system: true
+    home: "{{ auditd_laurel_log_dir }}"
+    create_home: true
+    shell: /usr/sbin/nologin
+
+- name: Check if the laurel binary is already installed
+  ansible.builtin.stat:
+    path: "{{ auditd_laurel_install_path }}"
+  register: auditd_laurel_binary_stat
+
+- name: Download, verify, and install the laurel release
+  when: not auditd_laurel_binary_stat.stat.exists
+  vars:
+    auditd_laurel_asset: "laurel-{{ auditd_laurel_version }}-{{ ansible_facts['architecture'] }}-glibc"
+  block:
+    - name: Create download temp directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: auditd_laurel_
+      register: auditd_laurel_tempdir
+
+    - name: Download laurel release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/threathunters-io/laurel/releases/download/v{{ auditd_laurel_version }}/{{ auditd_laurel_asset }}.tar.gz"
+        dest: "{{ auditd_laurel_tempdir.path }}/laurel.tar.gz"
+        checksum: "sha256:{{ auditd_laurel_checksums[ansible_facts['architecture']] }}"
+        mode: "0644"
+      register: auditd_laurel_download
+      until: auditd_laurel_download is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Extract laurel tarball
+      ansible.builtin.unarchive:
+        src: "{{ auditd_laurel_tempdir.path }}/laurel.tar.gz"
+        dest: "{{ auditd_laurel_tempdir.path }}"
+        remote_src: true
+
+    - name: Install laurel binary
+      ansible.builtin.copy:
+        src: "{{ auditd_laurel_tempdir.path }}/{{ auditd_laurel_asset }}/bin/laurel"
+        dest: "{{ auditd_laurel_install_path }}"
+        owner: root
+        group: root
+        mode: "0755"
+        remote_src: true
+  always:
+    - name: Clean up download temp directory
+      ansible.builtin.file:
+        path: "{{ auditd_laurel_tempdir.path }}"
+        state: absent
+      when: auditd_laurel_tempdir.path is defined
+
+- name: Deploy laurel config
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: /etc/laurel/config.toml
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload auditd
+
+- name: Deploy laurel auditd plugin registration
+  ansible.builtin.template:
+    src: laurel.conf.j2
+    dest: /etc/audit/plugins.d/laurel.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload auditd
+
+- name: Deploy curated audit rules
+  ansible.builtin.template:
+    src: 50-security.rules.j2
+    dest: /etc/audit/rules.d/50-security.rules
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload audit rules
+
+- name: Enable and start auditd
+  ansible.builtin.systemd:
+    name: auditd
+    state: started
+    enabled: true
+    daemon_reload: true

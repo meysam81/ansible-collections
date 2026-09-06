@@ -1,0 +1,19 @@
+---
+# augenrules regenerates /etc/audit/audit.rules from rules.d/*.rules and
+# loads it directly into the kernel via auditctl (netlink) — no auditd
+# process restart/reload involved, so this alone is sufficient whenever
+# only the rules file changed.
+- name: Reload audit rules
+  ansible.builtin.command:
+    cmd: augenrules --load
+  changed_when: true
+
+# auditd's unit sets RefuseManualStop, so `systemctl restart auditd` is
+# refused. Plugin registration (plugins.d/laurel.conf) and laurel's own
+# config.toml are only read when auditd's dispatcher respawns its plugin
+# children, which `systemctl reload` (SIGHUP) triggers without stopping
+# auditd itself.
+- name: Reload auditd
+  ansible.builtin.systemd:
+    name: auditd
+    state: reloaded

@@ -1,0 +1,58 @@
+---
+auditd_laurel_version: "0.8.2"
+# sha256 of laurel-<version>-<arch>-glibc.tar.gz, keyed by ansible_facts['architecture'].
+# Update both together when bumping auditd_laurel_version.
+auditd_laurel_checksums:
+  x86_64: c9b495acf67e9941760b24308145b513b2ee2a0a5bfe0a5bd70d5133c27c6e6c
+  aarch64: fb15e9ff013a9ec65b8c81e76aed684a13d4f72ba68dcd8fdf8c1ba4e35c6a50
+
+auditd_laurel_install_path: /usr/local/sbin/laurel
+auditd_laurel_user: _laurel
+auditd_laurel_log_dir: /var/log/laurel
+
+# Upstream config.toml defaults (5MB x 10 generations, ~50MB retained).
+auditd_laurel_log_size: 5000000
+auditd_laurel_log_generations: 10
+
+# POSIX ACL read grants on the log directory/files, for a log shipper that
+# isn't root (e.g. an Alloy/Promtail service user tailing audit.log).
+auditd_laurel_read_users: []
+
+# "array" reproduces EXECVE.ARGV reliably; "string" additionally emits a
+# space-joined ARGV_STR for easier grepping.
+auditd_laurel_transform_execve_argv:
+  - array
+  - string
+
+auditd_laurel_backlog_limit: 8192
+# 1 = printk (log and keep going) on backlog overflow, never silently drop.
+auditd_laurel_failure_mode: 1
+
+# Curated watch/syscall rules, deliberately narrow: identity/privilege files,
+# not blanket execve or time-change (which floods k3s/timesyncd noise). No
+# `-e 2` (immutable mode) anywhere — that would require a reboot to ever
+# change rules again. -D/-b/-f/--backlog_wait_time are rendered separately
+# from the two dedicated variables above plus a fixed wait time.
+auditd_laurel_rules:
+  - "-w /etc/passwd -p wa -k identity"
+  - "-w /etc/shadow -p wa -k identity"
+  - "-w /etc/group -p wa -k identity"
+  - "-w /etc/gshadow -p wa -k identity"
+  - "-w /etc/sudoers -p wa -k sudoers"
+  - "-w /etc/sudoers.d/ -p wa -k sudoers"
+  - "-w /etc/ssh/sshd_config -p wa -k sshd"
+  - "-w /etc/ssh/sshd_config.d/ -p wa -k sshd"
+  - "-w /root/.ssh/ -p wa -k rootkey"
+  - "-w /etc/cron.d/ -p wa -k cron"
+  - "-w /etc/crontab -p wa -k cron"
+  - "-w /var/spool/cron/ -p wa -k cron"
+  - "-w /etc/systemd/system/ -p wa -k systemd"
+  - "-w /etc/audit/ -p wa -k auditconfig"
+  - "-w /etc/laurel/ -p wa -k auditconfig"
+  - "-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -k modules"
+  - "-a always,exit -F arch=b64 -S mount -F auid>=1000 -F auid!=-1 -k mount"
+  - "-a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=-1 -k rootcmd"
+
+# Raw text appended verbatim after auditd_laurel_rules, for anything this
+# role doesn't curate by default.
+auditd_laurel_rules_extra: ""
