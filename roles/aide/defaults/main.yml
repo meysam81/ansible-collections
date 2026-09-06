@@ -12,7 +12,12 @@ aide_file_name: aide.prom
 
 # Recursive excludes (AIDE "!/regex" rules) for paths that churn constantly
 # and carry no integrity signal: log rotation, package cache, temp dirs,
-# AIDE's own database, and its own backups.
+# AIDE's own database, its own backups, and /run (tmpfs — recreated empty
+# on every boot, so nothing there can be a persistent tamper; every
+# service (re)start also touches files under it — e.g.
+# /run/credentials/<unit>.service, /run/<daemon>/<socket> mtimes —
+# confirmed live: an untouched box still reported 2-3 "changed" entries
+# under /run per run, purely from normal service activity between checks).
 aide_exclude_paths:
   - /var/log
   - /var/cache
@@ -21,6 +26,7 @@ aide_exclude_paths:
   - /var/lib/apt/lists
   - /var/lib/aide
   - /var/backups
+  - /run
 
 # Raw lines appended verbatim to the conf.d fragment, for selection rules
 # this role doesn't curate.

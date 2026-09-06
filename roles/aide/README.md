@@ -74,6 +74,7 @@ collections:
           - /var/lib/apt/lists
           - /var/lib/aide
           - /var/backups
+          - /run
           - /var/vmail
           - /var/spool/postfix
           - /var/lib/dovecot
@@ -159,6 +160,7 @@ aide_exclude_paths:
   - /var/lib/apt/lists
   - /var/lib/aide
   - /var/backups
+  - /run
 ```
 
 ### aide_file_name

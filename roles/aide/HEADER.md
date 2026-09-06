@@ -74,6 +74,7 @@ collections:
           - /var/lib/apt/lists
           - /var/lib/aide
           - /var/backups
+          - /run
           - /var/vmail
           - /var/spool/postfix
           - /var/lib/dovecot
