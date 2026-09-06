@@ -3,10 +3,13 @@
 # {{ coraza_haproxy_config_dir }}/coraza.cfg
 [coraza]
 spoe-agent coraza-agent
-    # Process HTTP requests only (the responses are not evaluated)
-    messages    coraza-req
-    # Comment the previous line and add coraza-res, to process responses also.
-    #messages   coraza-req     coraza-res
+    # No "messages" directive here on purpose: that auto-fires on
+    # "on-frontend-http-request", i.e. before ANY of the frontend's own
+    # http-request rules — including a Cloudflare `set-src`, so the WAF
+    # would evaluate Cloudflare's edge IP instead of the real client IP.
+    # coraza-req is sent explicitly instead, via
+    # `http-request send-spoe-group coraza coraza-req` in haproxy_config,
+    # placed after `set-src`.
     groups      coraza-req      coraza-res
     option      var-prefix      coraza
     option      set-on-error    error
@@ -14,7 +17,9 @@ spoe-agent coraza-agent
     timeout     idle            2m
     timeout     processing      500ms
     use-backend coraza-spoa
+{% if coraza_spoe_log_events %}
     log         global
+{% endif %}
 
 spoe-message coraza-req
     # Arguments are required to be in this order
