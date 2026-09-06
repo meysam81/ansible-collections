@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: sshd_hardening
+  description: Minimal, auditable sshd hardening via a single sshd_config.d drop-in
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - ssh
+    - sshd
+    - security
+    - hardening
+
+allow_duplicates: false
+
+dependencies: []

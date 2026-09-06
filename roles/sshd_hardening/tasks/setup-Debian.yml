@@ -1,0 +1,53 @@
+---
+# sshd_config.d/*.conf is only read if sshd_config itself Includes it.
+# Debian/Ubuntu OpenSSH packages ship this by default (OpenSSH >= 8.2), but
+# a hand-edited sshd_config could have dropped it — in which case this
+# entire role would silently do nothing.
+- name: Check that sshd_config includes the drop-in directory
+  ansible.builtin.command:
+    cmd: grep -E '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config
+  register: sshd_hardening_include_check
+  changed_when: false
+  failed_when: false
+
+- name: Assert sshd_config includes the drop-in directory
+  ansible.builtin.assert:
+    that:
+      - sshd_hardening_include_check.rc == 0
+    fail_msg: >-
+      /etc/ssh/sshd_config has no 'Include /etc/ssh/sshd_config.d/*.conf'
+      directive, so {{ sshd_hardening_dropin_path }} would never be read.
+      Add the Include line (OpenSSH >= 8.2 ships it by default) before
+      using this role.
+
+- name: Deploy sshd hardening drop-in
+  ansible.builtin.template:
+    src: 00-hardening.conf.j2
+    dest: "{{ sshd_hardening_dropin_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload sshd
+
+# A bad drop-in must never survive to the next sshd restart/reload — that
+# would lock out SSH access entirely. Validate against the real
+# /etc/ssh/sshd_config (which now Includes the drop-in) immediately, and
+# roll back on failure rather than leaving a broken file in place.
+- name: Validate sshd configuration
+  block:
+    - name: Run sshd -t
+      ansible.builtin.command:
+        cmd: sshd -t
+      changed_when: false
+  rescue:
+    - name: Remove invalid drop-in
+      ansible.builtin.file:
+        path: "{{ sshd_hardening_dropin_path }}"
+        state: absent
+
+    - name: Fail after rolling back the invalid drop-in
+      ansible.builtin.fail:
+        msg: >-
+          sshd -t failed after deploying {{ sshd_hardening_dropin_path }};
+          the drop-in was removed to avoid locking out SSH access. See the
+          'Run sshd -t' task output above for the actual syntax error.

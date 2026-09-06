@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# First match wins in sshd_config: this file's basename sorts before any
+# other sshd_config.d/*.conf fragment, so these directives take effect
+# even if another fragment (or the packaged sshd_config itself, after the
+# Include line) sets the same keyword.
+PermitRootLogin {{ sshd_hardening_permit_root_login }}
+PasswordAuthentication {{ sshd_hardening_password_authentication }}
+KbdInteractiveAuthentication {{ sshd_hardening_kbd_interactive_authentication }}
+PubkeyAuthentication {{ sshd_hardening_pubkey_authentication }}
+PermitEmptyPasswords {{ sshd_hardening_permit_empty_passwords }}
+MaxAuthTries {{ sshd_hardening_max_auth_tries }}
+MaxSessions {{ sshd_hardening_max_sessions }}
+LoginGraceTime {{ sshd_hardening_login_grace_time }}
+ClientAliveInterval {{ sshd_hardening_client_alive_interval }}
+ClientAliveCountMax {{ sshd_hardening_client_alive_count_max }}
+AllowTcpForwarding {{ sshd_hardening_allow_tcp_forwarding }}
+AllowAgentForwarding {{ sshd_hardening_allow_agent_forwarding }}
+X11Forwarding {{ sshd_hardening_x11_forwarding }}
+LogLevel {{ sshd_hardening_log_level }}
+Ciphers {{ sshd_hardening_ciphers | join(',') }}
+KexAlgorithms {{ sshd_hardening_kex_algorithms | join(',') }}
+MACs {{ sshd_hardening_macs | join(',') }}
+{% if sshd_hardening_allow_users | length > 0 %}
+AllowUsers {{ sshd_hardening_allow_users | join(' ') }}
+{% endif %}
+{% for key, value in sshd_hardening_extra_options.items() %}
+{{ key }} {{ value }}
+{% endfor %}
