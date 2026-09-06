@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+log_mode: file
+log_dir: /var/log/crowdsec-spoa/
+log_level: {{ crowdsec_haproxy_bouncer_log_level }}
+log_compression: true
+log_max_size: 100
+log_max_backups: 3
+log_max_age: 30
+
+update_frequency: 10s
+api_url: {{ crowdsec_haproxy_bouncer_api_url }}
+api_key: {{ crowdsec_haproxy_bouncer_effective_api_key }}
+insecure_skip_verify: false
+
+# TCP loopback only, no unix socket — HAProxy's SPOE backend below dials it
+# directly.
+listen_tcp: {{ crowdsec_haproxy_bouncer_listen_addr }}
+
+prometheus:
+  enabled: {{ crowdsec_haproxy_bouncer_prometheus_enabled | lower }}
+  listen_addr: {{ crowdsec_haproxy_bouncer_prometheus_listen.split(':')[0] }}
+  listen_port: {{ crowdsec_haproxy_bouncer_prometheus_listen.split(':')[1] }}

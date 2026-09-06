@@ -1,24 +1,45 @@
 {# roles/crowdsec_haproxy_bouncer/templates/crowdsec.cfg.j2 #}
-# /etc/haproxy/crowdsec.cfg
+# {{ crowdsec_haproxy_bouncer_haproxy_config_dir }}/crowdsec.cfg
+#
+# No auto-fired "messages" on the agent and no "event" on either message:
+# both are sent explicitly via `http-request send-spoe-group` from
+# haproxy_config, placed AFTER `set-src` so CrowdSec evaluates the real
+# client IP, not Cloudflare's edge IP (see haproxy_crowdsec_enabled).
 [crowdsec]
 spoe-agent crowdsec-agent
-    messages    crowdsec-ip crowdsec-http
+    groups      crowdsec-ip     crowdsec-http-no-body{% if crowdsec_haproxy_bouncer_appsec_enabled %}     crowdsec-http-body{% endif %}
 
     option      var-prefix      crowdsec
     option      set-on-error    error
-    timeout     hello           100ms
-    timeout     idle            30s
+    timeout     hello           200ms
+    timeout     idle            55s
     timeout     processing      500ms
     use-backend crowdsec-spoa
-    log         global
 
-## This message is used to customise the remediation from crowdsec-ip based on the host header
-## src-ip is included as fallback in case crowdsec-ip message didn't fire
-spoe-message crowdsec-http
-    args remediation=var(txn.crowdsec.remediation) crowdsec_captcha_cookie=req.cook(crowdsec_captcha_cookie) id=unique-id host=hdr(Host) method=method path=path query=query version=req.ver headers=req.hdrs body=req.body url=url ssl=ssl_fc src-ip=src src-port=src_port
-    event on-frontend-http-request
-
-## This message should be the first to trigger in the chain
-spoe-message crowdsec-ip
+## IP-level remediation. No `event`: sent explicitly via
+## `http-request send-spoe-group crowdsec crowdsec-ip`.
+spoe-message crowdsec-tcp
     args id=unique-id src-ip=src src-port=src_port
-    event on-client-session
+
+## HTTP-level remediation without the request body. No `event`: sent
+## explicitly via `http-request send-spoe-group crowdsec crowdsec-http-no-body`.
+spoe-message crowdsec-http-no-body
+    args remediation=var(txn.crowdsec.remediation) id=unique-id method=method path=path query=query version=req.ver headers=req.hdrs url=url ssl=ssl_fc src-ip=src src-port=src_port
+{% if crowdsec_haproxy_bouncer_appsec_enabled %}
+
+## Full request body, for CrowdSec AppSec scoring. Available to send but not
+## fired by haproxy_config's own wiring — see crowdsec_haproxy_bouncer_appsec_enabled.
+spoe-message crowdsec-http-body
+    args remediation=var(txn.crowdsec.remediation) id=unique-id method=method path=path query=query version=req.ver headers=req.hdrs body=req.body url=url ssl=ssl_fc src-ip=src src-port=src_port
+{% endif %}
+
+spoe-group crowdsec-ip
+    messages crowdsec-tcp
+
+spoe-group crowdsec-http-no-body
+    messages crowdsec-http-no-body
+{% if crowdsec_haproxy_bouncer_appsec_enabled %}
+
+spoe-group crowdsec-http-body
+    messages crowdsec-http-body
+{% endif %}
