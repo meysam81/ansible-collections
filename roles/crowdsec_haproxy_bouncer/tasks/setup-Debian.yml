@@ -89,8 +89,14 @@
   ansible.builtin.template:
     src: crowdsec-spoa-bouncer.yaml.j2
     dest: /etc/crowdsec/bouncers/crowdsec-spoa-bouncer.yaml
+    # The package's own /usr/lib/systemd/system/crowdsec-spoa-bouncer.service
+    # runs as User=crowdsec-spoa Group=crowdsec-spoa (created by the package
+    # postinst before this task runs). group: root here made the file
+    # unreadable by that user — 0640 root:root — and the service failed to
+    # start ("permission denied") on every apply. Matches the crowdsec.cfg
+    # task below, which already owns its file by the group that reads it.
     owner: root
-    group: root
+    group: crowdsec-spoa
     mode: "0640"
   notify: Restart crowdsec-spoa-bouncer
 
