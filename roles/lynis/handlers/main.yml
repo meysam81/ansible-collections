@@ -1,0 +1,9 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart lynis-metrics timer
+  ansible.builtin.systemd:
+    name: lynis-metrics.timer
+    state: restarted

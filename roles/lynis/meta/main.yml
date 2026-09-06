@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: lynis
+  description: Lynis security auditing on a timer, exposing hardening index and finding counts as textfile metrics
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - lynis
+    - security
+    - hardening
+    - metrics
+
+allow_duplicates: false
+
+dependencies: []

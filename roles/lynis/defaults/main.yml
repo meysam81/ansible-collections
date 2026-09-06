@@ -1,0 +1,20 @@
+---
+# Directory a textfile collector reads from — node_exporter's
+# --collector.textfile.directory or Alloy's prometheus.exporter.unix
+# textfile block.
+lynis_textfile_dir: /var/lib/node_exporter/textfile
+
+lynis_on_calendar: daily
+lynis_randomized_delay: 1h
+
+lynis_script_path: /usr/local/bin/lynis-metrics
+lynis_file_name: lynis.prom
+
+# Lynis test IDs to skip fleet-wide (e.g. tests that don't apply to a
+# container-adjacent host), rendered into /etc/lynis/custom.prf as one
+# skip-test= line per entry.
+lynis_skip_tests: []
+
+# Raw lines appended verbatim to /etc/lynis/custom.prf, for profile
+# directives this role doesn't curate (e.g. custom-url-protocol=).
+lynis_profile_extra: ""

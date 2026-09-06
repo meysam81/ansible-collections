@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+{% for test in lynis_skip_tests %}
+skip-test={{ test }}
+{% endfor %}
+{% if lynis_profile_extra | length > 0 %}
+{{ lynis_profile_extra }}
+{% endif %}

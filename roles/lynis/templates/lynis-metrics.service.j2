@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Lynis security audit for the node-exporter textfile collector
+
+[Service]
+Type=oneshot
+ExecStart={{ lynis_script_path }}
+
+# Lynis needs to read nearly the whole filesystem to audit it, so this unit
+# is intentionally not sandboxed the way node-textfile-metrics is — only
+# drop the handful of capabilities Lynis definitely doesn't need.
+CapabilityBoundingSet=~CAP_SYS_ADMIN CAP_SYS_MODULE CAP_SYS_PTRACE
+NoNewPrivileges=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lynis-metrics
