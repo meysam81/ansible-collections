@@ -1,0 +1,97 @@
+---
+- name: Install aide and aide-common
+  ansible.builtin.apt:
+    name:
+      - aide
+      - aide-common
+    state: present
+    update_cache: true
+
+# Debian's own daily cron-equivalent duplicates what the timer below does,
+# with a different (mail-oriented) reporting path this role doesn't use.
+- name: Disable Debian's own dailyaidecheck timer
+  ansible.builtin.systemd:
+    name: dailyaidecheck.timer
+    state: stopped
+    enabled: false
+  # Absent on distros that don't ship it (or already removed) — a no-op,
+  # not a failure.
+  failed_when: false
+
+- name: Check whether the textfile metrics dir already exists
+  ansible.builtin.stat:
+    path: "{{ aide_textfile_dir }}"
+  register: aide_textfile_dir_stat
+
+- name: Create textfile metrics dir if missing
+  ansible.builtin.file:
+    path: "{{ aide_textfile_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755" # NOSONAR: the collector user reads the metrics here
+  when: not aide_textfile_dir_stat.stat.exists
+
+- name: Deploy AIDE excludes fragment
+  ansible.builtin.template:
+    src: 99_ansible.j2
+    dest: /etc/aide/aide.conf.d/99_ansible
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Check whether an AIDE database already exists
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db
+  register: aide_db_stat
+
+# `aideinit` prompts interactively unless told otherwise; --yes/--force
+# together guarantee a non-interactive first run regardless of any stale
+# aide.db.new left over from an earlier aborted attempt.
+- name: Initialize the AIDE database
+  ansible.builtin.command:
+    cmd: aideinit --yes --force
+  when: not aide_db_stat.stat.exists
+  changed_when: true
+
+- name: Deploy AIDE check + metrics script
+  ansible.builtin.template:
+    src: aide-check-metrics.sh.j2
+    dest: "{{ aide_script_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Deploy aide-check service
+  ansible.builtin.template:
+    src: aide-check.service.j2
+    dest: /etc/systemd/system/aide-check.service
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+  notify: Reload systemd daemon
+
+- name: Deploy aide-check timer
+  ansible.builtin.template:
+    src: aide-check.timer.j2
+    dest: /etc/systemd/system/aide-check.timer
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+  notify:
+    - Reload systemd daemon
+    - Restart aide-check timer
+
+- name: Enable aide-check timer
+  ansible.builtin.systemd:
+    name: aide-check.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+
+# See node_textfile_metrics for why `creates:` (rather than the systemd
+# module) is the idempotent way to run this once immediately.
+- name: Run the AIDE check once so the textfile exists immediately
+  ansible.builtin.command:
+    cmd: "{{ aide_script_path }}"
+    creates: "{{ aide_textfile_dir }}/{{ aide_file_name }}"

@@ -1,0 +1,32 @@
+---
+# Directory a textfile collector reads from — node_exporter's
+# --collector.textfile.directory or Alloy's prometheus.exporter.unix
+# textfile block. Required; no default (see node_textfile_metrics for why).
+aide_textfile_dir: ""
+
+aide_on_calendar: daily
+aide_randomized_delay: 1h
+
+aide_script_path: /usr/local/bin/aide-check-metrics
+aide_file_name: aide.prom
+
+# Recursive excludes (AIDE "!/regex" rules) for paths that churn constantly
+# and carry no integrity signal: log rotation, package cache, temp dirs,
+# AIDE's own database, and its own backups.
+aide_exclude_paths:
+  - /var/log
+  - /var/cache
+  - /var/tmp
+  - /tmp
+  - /var/lib/apt/lists
+  - /var/lib/aide
+  - /var/backups
+
+# Raw lines appended verbatim to the conf.d fragment, for selection rules
+# this role doesn't curate.
+aide_config_extra: ""
+
+# When true, a clean `aide --update` run installs its new database
+# (aide.db.new -> aide.db) automatically, so a detected change alerts once
+# instead of on every run until someone manually re-baselines.
+aide_auto_accept: true

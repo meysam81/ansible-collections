@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Runs `aide --update`, parses the added/removed/changed counts from its
+# report, writes node-exporter textfile metrics, and — when
+# aide_auto_accept is true — installs the resulting database so a change
+# alerts exactly once instead of on every subsequent run.
+set -uo pipefail
+umask 0077
+
+AIDE_AUTO_ACCEPT="{{ aide_auto_accept | lower }}"
+DB=/var/lib/aide/aide.db
+DB_NEW=/var/lib/aide/aide.db.new
+METRICS_DIR="{{ aide_textfile_dir }}"
+METRICS_FILE="${METRICS_DIR}/{{ aide_file_name }}"
+
+start=$(date +%s)
+# AIDE's exit code for a --check/--update run is a bitmask (1=added,
+# 2=removed, 4=changed) — 0-7 all mean "ran fine", not an error. Capture
+# both output and rc without `set -e` tripping on a nonzero-but-successful
+# comparison result.
+output=$(aide --update 2>&1)
+rc=$?
+end=$(date +%s)
+duration=$((end - start))
+
+run_success=0
+if [ "${rc}" -ge 0 ] && [ "${rc}" -le 7 ]; then
+  run_success=1
+fi
+
+# AIDE only prints the "Added/Removed/Changed entries:" summary lines when
+# there ARE differences — absent means zero, hence the ${var:-0} fallback.
+added=$(printf '%s\n' "${output}" | grep -m1 'Added entries:' | grep -oE '[0-9]+' | tail -1)
+removed=$(printf '%s\n' "${output}" | grep -m1 'Removed entries:' | grep -oE '[0-9]+' | tail -1)
+changed=$(printf '%s\n' "${output}" | grep -m1 'Changed entries:' | grep -oE '[0-9]+' | tail -1)
+added=${added:-0}
+removed=${removed:-0}
+changed=${changed:-0}
+
+# ponytail: auto-accept; manual acceptance if ever needed (aide_auto_accept: false).
+if [ "${AIDE_AUTO_ACCEPT}" = "true" ] && [ "${run_success}" -eq 1 ] && [ -f "${DB_NEW}" ]; then
+  mv -f "${DB_NEW}" "${DB}"
+fi
+
+now=$(date +%s)
+
+# Atomic write: render to a temp file in the same directory, then rename,
+# so a collector scraping mid-write never sees a truncated .prom file.
+tmp=$(mktemp "${METRICS_FILE}.XXXXXX")
+trap 'rm -f "${tmp}"' EXIT
+{
+  echo '# HELP aide_last_run_timestamp_seconds Unix time this script last completed.'
+  echo '# TYPE aide_last_run_timestamp_seconds gauge'
+  echo "aide_last_run_timestamp_seconds ${now}"
+
+  echo '# HELP aide_last_run_success 1 if the AIDE run completed without an operational error, 0 otherwise.'
+  echo '# TYPE aide_last_run_success gauge'
+  echo "aide_last_run_success ${run_success}"
+
+  echo '# HELP aide_check_duration_seconds Wall-clock duration of the last aide --update run.'
+  echo '# TYPE aide_check_duration_seconds gauge'
+  echo "aide_check_duration_seconds ${duration}"
+
+  echo '# HELP aide_entries_added Number of entries added since the last accepted database.'
+  echo '# TYPE aide_entries_added gauge'
+  echo "aide_entries_added ${added}"
+
+  echo '# HELP aide_entries_removed Number of entries removed since the last accepted database.'
+  echo '# TYPE aide_entries_removed gauge'
+  echo "aide_entries_removed ${removed}"
+
+  echo '# HELP aide_entries_changed Number of entries changed since the last accepted database.'
+  echo '# TYPE aide_entries_changed gauge'
+  echo "aide_entries_changed ${changed}"
+} > "${tmp}"
+chmod 0644 "${tmp}"
+mv "${tmp}" "${METRICS_FILE}"

@@ -1,0 +1,13 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - aide_textfile_dir | length > 0
+    fail_msg: >-
+      aide_textfile_dir is required: set it to the directory a textfile
+      collector reads from (node_exporter's --collector.textfile.directory
+      or Alloy's prometheus.exporter.unix textfile block).
+
+- name: Setup aide on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
