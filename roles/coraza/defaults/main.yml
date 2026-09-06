@@ -17,3 +17,10 @@ coraza_haproxy_config_dir: "/etc/haproxy"
 # access log via haproxy_config's spoa-error:/waf-hit: log-format fields
 # whenever haproxy_coraza_enabled is true, regardless of this setting.
 coraza_spoe_log_events: false
+
+# SecRuleEngine mode written into coraza.conf after download. Upstream's
+# coraza.conf-recommended ships DetectionOnly (matches are logged, nothing is
+# blocked, and the SPOA never sets txn.coraza.fail). A WAF that never blocks
+# is not safe-by-default, so this role enforces; set DetectionOnly while
+# tuning CRS exclusions on a new deployment.
+coraza_rule_engine: "On"

@@ -58,6 +58,7 @@ this setting, whenever the consuming `haproxy_config` has
 | `coraza_coreruleset_version` | `4.17.1` | OWASP CoreRuleSet version. |
 | `coraza_go_install_dir` | `/usr/local` | Where the `golang` role installed the Go toolchain used to build coraza-spoa. |
 | `coraza_haproxy_config_dir` | `/etc/haproxy` | Directory `coraza.cfg` (the SPOE config) is written to. |
+| `coraza_rule_engine` | `On` | `SecRuleEngine` written into `coraza.conf`: `On` blocks, `DetectionOnly` only logs (upstream default). |
 | `coraza_spoa_addr` | `127.0.0.1` | Address coraza-spoa's own server listens on. |
 | `coraza_spoa_commit` | `""` | Pin coraza-spoa to a commit SHA instead of `coraza_spoa_version`. |
 | `coraza_spoa_port` | `9000` | Port coraza-spoa's own server listens on. |
@@ -74,6 +75,7 @@ this setting, whenever the consuming `haproxy_config` has
   - [coraza_coreruleset_version](#coraza_coreruleset_version)
   - [coraza_go_install_dir](#coraza_go_install_dir)
   - [coraza_haproxy_config_dir](#coraza_haproxy_config_dir)
+  - [coraza_rule_engine](#coraza_rule_engine)
   - [coraza_spoa_addr](#coraza_spoa_addr)
   - [coraza_spoa_commit](#coraza_spoa_commit)
   - [coraza_spoa_port](#coraza_spoa_port)
@@ -137,6 +139,14 @@ coraza_go_install_dir: /usr/local
 
 ```YAML
 coraza_haproxy_config_dir: /etc/haproxy
+```
+
+### coraza_rule_engine
+
+#### Default value
+
+```YAML
+coraza_rule_engine: On
 ```
 
 ### coraza_spoa_addr
