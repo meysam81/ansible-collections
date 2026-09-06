@@ -8,12 +8,17 @@
     cmd: augenrules --load
   changed_when: true
 
-# auditd's unit sets RefuseManualStop, so `systemctl restart auditd` is
-# refused. Plugin registration (plugins.d/laurel.conf) and laurel's own
+# Debian's packaged auditd.service has no ExecReload= at all (confirmed via
+# `systemctl cat auditd.service`), so `ansible.builtin.systemd: state:
+# reloaded` (systemctl reload) always fails with "Job type reload is not
+# applicable for unit auditd.service" — there's no reload job for systemd to
+# run. Plugin registration (plugins.d/laurel.conf) and laurel's own
 # config.toml are only read when auditd's dispatcher respawns its plugin
-# children, which `systemctl reload` (SIGHUP) triggers without stopping
-# auditd itself.
+# children, which sending SIGHUP directly to the main PID does trigger,
+# without stopping auditd itself (`man auditd` — SIGHUP reconfigures).
+# `systemctl kill` sends the signal without needing a unit-defined reload
+# job, and doesn't touch the unit's run state.
 - name: Reload auditd
-  ansible.builtin.systemd:
-    name: auditd
-    state: reloaded
+  ansible.builtin.command:
+    cmd: systemctl kill -s HUP --kill-who=main auditd.service
+  changed_when: true
