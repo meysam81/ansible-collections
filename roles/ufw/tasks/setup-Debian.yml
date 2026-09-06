@@ -16,6 +16,22 @@
     state: present
     update_cache: true
 
+# `ufw enable` re-applies /etc/ufw/sysctl.conf via `sysctl -p $IPT_SYSCTL`
+# EVERY time it runs, not just on the first disabled->enabled transition —
+# confirmed live: net.ipv4.conf.{all,default}.log_martians kept reverting
+# to that file's `=0` on every idempotent re-run, even though this role's
+# own "Enable UFW" task reported unchanged. Harmless for hosts with no
+# other sysctl management, but it silently fights any dedicated sysctl
+# role/policy a consumer applies elsewhere. Off by default preserves
+# existing behaviour for anyone already relying on ufw's own sysctl
+# defaults; set false when another role/policy owns net.* sysctls.
+- name: Stop ufw from re-applying its own sysctl.conf on every enable
+  ansible.builtin.lineinfile:
+    path: /etc/default/ufw
+    regexp: '^IPT_SYSCTL='
+    line: "IPT_SYSCTL=/dev/null"
+  when: not ufw_manage_sysctl
+
 - name: Reset UFW rules
   community.general.ufw:
     state: reset
