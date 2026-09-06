@@ -69,6 +69,14 @@
         state: absent
       when: auditd_laurel_tempdir.path is defined
 
+- name: Ensure /etc/laurel directory exists
+  ansible.builtin.file:
+    path: /etc/laurel
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Deploy laurel config
   ansible.builtin.template:
     src: config.toml.j2
