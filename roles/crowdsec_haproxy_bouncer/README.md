@@ -188,7 +188,7 @@ crowdsec_haproxy_bouncer_prometheus_listen: 127.0.0.1:60602
 
 ## Dependencies
 
-- haproxy
+None.
 
 ## License
 

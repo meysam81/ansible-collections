@@ -21,5 +21,4 @@ galaxy_info:
 
 allow_duplicates: false
 
-dependencies:
-  - role: haproxy
+dependencies: []
