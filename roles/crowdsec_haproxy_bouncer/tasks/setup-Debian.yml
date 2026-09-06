@@ -14,11 +14,13 @@
     state: directory
     owner: root
     group: root
+    mode: "0755" # NOSONAR: /etc/apt/keyrings is world-readable by distribution convention
 
 - name: Download CrowdSec GPG key
   ansible.builtin.get_url:
     url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
     dest: /etc/apt/keyrings/crowdsec.asc
+    mode: "0644" # NOSONAR: apt keyrings are world-readable by distribution convention
   register: crowdsec_haproxy_bouncer_gpg_key_download
   until: crowdsec_haproxy_bouncer_gpg_key_download is succeeded
   retries: 5

@@ -1,8 +1,9 @@
 ---
-# reload-or-restart: a running sshd re-reads its config without dropping
-# sessions; an inactive one (fresh image, socket-activated unit that has not
-# accepted a connection yet) is started instead of failing the handler.
+# A restart, not a reload: ssh.service runs with KillMode=process on
+# Debian/Ubuntu, so established sessions (including Ansible's own) survive
+# it, and it also works when the unit is not active yet (fresh images,
+# socket-activated sshd that has not accepted a connection).
 - name: Reload sshd
-  ansible.builtin.command:
-    cmd: systemctl reload-or-restart ssh
-  changed_when: true
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
