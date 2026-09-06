@@ -18,7 +18,14 @@ start=$(date +%s)
 # 2=removed, 4=changed) — 0-7 all mean "ran fine", not an error. Capture
 # both output and rc without `set -e` tripping on a nonzero-but-successful
 # comparison result.
-output=$(aide --update 2>&1)
+#
+# --config is required: Debian's `aide` binary has no compiled-in default
+# config path (unlike `aideinit`, the wrapper this role's own initial-DB
+# task uses) and errors immediately with "missing configuration" without
+# it — confirmed live, every scheduled run was failing operationally
+# (aide_last_run_success stuck at 0) despite the initial aideinit having
+# succeeded.
+output=$(aide --config /etc/aide/aide.conf --update 2>&1)
 rc=$?
 end=$(date +%s)
 duration=$((end - start))
