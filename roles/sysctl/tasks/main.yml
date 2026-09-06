@@ -21,4 +21,17 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload sysctl
+
+# Unconditional, not notify-on-change: another tool applying its own sysctl
+# file between our runs (e.g. `ufw enable` re-applying /etc/ufw/sysctl.conf,
+# which happens on every enable, not just the first) can silently overwrite
+# a live value this role also manages, for any key the two files overlap
+# on. A notify-only reload never re-fires once our own file already matches
+# on disk, so a value clobbered this way would stay wrong indefinitely.
+# Re-running `sysctl --system` is cheap and idempotent, so just always do
+# it — this role's job is the live value, not merely the file on disk.
+- name: Reload sysctl
+  ansible.builtin.command:
+    cmd: sysctl --system
+  changed_when: true
+  when: sysctl_reload
