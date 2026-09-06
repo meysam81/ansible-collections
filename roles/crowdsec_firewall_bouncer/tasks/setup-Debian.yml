@@ -1,0 +1,103 @@
+---
+# Own apt repo tasks — identical mechanism to crowdsec_agent's, duplicated
+# rather than shared so this role stands alone per Galaxy consumption.
+- name: Install CrowdSec apt repository dependencies
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download CrowdSec GPG key
+  ansible.builtin.get_url:
+    url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+    dest: /etc/apt/keyrings/crowdsec.asc
+    mode: "0644"
+  register: crowdsec_firewall_bouncer_gpg_key_download
+  until: crowdsec_firewall_bouncer_gpg_key_download is succeeded
+  retries: 5
+  delay: 5
+
+- name: Dearmor CrowdSec GPG key
+  ansible.builtin.command:
+    cmd: gpg --batch --yes --dearmor -o /usr/share/keyrings/crowdsec-archive-keyring.gpg /etc/apt/keyrings/crowdsec.asc
+    creates: /usr/share/keyrings/crowdsec-archive-keyring.gpg
+
+- name: Add CrowdSec apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/crowdsec-archive-keyring.gpg]
+      https://packagecloud.io/crowdsec/crowdsec/{{ ansible_facts['distribution'] | lower }}
+      {{ crowdsec_firewall_bouncer_apt_codename }} main
+    filename: crowdsec
+    state: present
+
+- name: Install CrowdSec firewall bouncer
+  ansible.builtin.apt:
+    name: "crowdsec-firewall-bouncer-{{ crowdsec_firewall_bouncer_backend }}"
+    state: present
+    update_cache: true
+
+# The package's postinst runs `cscli bouncers add` (when cscli/crowdsec is
+# present) and writes the resulting key straight into this file — before
+# our own template below ever touches it.
+- name: Check for an existing bouncer config
+  ansible.builtin.stat:
+    path: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+  register: crowdsec_firewall_bouncer_existing_config
+  when: crowdsec_firewall_bouncer_api_key | length == 0
+
+- name: Read the API key the package postinst registered
+  ansible.builtin.slurp:
+    path: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+  register: crowdsec_firewall_bouncer_existing_config_content
+  when:
+    - crowdsec_firewall_bouncer_api_key | length == 0
+    - crowdsec_firewall_bouncer_existing_config.stat.exists | default(false)
+  no_log: true
+
+- name: Resolve the effective API key
+  ansible.builtin.set_fact:
+    crowdsec_firewall_bouncer_effective_api_key: >-
+      {{ crowdsec_firewall_bouncer_api_key
+         if crowdsec_firewall_bouncer_api_key | length > 0
+         else ((crowdsec_firewall_bouncer_existing_config_content.content | b64decode | from_yaml).api_key | default('')) }}
+  no_log: true
+
+- name: Assert an API key is available
+  ansible.builtin.assert:
+    that:
+      - crowdsec_firewall_bouncer_effective_api_key | length > 0
+      - "'<API_KEY>' not in crowdsec_firewall_bouncer_effective_api_key"
+    fail_msg: >-
+      No usable CrowdSec API key for the firewall bouncer. Either set
+      crowdsec_firewall_bouncer_api_key explicitly, or ensure cscli/crowdsec
+      was present on this host when crowdsec-firewall-bouncer-{{ crowdsec_firewall_bouncer_backend }}
+      was installed (its postinst auto-registers a key via 'cscli bouncers add').
+      Generate one manually with 'cscli bouncers add <name>' and set the variable
+      if this bouncer talks to a remote LAPI.
+  no_log: true
+
+- name: Deploy CrowdSec firewall bouncer config
+  ansible.builtin.template:
+    src: crowdsec-firewall-bouncer.yaml.j2
+    dest: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Restart crowdsec-firewall-bouncer
+
+- name: Enable and start CrowdSec firewall bouncer
+  ansible.builtin.systemd:
+    name: crowdsec-firewall-bouncer
+    state: started
+    enabled: true
+    daemon_reload: true

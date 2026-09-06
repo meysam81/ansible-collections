@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: crowdsec_firewall_bouncer
+  description: Install the CrowdSec firewall bouncer (nftables/iptables) for host-wide IP remediation
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - crowdsec
+    - firewall
+    - security
+    - nftables
+
+allow_duplicates: false
+
+dependencies: []

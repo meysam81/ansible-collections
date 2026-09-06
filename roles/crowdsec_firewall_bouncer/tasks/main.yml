@@ -1,0 +1,10 @@
+---
+- name: Assert backend is supported
+  ansible.builtin.assert:
+    that:
+      - crowdsec_firewall_bouncer_backend in ['nftables', 'iptables']
+    fail_msg: "crowdsec_firewall_bouncer_backend must be 'nftables' or 'iptables' (got: {{ crowdsec_firewall_bouncer_backend }})"
+
+- name: Setup CrowdSec firewall bouncer on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
