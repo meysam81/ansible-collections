@@ -14,24 +14,26 @@
     group: root
     mode: "0755"
 
-- name: Deploy sysctl configuration
-  ansible.builtin.template:
-    src: sysctl.conf.j2
-    dest: "{{ sysctl_file }}"
-    owner: root
-    group: root
-    mode: "0644"
-
-# Unconditional, not notify-on-change: another tool applying its own sysctl
-# file between our runs (e.g. `ufw enable` re-applying /etc/ufw/sysctl.conf,
-# which happens on every enable, not just the first) can silently overwrite
-# a live value this role also manages, for any key the two files overlap
-# on. A notify-only reload never re-fires once our own file already matches
-# on disk, so a value clobbered this way would stay wrong indefinitely.
-# Re-running `sysctl --system` is cheap and idempotent, so just always do
-# it — this role's job is the live value, not merely the file on disk.
-- name: Reload sysctl
-  ansible.builtin.command:
-    cmd: sysctl --system
-  changed_when: true
-  when: sysctl_reload
+# ansible.posix.sysctl checks the LIVE kernel value (via `sysctl -n`) on
+# every run, not just this role's own file, and re-applies whenever it has
+# drifted. A plain templated file + notify-on-change reload (the previous
+# approach here) only re-applies when OUR file's content changes — but
+# another tool reapplying its own overlapping sysctl file between runs
+# (confirmed live: `ufw enable`, which Debian's ufw package runs on every
+# enable, not just the first transition, reapplies /etc/ufw/sysctl.conf and
+# silently reset net.ipv4.conf.all.log_martians to 0) leaves our file
+# untouched and matching, so the notify never re-fires and the live value
+# stays wrong indefinitely. Looping the module per key also gives an
+# accurate per-key changed status — unlike an unconditional `sysctl
+# --system`, this reports changed=false once every value has converged.
+- name: Ensure sysctl values are live and persisted
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: "{{ sysctl_file }}"
+    sysctl_set: true
+    reload: "{{ sysctl_reload }}"
+    state: present
+  loop: "{{ sysctl_params | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
