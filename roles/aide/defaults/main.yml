@@ -31,6 +31,11 @@ aide_exclude_paths:
   # alternating between consecutive runs), no integrity value.
   - /dev
 
+# Host-specific excludes merged with aide_exclude_paths (mail spools, state
+# directories of other services, ...). Set this rather than overriding the
+# list above so future default additions still apply.
+aide_exclude_paths_extra: []
+
 # Raw lines appended verbatim to the conf.d fragment, for selection rules
 # this role doesn't curate.
 aide_config_extra: ""

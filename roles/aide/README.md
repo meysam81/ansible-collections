@@ -99,6 +99,7 @@ collections:
 | `aide_auto_accept` | `true` | Install the freshly-written database automatically after a successful run. |
 | `aide_config_extra` | `""` | Raw lines appended verbatim to the `99_ansible` fragment. |
 | `aide_exclude_paths` | see below | Recursive excludes (`!/regex` rules) — log/cache/temp/AIDE's own state. |
+| `aide_exclude_paths_extra` | `[]` | Host-specific excludes merged with `aide_exclude_paths`; prefer this over overriding the default list. |
 | `aide_file_name` | `aide.prom` | Filename inside `aide_textfile_dir`. |
 | `aide_on_calendar` | `daily` | systemd `OnCalendar` schedule. |
 | `aide_randomized_delay` | `1h` | `RandomizedDelaySec` on the timer. |
@@ -115,6 +116,7 @@ AIDE file integrity monitoring on a timer, with excludes and textfile metrics
   - [aide_auto_accept](#aide_auto_accept)
   - [aide_config_extra](#aide_config_extra)
   - [aide_exclude_paths](#aide_exclude_paths)
+  - [aide_exclude_paths_extra](#aide_exclude_paths_extra)
   - [aide_file_name](#aide_file_name)
   - [aide_on_calendar](#aide_on_calendar)
   - [aide_randomized_delay](#aide_randomized_delay)
@@ -164,6 +166,14 @@ aide_exclude_paths:
   - /var/backups
   - /run
   - /dev
+```
+
+### aide_exclude_paths_extra
+
+#### Default value
+
+```YAML
+aide_exclude_paths_extra: []
 ```
 
 ### aide_file_name

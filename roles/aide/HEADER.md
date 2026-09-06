@@ -99,6 +99,7 @@ collections:
 | `aide_auto_accept` | `true` | Install the freshly-written database automatically after a successful run. |
 | `aide_config_extra` | `""` | Raw lines appended verbatim to the `99_ansible` fragment. |
 | `aide_exclude_paths` | see below | Recursive excludes (`!/regex` rules) — log/cache/temp/AIDE's own state. |
+| `aide_exclude_paths_extra` | `[]` | Host-specific excludes merged with `aide_exclude_paths`; prefer this over overriding the default list. |
 | `aide_file_name` | `aide.prom` | Filename inside `aide_textfile_dir`. |
 | `aide_on_calendar` | `daily` | systemd `OnCalendar` schedule. |
 | `aide_randomized_delay` | `1h` | `RandomizedDelaySec` on the timer. |
