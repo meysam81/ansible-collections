@@ -31,6 +31,12 @@
       tags: cloudflare_ips
     - role: coraza
       tags: coraza
+    - role: crowdsec_agent
+      tags: crowdsec_agent
+      vars:
+        crowdsec_agent_enrollment_key: "{{ lookup('env', 'CROWDSEC_ENROLLMENT_KEY') | default('', true) }}"
+    - role: crowdsec_firewall_bouncer
+      tags: crowdsec_firewall_bouncer
     - role: crowdsec_haproxy_bouncer
       tags: crowdsec_haproxy_bouncer
     - role: node_exporter
@@ -72,3 +78,17 @@
       tags: oathkeeper
     - role: vm_identity_gcp
       tags: vm_identity_gcp
+    - role: sshd_hardening
+      tags: sshd_hardening
+    - role: auditd_laurel
+      tags: auditd_laurel
+      vars:
+        auditd_laurel_read_users: [nobody]
+    - role: lynis
+      tags: lynis
+      vars:
+        lynis_textfile_dir: /var/lib/node-textfile-metrics
+    - role: aide
+      tags: aide
+      vars:
+        aide_textfile_dir: /var/lib/node-textfile-metrics
