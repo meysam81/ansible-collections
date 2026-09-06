@@ -23,6 +23,7 @@
   ansible.builtin.assert:
     that:
       - ("passwordauthentication " ~ sshd_hardening_password_authentication) in (sshd_hardening_effective.stdout | lower)
-      - ("permitrootlogin " ~ sshd_hardening_permit_root_login) in (sshd_hardening_effective.stdout | lower)
+      # sshd -T prints the canonical spelling: prohibit-password shows as without-password.
+      - ("permitrootlogin " ~ (sshd_hardening_permit_root_login | replace('prohibit-password', 'without-password'))) in (sshd_hardening_effective.stdout | lower)
     fail_msg: "sshd -T does not reflect {{ sshd_hardening_dropin_path }}; check for an earlier directive in /etc/ssh/sshd_config"
   when: ansible_facts['os_family'] == 'Debian'
