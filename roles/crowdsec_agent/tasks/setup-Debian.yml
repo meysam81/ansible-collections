@@ -44,10 +44,23 @@
     state: present
     update_cache: true
 
+# Best effort: the hub index only matters for items not yet cached locally,
+# and a play must not fail (and drop its queued handlers) because
+# hub.crowdsec.net was unreachable for a moment.
 - name: Update CrowdSec hub index
   ansible.builtin.command:
     cmd: cscli hub update
+  register: crowdsec_agent_hub_update
   changed_when: false
+  failed_when: false
+  retries: 3
+  delay: 5
+  until: crowdsec_agent_hub_update.rc == 0
+
+- name: Warn when the hub index could not be refreshed
+  ansible.builtin.debug:
+    msg: "cscli hub update failed ({{ crowdsec_agent_hub_update.stderr | default('') | trim }}); continuing with the cached index"
+  when: crowdsec_agent_hub_update.rc != 0
 
 - name: Install CrowdSec collections
   ansible.builtin.command:
