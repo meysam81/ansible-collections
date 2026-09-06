@@ -19,7 +19,9 @@ crowdsec_agent_apt_codename: "{{ {'trixie': 'bookworm'}[ansible_facts['distribut
 
 # journald acquisition sources, one file per entry under /etc/crowdsec/acquis.d/.
 # Each entry:
-#   name:        (required) safe filename stem (alphanumeric, dash, underscore)
+#   name:        (required) safe filename stem (alphanumeric, dash, underscore, dot —
+#                dots allowed so a name can match/replace a hand-made acquisition
+#                file of the same name, e.g. "setup.haproxy-journald")
 #   type:        (required) labels.type value CrowdSec parsers key off (e.g. sshd, haproxy)
 #   units:       [] systemd unit names -> "_SYSTEMD_UNIT=<unit>" filters (OR'd together)
 #   identifiers: [] syslog identifiers -> "SYSLOG_IDENTIFIER=<id>" filters (OR'd together)
