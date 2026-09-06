@@ -1,6 +1,8 @@
 ---
+# crowdsecurity/http-probing was folded into base-http-scenarios upstream and
+# no longer installs on its own.
 crowdsec_agent_collections:
-  - crowdsecurity/http-probing
+  - crowdsecurity/linux
   - crowdsecurity/iptables
 
 crowdsec_agent_enrollment_key: ""

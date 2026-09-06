@@ -75,7 +75,7 @@
     state: directory
     owner: root
     group: root
-    mode: "0755"
+    mode: "0750"
 
 - name: Deploy laurel config
   ansible.builtin.template:
@@ -83,7 +83,7 @@
     dest: /etc/laurel/config.toml
     owner: root
     group: root
-    mode: "0644"
+    mode: "0640"
   notify: Reload auditd
 
 - name: Deploy laurel auditd plugin registration
@@ -92,7 +92,7 @@
     dest: /etc/audit/plugins.d/laurel.conf
     owner: root
     group: root
-    mode: "0644"
+    mode: "0640"
   notify: Reload auditd
 
 - name: Deploy curated audit rules

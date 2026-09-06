@@ -27,7 +27,7 @@
     dest: /etc/lynis/custom.prf
     owner: root
     group: root
-    mode: "0644"
+    mode: "0640"
   when: (lynis_skip_tests | length > 0) or (lynis_profile_extra | length > 0)
 
 - name: Deploy Lynis metrics script

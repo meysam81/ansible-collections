@@ -14,13 +14,11 @@
     state: directory
     owner: root
     group: root
-    mode: "0755"
 
 - name: Download CrowdSec GPG key
   ansible.builtin.get_url:
     url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
     dest: /etc/apt/keyrings/crowdsec.asc
-    mode: "0644"
   register: crowdsec_haproxy_bouncer_gpg_key_download
   until: crowdsec_haproxy_bouncer_gpg_key_download is succeeded
   retries: 5

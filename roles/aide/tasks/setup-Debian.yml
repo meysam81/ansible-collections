@@ -38,7 +38,7 @@
     dest: /etc/aide/aide.conf.d/99_ansible
     owner: root
     group: root
-    mode: "0644"
+    mode: "0640"
 
 - name: Check whether an AIDE database already exists
   ansible.builtin.stat:

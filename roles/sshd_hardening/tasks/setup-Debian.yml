@@ -29,6 +29,17 @@
       first directive={{ sshd_hardening_include_check.stdout.split()[1] }}); otherwise
       {{ sshd_hardening_dropin_path }} loses to the earlier value for that keyword.
 
+# sshd -t (and -T) refuse to run without the privilege-separation directory,
+# which only exists while sshd has been started at least once since boot
+# (fresh images, CI runners). Creating it is what the sshd unit does itself.
+- name: Ensure the sshd privilege separation directory exists
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Deploy sshd hardening drop-in
   ansible.builtin.template:
     src: 00-hardening.conf.j2

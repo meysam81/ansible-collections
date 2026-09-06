@@ -19,7 +19,7 @@ collections:
 
 ## Usage
 
-### Default (http-probing + iptables collections)
+### Default (linux + iptables collections)
 
 ```yaml
 ---
@@ -122,7 +122,7 @@ was already installed and configured by hand.
 | `crowdsec_agent_acquis_extra` | `[]` | Extra file-based acquisition sources, all written to one file (`crowdsec_agent_acquis_filename`). |
 | `crowdsec_agent_acquis_filename` | `egress` | Filename (without extension) for `crowdsec_agent_acquis_extra` under `/etc/crowdsec/acquis.d/`. |
 | `crowdsec_agent_apt_codename` | detected release, `trixie` mapped to `bookworm` | apt suite codename; override for other releases the upstream repo lacks. |
-| `crowdsec_agent_collections` | `[crowdsecurity/http-probing, crowdsecurity/iptables]` | CrowdSec hub collections to install. |
+| `crowdsec_agent_collections` | `[crowdsecurity/linux, crowdsecurity/iptables]` | CrowdSec hub collections to install. |
 | `crowdsec_agent_enrollment_key` | `""` | Console enrollment key. Empty disables enrollment. |
 | `crowdsec_agent_journal_acquisitions` | `[]` | journald acquisition sources; one `/etc/crowdsec/acquis.d/<name>.yaml` per entry. See usage above. |
 | `crowdsec_agent_lapi_listen` | `127.0.0.1:8080` | LAPI listen address, rendered into `config.yaml.local`. |
@@ -194,7 +194,7 @@ crowdsec_agent_apt_codename: "{{ {'trixie': 'bookworm'}[ansible_facts['distribut
 
 ```YAML
 crowdsec_agent_collections:
-  - crowdsecurity/http-probing
+  - crowdsecurity/linux
   - crowdsecurity/iptables
 ```
 

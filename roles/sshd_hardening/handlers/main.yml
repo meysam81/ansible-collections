@@ -1,5 +1,8 @@
 ---
+# reload-or-restart: a running sshd re-reads its config without dropping
+# sessions; an inactive one (fresh image, socket-activated unit that has not
+# accepted a connection yet) is started instead of failing the handler.
 - name: Reload sshd
-  ansible.builtin.systemd:
-    name: ssh
-    state: reloaded
+  ansible.builtin.command:
+    cmd: systemctl reload-or-restart ssh
+  changed_when: true

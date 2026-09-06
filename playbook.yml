@@ -32,7 +32,9 @@
     - role: coraza
       tags: coraza
     - role: crowdsec_agent
-      tags: crowdsec_agent
+      # The bouncers register their API key with a local LAPI, so their
+      # per-role CI jobs run the agent first.
+      tags: [crowdsec_agent, crowdsec_firewall_bouncer, crowdsec_haproxy_bouncer]
       vars:
         crowdsec_agent_enrollment_key: "{{ lookup('env', 'CROWDSEC_ENROLLMENT_KEY') | default('', true) }}"
     - role: crowdsec_firewall_bouncer
@@ -92,3 +94,16 @@
       tags: aide
       vars:
         aide_textfile_dir: /var/lib/node-textfile-metrics
+        # A CI runner image carries tens of GB of toolchains under these
+        # paths; a full first scan would take longer than the job.
+        aide_exclude_paths_extra:
+          - /home
+          - /opt
+          - /usr/local
+          - /usr/share
+          - /usr/lib
+          - /usr/libexec
+          - /var/lib
+          - /mnt
+          - /snap
+          - /imagegeneration
