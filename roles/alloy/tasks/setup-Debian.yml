@@ -20,6 +20,10 @@
     owner: root
     group: root
     mode: "0644"
+  register: alloy_apt_key_download
+  until: alloy_apt_key_download is succeeded
+  retries: 5
+  delay: 5
 
 - name: Add Grafana APT repository
   ansible.builtin.apt_repository:
