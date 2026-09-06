@@ -239,6 +239,17 @@ haproxy_coraza_enabled: false
 haproxy_coraza_spoa_addr: "127.0.0.1"
 haproxy_coraza_spoa_port: 9000
 
+# ── CrowdSec (SPOA IP-ban bouncer; only when haproxy_crowdsec_enabled) ──
+# Fail-open by design: unset/false means no filter, no send-spoe-group, no
+# ban response — traffic flows exactly as it would without this feature.
+haproxy_crowdsec_enabled: false
+haproxy_crowdsec_spoa_addr: "127.0.0.1"
+haproxy_crowdsec_spoa_port: 9001
+haproxy_crowdsec_config_file: "{{ haproxy_base_config_dir }}/crowdsec.cfg"
+# Ban HTML template directory. Matches crowdsec_haproxy_bouncer's default —
+# the crowdsec-haproxy-spoa-bouncer package installs ban.html there itself.
+haproxy_crowdsec_html_dir: "/var/lib/crowdsec-haproxy-spoa-bouncer/html"
+
 # ── Compression ─────────────────────────────────────────────────────
 haproxy_compression_types:
   - text/html
@@ -259,6 +270,11 @@ haproxy_default_redirect_url: ""
 
 # ── Misc ────────────────────────────────────────────────────────────
 haproxy_alt_svc_enabled: true
+
+# Full request/response headers in the access log — includes Authorization
+# and Cookie verbatim. Off by default; the Prometheus/CrowdSec-relevant
+# spoa-error/waf-hit fields (when Coraza is enabled) are unaffected by this.
+haproxy_log_request_headers: false
 
 # ── Escape hatches (raw lines injected into sections) ───────────────
 haproxy_global_extra: []

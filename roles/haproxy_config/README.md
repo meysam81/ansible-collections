@@ -144,6 +144,50 @@ Inject raw HAProxy config lines into specific sections:
           - "use_backend ws if is_websocket"
 ```
 
+### WAF (Coraza) and CrowdSec IP ban
+
+Both are SPOE filters fired **explicitly**, never on SPOE's own automatic
+`event`. The frontend evaluates rules in this fixed order:
+
+```
+set-src (Cloudflare, if enabled)
+  -> send-spoe-group coraza coraza-req      (if haproxy_coraza_enabled)
+  -> return 403/503 on coraza.fail/error
+  -> send-spoe-group crowdsec crowdsec-ip           (if haproxy_crowdsec_enabled)
+  -> send-spoe-group crowdsec crowdsec-http-no-body
+  -> return 403 on crowdsec.remediation == "ban"
+```
+
+Explicit firing (instead of SPOE's `event on-frontend-http-request`, which
+fires before *any* of the frontend's own rules) is what makes a Cloudflare
+`set-src` actually apply before the WAF/bouncer see the request — otherwise
+both evaluate Cloudflare's edge IP instead of the real client IP. This block
+renders at the same point in the frontend whether or not Cloudflare is
+enabled, so the ordering guarantee holds either way (there is simply no
+`set-src` to be "after" when Cloudflare is off).
+
+```yaml
+        haproxy_coraza_enabled: true                # meysam81.general.coraza deploys coraza.cfg
+        haproxy_crowdsec_enabled: true               # meysam81.general.crowdsec_haproxy_bouncer deploys crowdsec.cfg
+        haproxy_crowdsec_spoa_addr: "127.0.0.1"
+        haproxy_crowdsec_spoa_port: 9001              # Coraza's SPOA owns 9000 on the same host
+```
+
+CrowdSec's ban response mirrors the upstream bouncer's own recipe: a 403
+HTML page (`lf-file` from `haproxy_crowdsec_html_dir`) when the client's
+`Accept` header can render HTML, otherwise plain text — no captcha, no
+AppSec, both deferred. Fail-open: with `haproxy_crowdsec_enabled: false`
+(the default) none of this renders — behaviour is identical to the role
+without CrowdSec.
+
+### Header logging
+
+`haproxy_log_request_headers` (default `false`) gates capturing full
+request/response headers — including `Authorization` and `Cookie`
+verbatim — into the access log. Leave it off in production; the
+Coraza-specific `spoa-error:`/`waf-hit:` log fields are independent and
+still appear whenever `haproxy_coraza_enabled` is true.
+
 HAProxy with full config management, TLS, and security headers
 
 ## Table of contents
@@ -180,6 +224,11 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cors_expose_headers](#haproxy_cors_expose_headers)
   - [haproxy_cors_max_age](#haproxy_cors_max_age)
   - [haproxy_cors_subdomain_patterns](#haproxy_cors_subdomain_patterns)
+  - [haproxy_crowdsec_config_file](#haproxy_crowdsec_config_file)
+  - [haproxy_crowdsec_enabled](#haproxy_crowdsec_enabled)
+  - [haproxy_crowdsec_html_dir](#haproxy_crowdsec_html_dir)
+  - [haproxy_crowdsec_spoa_addr](#haproxy_crowdsec_spoa_addr)
+  - [haproxy_crowdsec_spoa_port](#haproxy_crowdsec_spoa_port)
   - [haproxy_csp](#haproxy_csp)
   - [haproxy_default_redirect_url](#haproxy_default_redirect_url)
   - [haproxy_defaults_extra](#haproxy_defaults_extra)
@@ -197,6 +246,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_hsts_preload](#haproxy_hsts_preload)
   - [haproxy_inline_responders](#haproxy_inline_responders)
   - [haproxy_listen_sections](#haproxy_listen_sections)
+  - [haproxy_log_request_headers](#haproxy_log_request_headers)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_ocsp_stapling_enabled](#haproxy_ocsp_stapling_enabled)
@@ -509,6 +559,46 @@ haproxy_cors_max_age: '3600'
 haproxy_cors_subdomain_patterns: []
 ```
 
+### haproxy_crowdsec_config_file
+
+#### Default value
+
+```YAML
+haproxy_crowdsec_config_file: '{{ haproxy_base_config_dir }}/crowdsec.cfg'
+```
+
+### haproxy_crowdsec_enabled
+
+#### Default value
+
+```YAML
+haproxy_crowdsec_enabled: false
+```
+
+### haproxy_crowdsec_html_dir
+
+#### Default value
+
+```YAML
+haproxy_crowdsec_html_dir: /var/lib/crowdsec-haproxy-spoa-bouncer/html
+```
+
+### haproxy_crowdsec_spoa_addr
+
+#### Default value
+
+```YAML
+haproxy_crowdsec_spoa_addr: 127.0.0.1
+```
+
+### haproxy_crowdsec_spoa_port
+
+#### Default value
+
+```YAML
+haproxy_crowdsec_spoa_port: 9001
+```
+
 ### haproxy_csp
 
 #### Default value
@@ -659,6 +749,14 @@ haproxy_inline_responders: []
 
 ```YAML
 haproxy_listen_sections: []
+```
+
+### haproxy_log_request_headers
+
+#### Default value
+
+```YAML
+haproxy_log_request_headers: false
 ```
 
 ### haproxy_maxconn
