@@ -17,6 +17,18 @@
       - crowdsec_agent_collections | length > 0
     fail_msg: "crowdsec_agent_collections must contain at least one collection"
 
+- name: Assert journal acquisition entries are well-formed
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.name is match('^[a-zA-Z0-9_-]+$')
+      - item.type is defined
+      - (item.units | default([]) | length > 0) or (item.identifiers | default([]) | length > 0)
+    fail_msg: "Invalid crowdsec_agent_journal_acquisitions entry (needs name, type, and at least one of units/identifiers): {{ item }}"
+  loop: "{{ crowdsec_agent_journal_acquisitions }}"
+  loop_control:
+    label: "{{ item.name | default('?') }}"
+
 - name: Setup CrowdSec agent on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_facts['os_family'] == 'Debian'

@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# Overlay merged over the packaged /etc/crowdsec/config.yaml — never edit
+# that file directly, it is owned by the crowdsec package.
+prometheus:
+  enabled: {{ crowdsec_agent_prometheus_enabled | lower }}
+  listen_addr: {{ crowdsec_agent_prometheus_listen_addr }}
+  listen_port: {{ crowdsec_agent_prometheus_listen_port }}
+  level: {{ crowdsec_agent_prometheus_level }}
+api:
+  server:
+    listen_uri: {{ crowdsec_agent_lapi_listen }}

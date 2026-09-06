@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+name: ansible/whitelist
+description: "Whitelist events from IPs/CIDRs supplied via crowdsec_agent_whitelist_ips/_cidrs"
+whitelist:
+  reason: "ansible-managed infra allowlist"
+{% if crowdsec_agent_whitelist_ips | length > 0 %}
+  ip:
+{% for ip in crowdsec_agent_whitelist_ips %}
+    - "{{ ip }}"
+{% endfor %}
+{% endif %}
+{% if crowdsec_agent_whitelist_cidrs | length > 0 %}
+  cidr:
+{% for cidr in crowdsec_agent_whitelist_cidrs %}
+    - "{{ cidr }}"
+{% endfor %}
+{% endif %}
