@@ -102,5 +102,6 @@ collections:
 | `aide_file_name` | `aide.prom` | Filename inside `aide_textfile_dir`. |
 | `aide_on_calendar` | `daily` | systemd `OnCalendar` schedule. |
 | `aide_randomized_delay` | `1h` | `RandomizedDelaySec` on the timer. |
+| `aide_report_path` | `/var/log/aide/aide-check.log` | Full report of the last run (0640 root:adm); the metrics carry only counts. |
 | `aide_script_path` | `/usr/local/bin/aide-check-metrics` | Where the metrics script is installed. |
 | `aide_textfile_dir` | `""` | Required. Directory a textfile collector reads from. |

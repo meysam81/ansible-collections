@@ -27,6 +27,9 @@ aide_exclude_paths:
   - /var/lib/aide
   - /var/backups
   - /run
+  # devtmpfs: node permissions and ACLs flip at runtime (/dev/kmsg was seen
+  # alternating between consecutive runs), no integrity value.
+  - /dev
 
 # Raw lines appended verbatim to the conf.d fragment, for selection rules
 # this role doesn't curate.
@@ -36,3 +39,7 @@ aide_config_extra: ""
 # (aide.db.new -> aide.db) automatically, so a detected change alerts once
 # instead of on every run until someone manually re-baselines.
 aide_auto_accept: true
+
+# Where the full report of the last run is kept (mode 0640 root:adm), so an
+# "entries changed" alert can be traced to the actual files afterwards.
+aide_report_path: /var/log/aide/aide-check.log

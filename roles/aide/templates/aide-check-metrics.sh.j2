@@ -26,6 +26,11 @@ start=$(date +%s)
 # (aide_last_run_success stuck at 0) despite the initial aideinit having
 # succeeded.
 output=$(aide --config /etc/aide/aide.conf --update 2>&1)
+# Keep the full report: the metrics only carry counts.
+{
+  printf 'aide --update run at %s (exit code below)\n' "$(date -Is)"
+  printf '%s\n' "${output}"
+} > "{{ aide_report_path }}.tmp" && chmod 0640 "{{ aide_report_path }}.tmp" && chgrp adm "{{ aide_report_path }}.tmp" 2>/dev/null; mv -f "{{ aide_report_path }}.tmp" "{{ aide_report_path }}"
 rc=$?
 end=$(date +%s)
 duration=$((end - start))
