@@ -58,7 +58,7 @@ collections:
 ```yaml
     - name: meysam81.general.crowdsec_firewall_bouncer
       vars:
-        crowdsec_firewall_bouncer_api_url: "http://172.16.16.2:8080/"
+        crowdsec_firewall_bouncer_api_url: "http://192.0.2.10:8080/"
         crowdsec_firewall_bouncer_api_key: "{{ vault_crowdsec_bouncer_key }}"
 ```
 

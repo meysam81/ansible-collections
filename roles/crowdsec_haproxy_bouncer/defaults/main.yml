@@ -24,7 +24,6 @@ crowdsec_haproxy_bouncer_haproxy_config_dir: /etc/haproxy
 
 # Ban/captcha HTML templates. The package installs its own copies here;
 # override only if you relocate them.
-crowdsec_haproxy_bouncer_html_dir: /var/lib/crowdsec-haproxy-spoa-bouncer/html
 
 # Forward-looking hook, off by default: adds the crowdsec-http-body SPOE
 # message/group (full request body forwarded for CrowdSec AppSec scoring).
@@ -33,3 +32,8 @@ crowdsec_haproxy_bouncer_html_dir: /var/lib/crowdsec-haproxy-spoa-bouncer/html
 # it explicitly (e.g. via haproxy_frontend_extra_rules); haproxy_config's
 # own crowdsec wiring only ever sends crowdsec-ip and crowdsec-http-no-body.
 crowdsec_haproxy_bouncer_appsec_enabled: false
+
+# HAProxy reads crowdsec.cfg only at (re)load. Name its systemd unit here
+# (e.g. "haproxy") to reload it whenever this role changes the SPOE config;
+# empty leaves the reload to the consumer.
+crowdsec_haproxy_bouncer_haproxy_reload_unit: ""

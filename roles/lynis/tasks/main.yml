@@ -2,3 +2,6 @@
 - name: Setup lynis on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_facts['os_family'] == 'Debian'
+
+- name: Apply pending service reloads before leaving the role
+  ansible.builtin.meta: flush_handlers

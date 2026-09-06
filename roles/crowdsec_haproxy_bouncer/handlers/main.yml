@@ -9,7 +9,9 @@
     daemon_reload: true
     enabled: true
 
-# HAProxy itself is not reloaded here — that is the consumer's business.
-# haproxy_config renders `filter spoe engine crowdsec config
-# {{ haproxy_crowdsec_config_file }}` and reloads HAProxy through its own
-# handler whenever haproxy.cfg changes.
+# HAProxy reads the SPOE config only at (re)load; opt in by naming its unit.
+- name: Reload HAProxy for the SPOE config
+  ansible.builtin.systemd:
+    name: "{{ crowdsec_haproxy_bouncer_haproxy_reload_unit }}"
+    state: reloaded
+  when: crowdsec_haproxy_bouncer_haproxy_reload_unit | length > 0

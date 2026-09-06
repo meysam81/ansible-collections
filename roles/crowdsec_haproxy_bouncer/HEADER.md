@@ -59,7 +59,7 @@ collections:
 ```yaml
     - name: meysam81.general.crowdsec_haproxy_bouncer
       vars:
-        crowdsec_haproxy_bouncer_api_url: "http://172.16.16.2:8080/"
+        crowdsec_haproxy_bouncer_api_url: "http://192.0.2.10:8080/"
         crowdsec_haproxy_bouncer_api_key: "{{ vault_crowdsec_bouncer_key }}"
 ```
 
@@ -72,7 +72,7 @@ collections:
 | `crowdsec_haproxy_bouncer_api_url` | `http://127.0.0.1:8080/` | LAPI base URL to pull decisions from. |
 | `crowdsec_haproxy_bouncer_appsec_enabled` | `false` | Adds the `crowdsec-http-body` SPOE message/group (see above); nothing sends it by default. |
 | `crowdsec_haproxy_bouncer_haproxy_config_dir` | `/etc/haproxy` | Directory `crowdsec.cfg` (the SPOE config) is written to. |
-| `crowdsec_haproxy_bouncer_html_dir` | `/var/lib/crowdsec-haproxy-spoa-bouncer/html` | Ban HTML templates; installed by the package itself, override only if relocated. |
+| `crowdsec_haproxy_bouncer_haproxy_reload_unit` | `""` | systemd unit to reload after `crowdsec.cfg` changes (HAProxy reads SPOE config at load time); empty leaves it to the consumer. |
 | `crowdsec_haproxy_bouncer_listen_addr` | `127.0.0.1:9001` | TCP address the bouncer's own SPOA server listens on. Coraza's SPOA owns `9000` on the same host. |
 | `crowdsec_haproxy_bouncer_log_level` | `info` | Bouncer log verbosity. |
 | `crowdsec_haproxy_bouncer_prometheus_enabled` | `true` | Expose Prometheus metrics. |

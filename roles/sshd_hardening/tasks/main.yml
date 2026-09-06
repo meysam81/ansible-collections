@@ -9,3 +9,20 @@
 # inside this role's own blast radius.
 - name: Apply pending service reloads before leaving the role
   ansible.builtin.meta: flush_handlers
+
+# What sshd actually runs with, not what the file says: catches a stale
+# daemon or a directive that outranks the drop-in.
+- name: Read the effective sshd configuration
+  ansible.builtin.command:
+    cmd: sshd -T
+  register: sshd_hardening_effective
+  changed_when: false
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Assert the effective sshd configuration matches the drop-in
+  ansible.builtin.assert:
+    that:
+      - ("passwordauthentication " ~ sshd_hardening_password_authentication) in (sshd_hardening_effective.stdout | lower)
+      - ("permitrootlogin " ~ sshd_hardening_permit_root_login) in (sshd_hardening_effective.stdout | lower)
+    fail_msg: "sshd -T does not reflect {{ sshd_hardening_dropin_path }}; check for an earlier directive in /etc/ssh/sshd_config"
+  when: ansible_facts['os_family'] == 'Debian'

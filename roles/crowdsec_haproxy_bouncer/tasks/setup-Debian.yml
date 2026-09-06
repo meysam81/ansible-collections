@@ -107,7 +107,9 @@
     owner: haproxy
     group: haproxy
     mode: "0640"
-  notify: Restart crowdsec-spoa-bouncer
+  notify:
+    - Restart crowdsec-spoa-bouncer
+    - Reload HAProxy for the SPOE config
 
 - name: Enable and start CrowdSec SPOA bouncer
   ansible.builtin.systemd:

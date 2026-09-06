@@ -3,22 +3,31 @@
 # Debian/Ubuntu OpenSSH packages ship this by default (OpenSSH >= 8.2), but
 # a hand-edited sshd_config could have dropped it — in which case this
 # entire role would silently do nothing.
-- name: Check that sshd_config includes the drop-in directory
-  ansible.builtin.command:
-    cmd: grep -E '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config
+# First match wins in sshd_config, so the Include must also come before any
+# other directive: a hand-edited file with e.g. "PasswordAuthentication yes"
+# above the Include would silently beat the drop-in for that keyword.
+- name: Locate the Include line and the first other directive in sshd_config
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      inc=$(grep -nE '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config | head -1 | cut -d: -f1);
+      first=$(grep -nE '^[[:space:]]*[A-Za-z]' /etc/ssh/sshd_config | grep -vE '^[0-9]+:[[:space:]]*Include[[:space:]]' | head -1 | cut -d: -f1);
+      echo "${inc:-0} ${first:-0}"
+    executable: /bin/bash
   register: sshd_hardening_include_check
   changed_when: false
-  failed_when: false
 
-- name: Assert sshd_config includes the drop-in directory
+- name: Assert the drop-in directory is included before any other directive
   ansible.builtin.assert:
     that:
-      - sshd_hardening_include_check.rc == 0
+      - (sshd_hardening_include_check.stdout.split()[0] | int) > 0
+      - (sshd_hardening_include_check.stdout.split()[1] | int) == 0 or
+        (sshd_hardening_include_check.stdout.split()[0] | int) < (sshd_hardening_include_check.stdout.split()[1] | int)
     fail_msg: >-
-      /etc/ssh/sshd_config has no 'Include /etc/ssh/sshd_config.d/*.conf'
-      directive, so {{ sshd_hardening_dropin_path }} would never be read.
-      Add the Include line (OpenSSH >= 8.2 ships it by default) before
-      using this role.
+      /etc/ssh/sshd_config must contain 'Include /etc/ssh/sshd_config.d/*.conf'
+      before any other directive (line numbers: Include={{ sshd_hardening_include_check.stdout.split()[0] }},
+      first directive={{ sshd_hardening_include_check.stdout.split()[1] }}); otherwise
+      {{ sshd_hardening_dropin_path }} loses to the earlier value for that keyword.
 
 - name: Deploy sshd hardening drop-in
   ansible.builtin.template:
