@@ -48,7 +48,7 @@ jobs:
           severity: CRITICAL,HIGH
           trivy-config: trivy.yaml
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
         with:
           sarif_file: "trivy-results.sarif"
 
@@ -84,7 +84,7 @@ jobs:
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.7.7
+        image: grafana/loki:3.7.8
         ports:
           - 3100:3100
     strategy:
@@ -173,7 +173,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@5fac056c45595896c973fbde871f01f6cb14d74c # main
+        uses: ansible/ansible-lint@bf862ae34f1cedbffe8ca2b698f2914bc0d27404 # main
         with:
           setup_python: "true"
           requirements_file: requirements.yml
