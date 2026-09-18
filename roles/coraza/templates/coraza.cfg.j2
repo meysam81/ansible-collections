@@ -1,6 +1,7 @@
 {# roles/coraza/templates/coraza.cfg.j2 #}
 # https://github.com/haproxy/haproxy/blob/master/doc/SPOE.txt
 # {{ coraza_haproxy_config_dir }}/coraza.cfg
+{% set _skip = (' unless { path_beg ' ~ (coraza_skip_paths | join(' ')) ~ ' }') if coraza_skip_paths else '' %}
 [coraza]
 spoe-agent coraza-agent
     # Process HTTP requests only (the responses are not evaluated)
@@ -19,12 +20,12 @@ spoe-agent coraza-agent
 spoe-message coraza-req
     # Arguments are required to be in this order
     args app=var(txn.coraza.app) id=unique-id src-ip=src src-port=src_port dst-ip=dst dst-port=dst_port method=method path=path query=query version=req.ver headers=req.hdrs body=req.body
-    event on-frontend-http-request
+    event on-frontend-http-request{{ _skip }}
 
 spoe-message coraza-res
     # Arguments are required to be in this order
     args app=var(txn.coraza.app) id=var(txn.coraza.id) version=res.ver status=status headers=res.hdrs body=res.body
-    event on-http-response
+    event on-http-response{{ _skip }}
 
 spoe-group coraza-req
     messages coraza-req
