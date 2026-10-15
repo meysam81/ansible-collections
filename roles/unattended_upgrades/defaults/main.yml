@@ -1,0 +1,149 @@
+---
+# ── Delayed regular updates ────────────────────────────────────────────────
+# Regular (non-security) updates come from an APT archive snapshot this many
+# days old; security updates always install live. 0 disables the delay, and
+# with it every regular-update origin, leaving a security-only setup.
+# Needs apt >= 2.7 (Ubuntu 23.10+, Debian 13+) or Ubuntu's backport (apt >=
+# 2.4.11 on 22.04, >= 2.0.10 on 20.04). Elsewhere the role warns and
+# installs security updates only: regular updates never install undelayed.
+unattended_upgrades_delay_days: 14
+
+# ── Origins ────────────────────────────────────────────────────────────────
+# Unattended-Upgrade::Origins-Pattern entries that install live, as soon as
+# released. Defaults to the distro's security origins (plus Ubuntu's frozen
+# release pocket and ESM). Required on Debian derivatives other than Debian
+# and Ubuntu.
+unattended_upgrades_origins_patterns: "{{ unattended_upgrades_distro_origins[ansible_facts['distribution']].live | default([]) }}"
+
+# Origins-Pattern entries for regular updates. Installed only while the
+# delay is active, so they always come from the snapshot.
+unattended_upgrades_delayed_origins_patterns: "{{ unattended_upgrades_distro_origins[ansible_facts['distribution']].delayed | default([]) }}"
+
+# ── Package selection ──────────────────────────────────────────────────────
+# Python regexes of packages never to upgrade, e.g. ["linux-", "libc6$"].
+unattended_upgrades_package_blacklist: []
+
+# Python regexes; when non-empty, only matching packages (and, unless
+# strict, their dependencies) are upgraded.
+unattended_upgrades_package_whitelist: []
+
+unattended_upgrades_package_whitelist_strict: false
+
+# ── Upgrade behaviour ──────────────────────────────────────────────────────
+# Run `dpkg --force-confold --configure -a` after an interrupted dpkg run.
+unattended_upgrades_auto_fix_interrupted_dpkg: true
+
+# Upgrade in small self-contained chunks so SIGTERM (shutdown) can stop it.
+unattended_upgrades_minimal_steps: true
+
+unattended_upgrades_install_on_shutdown: false
+
+# Weekdays upgrades may run on, e.g. ["Mon", "Fri"] or ["1", "5"]. Empty
+# means every day. This also holds back security updates on the other days.
+unattended_upgrades_update_days: []
+
+unattended_upgrades_only_on_ac_power: true
+
+unattended_upgrades_skip_updates_on_metered_connections: true
+
+# Allow downgrades when an APT pin has priority above 1000.
+unattended_upgrades_allow_downgrade: false
+
+unattended_upgrades_allow_apt_mark_fallback: true
+
+# Upgrade a development release: "auto" waits until close to release.
+unattended_upgrades_dev_release: auto
+
+unattended_upgrades_keep_debs_after_install: false
+
+# Acquire::http::Dl-Limit in kB/s; 0 is unlimited. Rendered only when set,
+# since it applies to every apt download on the host.
+unattended_upgrades_dl_limit: 0
+
+# Dpkg::Options, e.g. ["--force-confdef", "--force-confold"]. Rendered only
+# when set, since it applies to every dpkg run on the host.
+unattended_upgrades_dpkg_options: []
+
+# ── Cleanup ────────────────────────────────────────────────────────────────
+unattended_upgrades_remove_unused_kernel_packages: true
+
+unattended_upgrades_remove_new_unused_dependencies: true
+
+unattended_upgrades_remove_unused_dependencies: false
+
+# ── Mail ───────────────────────────────────────────────────────────────────
+# Report recipient; empty sends nothing. Needs a working local MTA and a
+# package providing mailx.
+unattended_upgrades_mail: ""
+
+unattended_upgrades_sender: root
+
+# One of "always", "only-on-error", "on-change".
+unattended_upgrades_mail_report: on-change
+
+# ── unattended-upgrades' own reboot ────────────────────────────────────────
+# Reboots right after the upgrade (or at automatic_reboot_time) whenever
+# one is required. Mutually exclusive with the reboot window below.
+unattended_upgrades_automatic_reboot: false
+
+unattended_upgrades_automatic_reboot_with_users: true
+
+unattended_upgrades_automatic_reboot_with_system_users: true
+
+unattended_upgrades_automatic_reboot_ignored_users: []
+
+# "now" or "HH:MM".
+unattended_upgrades_automatic_reboot_time: now
+
+# ── Logging ────────────────────────────────────────────────────────────────
+unattended_upgrades_syslog_enable: false
+
+unattended_upgrades_syslog_facility: daemon
+
+unattended_upgrades_verbose: false
+
+unattended_upgrades_debug: false
+
+# ── Reboot window ──────────────────────────────────────────────────────────
+# Reboot only inside a recurring window, and only when /run/reboot-required
+# exists. Off by default: rebooting is the caller's decision.
+unattended_upgrades_reboot_window_enabled: false
+
+# systemd OnCalendar for the window start.
+unattended_upgrades_reboot_window_on_calendar: Sun *-*-* 00:00:00 UTC
+
+# The reboot happens within this many seconds of the window start, or not
+# at all (e.g. an upgrade is still running when the window closes).
+unattended_upgrades_reboot_window_duration_sec: 7200
+
+# Spreads reboots across a fleet. Must be shorter than the window.
+unattended_upgrades_reboot_window_random_delay_sec: 1800
+
+# ── APT::Periodic (apt-daily / apt-daily-upgrade timers) ───────────────────
+# Interval values are days, or with an s/m/h/d suffix, or "always".
+unattended_upgrades_periodic_enable: true
+
+unattended_upgrades_periodic_update_package_lists: "1"
+
+unattended_upgrades_periodic_unattended_upgrade: "1"
+
+unattended_upgrades_periodic_download_upgradeable_packages: "0"
+
+unattended_upgrades_periodic_download_upgradeable_packages_debdelta: "1"
+
+unattended_upgrades_periodic_autoclean_interval: "0"
+
+unattended_upgrades_periodic_clean_interval: "0"
+
+unattended_upgrades_periodic_max_age: "0"
+
+unattended_upgrades_periodic_min_age: "2"
+
+unattended_upgrades_periodic_max_size: "0"
+
+unattended_upgrades_periodic_backup_archive_interval: "0"
+
+unattended_upgrades_periodic_backup_level: "3"
+
+# 0 = no report mail, 1 = progress, 2 = command output, 3 = trace.
+unattended_upgrades_periodic_verbose: "0"

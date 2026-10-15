@@ -154,3 +154,75 @@
           - node_textfile_metrics_file.stat.exists
           - "'node_reboot_required' in (node_textfile_metrics_content.content | b64decode)"
       tags: node_textfile_metrics
+
+    # ── unattended_upgrades ────────────────────────
+    - name: Read the effective unattended-upgrades configuration
+      ansible.builtin.command:
+        cmd: apt-config dump Unattended-Upgrade APT::Periodic APT::Snapshot
+      register: unattended_upgrades_config
+      changed_when: false
+      tags: unattended_upgrades
+
+    # What apt (and unattended-upgrades) actually installs from; indextargets
+    # would also list the shadowed originals apt keeps for server discovery.
+    - name: Read the APT sources in use
+      ansible.builtin.command:
+        cmd: apt-cache policy
+      register: unattended_upgrades_policy
+      changed_when: false
+      tags: unattended_upgrades
+
+    - name: Read the installed apt version
+      ansible.builtin.command:
+        cmd: dpkg-query -W -f=${Version} apt
+      register: unattended_upgrades_apt
+      changed_when: false
+      tags: unattended_upgrades
+
+    # Debian 12's apt 2.6 has no snapshot support: security updates only.
+    - name: Assert hosts without snapshot support install security updates only
+      ansible.builtin.assert:
+        that:
+          - "'APT::Snapshot' not in unattended_upgrades_config.stdout"
+          - "'-updates' not in unattended_upgrades_config.stdout"
+          - "'-security' in unattended_upgrades_config.stdout"
+      when: ansible_facts['distribution'] == 'Debian' and unattended_upgrades_apt.stdout is version('2.7', '<')
+      tags: unattended_upgrades
+
+    - name: Assert regular updates are delayed and security is live
+      when: ansible_facts['distribution'] == 'Ubuntu' or unattended_upgrades_apt.stdout is version('2.7', '>=')
+      vars:
+        _security: "{{ unattended_upgrades_policy.stdout_lines | select('search', ' ' ~ ansible_facts['distribution_release'] ~ '-security/') | list }}"
+        _updates: "{{ unattended_upgrades_policy.stdout_lines | select('search', ' ' ~ ansible_facts['distribution_release'] ~ '-updates/') | list }}"
+        _snapshot: "{{ lookup('pipe', 'date -u -d \"14 days ago\" +%Y%m%dT000000Z') }}"
+      ansible.builtin.assert:
+        that:
+          - "'APT::Snapshot \"' ~ _snapshot ~ '\"' in unattended_upgrades_config.stdout"
+          - "'-updates' in unattended_upgrades_config.stdout"
+          - _updates | length > 0
+          - _updates | reject('search', '/snapshot\\.[a-z]+\\.(com|org)/.*' ~ _snapshot) | list | length == 0
+          - _security | length > 0
+          - _security | select('search', 'snapshot\\.') | list | length == 0
+      tags: unattended_upgrades
+
+    # service_facts only lists .service units, not timers.
+    - name: Read apt-daily and reboot-if-required timer states
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+      register: unattended_upgrades_timers
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+        - reboot-if-required.timer
+      tags: unattended_upgrades
+
+    - name: Assert apt-daily and reboot-if-required timers are active and enabled
+      ansible.builtin.assert:
+        that:
+          - item.status.ActiveState == 'active'
+          - item.status.UnitFileState == 'enabled'
+        quiet: true
+      loop: "{{ unattended_upgrades_timers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      tags: unattended_upgrades

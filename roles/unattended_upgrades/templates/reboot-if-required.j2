@@ -1,0 +1,27 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Started by reboot-if-required.timer at the window start (plus a random delay).
+set -eu
+[ -f /run/reboot-required ] || exit 0
+# The timer's random delay is part of the window, so only what's left of it is ours.
+deadline=$(( $(date +%s) + {{ unattended_upgrades_reboot_window_duration_sec | int - unattended_upgrades_reboot_window_random_delay_sec | int }} ))
+
+# apt-daily-upgrade is Type=oneshot: it reports "activating" while it runs,
+# which `systemctl is-active --quiet` counts as not running.
+upgrading() {
+  case "$(systemctl is-active apt-daily-upgrade.service || true)" in
+    active | activating | deactivating | reloading) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Rebooting mid-upgrade can leave dpkg half-configured: wait, but never past the window.
+while upgrading; do
+  sleep 60
+  if [ "$(date +%s)" -ge "$deadline" ]; then
+    echo "apt-daily-upgrade still running at window close; reboot skipped"
+    exit 0
+  fi
+done
+echo "Rebooting, required by: $(cat /run/reboot-required.pkgs 2>/dev/null || true)"
+systemctl reboot

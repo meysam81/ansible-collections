@@ -1,0 +1,217 @@
+---
+- name: Assert unattended_upgrades variables
+  ansible.builtin.assert:
+    that:
+      - unattended_upgrades_origins_patterns | length > 0
+      - unattended_upgrades_delay_days | int >= 0
+      - unattended_upgrades_mail_report in ['always', 'only-on-error', 'on-change']
+      - not (unattended_upgrades_automatic_reboot | bool and unattended_upgrades_reboot_window_enabled | bool)
+      - unattended_upgrades_reboot_window_random_delay_sec | int < unattended_upgrades_reboot_window_duration_sec | int
+    fail_msg: >-
+      unattended_upgrades_origins_patterns is required on
+      {{ ansible_facts['distribution'] }} (only Debian and Ubuntu have
+      defaults); unattended_upgrades_delay_days must be >= 0;
+      unattended_upgrades_mail_report must be always, only-on-error or
+      on-change; unattended_upgrades_automatic_reboot and
+      unattended_upgrades_reboot_window_enabled are mutually exclusive;
+      unattended_upgrades_reboot_window_random_delay_sec must be shorter than
+      unattended_upgrades_reboot_window_duration_sec.
+    quiet: true
+
+- name: Install unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Read the installed apt version
+  ansible.builtin.command:
+    cmd: dpkg-query -W -f=${Version} apt
+  register: unattended_upgrades_apt_version
+  changed_when: false
+  check_mode: false
+
+# apt >= 2.7 applies APT::Snapshot to every source it knows a snapshot server
+# for. Ubuntu's backport to 22.04 (2.4.11) and 20.04 (2.0.10) applies it only
+# to sources opted in with snapshot=yes. Older apt (e.g. Debian 12's 2.6)
+# has no snapshot support at all.
+- name: Detect APT snapshot support
+  vars:
+    _v: "{{ unattended_upgrades_apt_version.stdout }}"
+  ansible.builtin.set_fact:
+    unattended_upgrades_snapshot_mode: >-
+      {{
+        'auto' if _v is version('2.7', '>=') else
+        'opt-in' if ansible_facts['distribution'] == 'Ubuntu'
+          and ((_v is version('2.4.11', '>=') and _v is version('2.5', '<'))
+            or (_v is version('2.0.10', '>=') and _v is version('2.1', '<')))
+        else 'none'
+      }}
+
+- name: Decide whether the delay is active
+  ansible.builtin.set_fact:
+    unattended_upgrades_delay_active: >-
+      {{ unattended_upgrades_delay_days | int > 0 and unattended_upgrades_snapshot_mode != 'none' }}
+
+- name: Warn that this host cannot delay regular updates
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: apt {{ unattended_upgrades_apt_version.stdout }} on
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+      has no archive snapshot support, so the {{ unattended_upgrades_delay_days }}-day
+      delay cannot apply. Installing security updates only; regular updates
+      are left to manual upgrades.
+  when: unattended_upgrades_delay_days | int > 0 and not unattended_upgrades_delay_active | bool
+
+- name: Deploy unattended-upgrades configuration
+  ansible.builtin.template:
+    src: 52unattended-upgrades-local.j2
+    dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: apt configuration is world-readable by convention
+    validate: apt-config -c %s dump
+
+- name: Configure the delayed APT snapshot
+  when: unattended_upgrades_delay_active | bool
+  block:
+    - name: Find APT sources files
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d
+        patterns: ["*.list", "*.sources"]
+      register: unattended_upgrades_sources_files
+
+    - name: Check for the one-line sources.list
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list
+      register: unattended_upgrades_sources_list
+
+    # Security suites are exempted wherever they appear. Opt-ins go only into
+    # the distro's own files, see unattended_upgrades_distro_sources_files.
+    - name: Keep security sources live and opt archive sources in to the snapshot
+      unattended_upgrades_sources:
+        path: "{{ item }}"
+        snapshot_no:
+          - "{{ ansible_facts['distribution_release'] }}-security"
+        snapshot_yes: >-
+          {{ unattended_upgrades_delayed_suites
+             if unattended_upgrades_snapshot_mode == 'opt-in' and item in unattended_upgrades_distro_sources_files
+             else [] }}
+      loop: >-
+        {{ unattended_upgrades_sources_files.files | map(attribute='path')
+           + (['/etc/apt/sources.list'] if unattended_upgrades_sources_list.stat.exists else []) }}
+      notify: Update APT cache
+
+    - name: Deploy the snapshot pinning script
+      ansible.builtin.template:
+        src: apt-delay-snapshot.j2
+        dest: /usr/local/sbin/apt-delay-snapshot
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Pin APT snapshot
+
+    # A drop-in, not override.conf, so an admin's `systemctl edit` survives.
+    - name: Create apt-daily.service drop-in directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/apt-daily.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Pin the snapshot before every apt-daily update
+      ansible.builtin.template:
+        src: apt-daily-delay-snapshot.conf.j2
+        dest: /etc/systemd/system/apt-daily.service.d/50-delay-snapshot.conf
+        owner: root
+        group: root
+        mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+      notify: Reload systemd daemon
+
+# Sources keep their snapshot options: without APT::Snapshot they are inert.
+- name: Remove the delayed APT snapshot
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/apt.conf.d/99delay-snapshot
+    - /etc/systemd/system/apt-daily.service.d/50-delay-snapshot.conf
+    - /usr/local/sbin/apt-delay-snapshot
+  when: not unattended_upgrades_delay_active | bool
+  notify:
+    - Reload systemd daemon
+    - Update APT cache
+
+- name: Enable the apt-daily timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+
+- name: Configure the reboot window
+  when: unattended_upgrades_reboot_window_enabled | bool
+  block:
+    - name: Validate the reboot window calendar expression
+      ansible.builtin.command:
+        cmd: systemd-analyze calendar "{{ unattended_upgrades_reboot_window_on_calendar }}"
+      changed_when: false
+      check_mode: false
+
+    - name: Deploy reboot-if-required script
+      ansible.builtin.template:
+        src: reboot-if-required.j2
+        dest: /usr/local/sbin/reboot-if-required
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy reboot-if-required service and timer
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: /etc/systemd/system/{{ item }}
+        owner: root
+        group: root
+        mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+      loop:
+        - reboot-if-required.service
+        - reboot-if-required.timer
+      notify:
+        - Reload systemd daemon
+        - Restart reboot-if-required timer
+
+    - name: Enable reboot-if-required timer
+      ansible.builtin.systemd:
+        name: reboot-if-required.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+
+- name: Remove the reboot window
+  when: not unattended_upgrades_reboot_window_enabled | bool
+  block:
+    - name: Check for reboot-if-required timer
+      ansible.builtin.stat:
+        path: /etc/systemd/system/reboot-if-required.timer
+      register: unattended_upgrades_reboot_timer
+
+    - name: Disable reboot-if-required timer
+      ansible.builtin.systemd:
+        name: reboot-if-required.timer
+        state: stopped
+        enabled: false
+      when: unattended_upgrades_reboot_timer.stat.exists
+
+    - name: Remove reboot-if-required files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/systemd/system/reboot-if-required.timer
+        - /etc/systemd/system/reboot-if-required.service
+        - /usr/local/sbin/reboot-if-required
+      notify: Reload systemd daemon

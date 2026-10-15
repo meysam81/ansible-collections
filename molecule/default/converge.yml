@@ -97,6 +97,10 @@
       tags: node_textfile_metrics
       vars:
         node_textfile_metrics_dir: /var/lib/node-textfile-metrics
+    - role: unattended_upgrades
+      tags: unattended_upgrades
+      vars:
+        unattended_upgrades_reboot_window_enabled: true
     - role: vmagent
       tags: vmagent
       vars:
