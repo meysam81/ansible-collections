@@ -10,3 +10,13 @@ coraza_spoa_port: 9000
 coraza_config_dir: "/etc/coraza-spoa"
 coraza_go_install_dir: "/usr/local"
 coraza_haproxy_config_dir: "/etc/haproxy"
+# Request paths the WAF never sees. Rendered as an ACL condition on the SPOE
+# events, so HAProxy does not ship the request to the agent at all: cheaper
+# than a ctl:ruleEngine=Off rule and immune to agent errors, because a request
+# the agent never receives cannot fail through `set-on-error`. Use it for
+# machine ingest endpoints whose bodies are binary (metrics remote-write, log
+# pushes) and trip protocol-enforcement rules on every call.
+#   coraza_skip_paths:
+#     - /insert/
+#     - /api/v1/write
+coraza_skip_paths: []
