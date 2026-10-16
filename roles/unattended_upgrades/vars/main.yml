@@ -1,0 +1,40 @@
+---
+# Per-distro defaults for the origins variables. Ubuntu's -security and
+# release pockets share Origin/Label "Ubuntu" and are told apart by suite
+# (archive=); Debian's by label and codename.
+unattended_upgrades_distro_origins:
+  Ubuntu:
+    live:
+      # Frozen at release; security fixes may pull new dependencies from it.
+      - origin=${distro_id},archive=${distro_codename}
+      - origin=${distro_id},archive=${distro_codename}-security
+      - origin=${distro_id}ESMApps,archive=${distro_codename}-apps-security
+      - origin=${distro_id}ESMApps,archive=${distro_codename}-apps-legacy-security
+      - origin=${distro_id}ESM,archive=${distro_codename}-infra-security
+      - origin=${distro_id}ESM,archive=${distro_codename}-infra-legacy-security
+    delayed:
+      - origin=${distro_id},archive=${distro_codename}-updates
+  Debian:
+    live:
+      - origin=Debian,codename=${distro_codename}-security,label=Debian-Security
+      - origin=Debian,codename=${distro_codename},label=Debian-Security
+    delayed:
+      # Unlike Ubuntu's release pocket, Debian's changes at every point release.
+      - origin=Debian,codename=${distro_codename},label=Debian
+      - origin=Debian,codename=${distro_codename}-updates
+
+# Suites that become snapshot opt-ins on apt that needs one (Ubuntu's
+# backport); apt >= 2.7 snapshots every source it knows a server for.
+unattended_upgrades_delayed_suites:
+  - "{{ ansible_facts['distribution_release'] }}"
+  - "{{ ansible_facts['distribution_release'] }}-updates"
+  - "{{ ansible_facts['distribution_release'] }}-backports"
+  - "{{ ansible_facts['distribution_release'] }}-proposed"
+
+# Only the distro's own sources files get snapshot opt-ins: third-party
+# repos reuse codename suites (e.g. "jammy stable") but have no snapshot
+# server, and an opt-in there fails `apt update`.
+unattended_upgrades_distro_sources_files:
+  - /etc/apt/sources.list
+  - /etc/apt/sources.list.d/ubuntu.sources
+  - /etc/apt/sources.list.d/debian.sources

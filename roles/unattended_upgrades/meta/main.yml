@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: unattended_upgrades
+  description: >-
+    unattended-upgrades with live security updates, regular updates delayed
+    through a rolling APT archive snapshot, and an optional reboot window.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - apt
+    - security
+    - updates
+    - systemd
+allow_duplicates: false
+
+dependencies: []

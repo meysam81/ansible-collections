@@ -1,0 +1,19 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Pins APT to the archive as it was {{ unattended_upgrades_delay_days }} days ago. Runs before every
+# apt-daily update; the file stays in place so package lists, unattended-upgrades
+# and manual apt runs all see the same snapshot.
+set -eu
+conf=/etc/apt/apt.conf.d/99delay-snapshot
+ts=$(date -u -d '{{ unattended_upgrades_delay_days }} days ago' +%Y%m%dT000000Z)
+# A snapshot is old by design, so Release files with a Valid-Until (Debian's
+# -updates and -backports: 7 days) look expired; extend them by the delay plus
+# two days of slack. Only these archive labels: Debian-Security is live and
+# keeps its full freshness check. Ubuntu's Release files carry no Valid-Until.
+cat > "$conf.tmp" <<EOF
+APT::Snapshot "$ts";
+Acquire::Min-ValidTime::Debian "{{ (unattended_upgrades_delay_days | int + 2) * 86400 }}";
+Acquire::Min-ValidTime::"Debian Backports" "{{ (unattended_upgrades_delay_days | int + 2) * 86400 }}";
+EOF
+mv "$conf.tmp" "$conf"
+echo "APT::Snapshot $ts"

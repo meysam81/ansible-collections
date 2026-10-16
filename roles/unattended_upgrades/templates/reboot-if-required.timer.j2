@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Reboot window for reboot-if-required
+
+[Timer]
+OnCalendar={{ unattended_upgrades_reboot_window_on_calendar }}
+RandomizedDelaySec={{ unattended_upgrades_reboot_window_random_delay_sec }}
+AccuracySec=1s
+# A run missed while the host was off must not fire at boot, outside the window.
+Persistent=false
+
+[Install]
+WantedBy=timers.target

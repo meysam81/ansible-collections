@@ -1,0 +1,26 @@
+---
+# Order matters: handlers run in the order listed here, and the snapshot
+# must be pinned before the cache update that fetches from it.
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Pin APT snapshot
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/apt-delay-snapshot
+  changed_when: true
+  notify: Update APT cache
+
+# Snapshot servers answer with intermittent 5xx under load.
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+  register: unattended_upgrades_apt_update
+  until: unattended_upgrades_apt_update is succeeded
+  retries: 3
+  delay: 30
+
+- name: Restart reboot-if-required timer
+  ansible.builtin.systemd:
+    name: reboot-if-required.timer
+    state: restarted

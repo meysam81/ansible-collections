@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Reboot if a package upgrade requires it (maintenance window)
+# Only the timer may start it: a stray `systemctl start` must not reboot the
+# host outside the window.
+RefuseManualStart=yes
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/reboot-if-required

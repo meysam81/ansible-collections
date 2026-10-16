@@ -1,0 +1,84 @@
+// {{ ansible_managed }}
+// Sorts after the vendor 50unattended-upgrades, which stays untouched. The
+// #clear lines drop the vendor (and any earlier) values, so the effective
+// configuration is exactly this file.
+
+#clear APT::Periodic;
+APT::Periodic::Enable "{{ '1' if unattended_upgrades_periodic_enable | bool else '0' }}";
+APT::Periodic::Update-Package-Lists "{{ unattended_upgrades_periodic_update_package_lists }}";
+APT::Periodic::Unattended-Upgrade "{{ unattended_upgrades_periodic_unattended_upgrade }}";
+APT::Periodic::Download-Upgradeable-Packages "{{ unattended_upgrades_periodic_download_upgradeable_packages }}";
+APT::Periodic::Download-Upgradeable-Packages-Debdelta "{{ unattended_upgrades_periodic_download_upgradeable_packages_debdelta }}";
+APT::Periodic::AutocleanInterval "{{ unattended_upgrades_periodic_autoclean_interval }}";
+APT::Periodic::CleanInterval "{{ unattended_upgrades_periodic_clean_interval }}";
+APT::Periodic::MaxAge "{{ unattended_upgrades_periodic_max_age }}";
+APT::Periodic::MinAge "{{ unattended_upgrades_periodic_min_age }}";
+APT::Periodic::MaxSize "{{ unattended_upgrades_periodic_max_size }}";
+APT::Periodic::BackupArchiveInterval "{{ unattended_upgrades_periodic_backup_archive_interval }}";
+APT::Periodic::BackupLevel "{{ unattended_upgrades_periodic_backup_level }}";
+APT::Periodic::Verbose "{{ unattended_upgrades_periodic_verbose }}";
+
+#clear Unattended-Upgrade;
+Unattended-Upgrade::Origins-Pattern {
+{% for pattern in unattended_upgrades_origins_patterns %}
+    "{{ pattern }}";
+{% endfor %}
+{% if unattended_upgrades_delay_active | bool %}
+    // Regular updates: served from the delayed snapshot.
+{% for pattern in unattended_upgrades_delayed_origins_patterns %}
+    "{{ pattern }}";
+{% endfor %}
+{% endif %}
+};
+Unattended-Upgrade::Package-Blacklist {
+{% for pattern in unattended_upgrades_package_blacklist %}
+    "{{ pattern }}";
+{% endfor %}
+};
+Unattended-Upgrade::Package-Whitelist {
+{% for pattern in unattended_upgrades_package_whitelist %}
+    "{{ pattern }}";
+{% endfor %}
+};
+Unattended-Upgrade::Package-Whitelist-Strict "{{ unattended_upgrades_package_whitelist_strict | bool | lower }}";
+Unattended-Upgrade::Update-Days {
+{% for day in unattended_upgrades_update_days %}
+    "{{ day }}";
+{% endfor %}
+};
+Unattended-Upgrade::AutoFixInterruptedDpkg "{{ unattended_upgrades_auto_fix_interrupted_dpkg | bool | lower }}";
+Unattended-Upgrade::MinimalSteps "{{ unattended_upgrades_minimal_steps | bool | lower }}";
+Unattended-Upgrade::InstallOnShutdown "{{ unattended_upgrades_install_on_shutdown | bool | lower }}";
+Unattended-Upgrade::OnlyOnACPower "{{ unattended_upgrades_only_on_ac_power | bool | lower }}";
+Unattended-Upgrade::Skip-Updates-On-Metered-Connections "{{ unattended_upgrades_skip_updates_on_metered_connections | bool | lower }}";
+Unattended-Upgrade::Allow-downgrade "{{ unattended_upgrades_allow_downgrade | bool | lower }}";
+Unattended-Upgrade::Allow-APT-Mark-Fallback "{{ unattended_upgrades_allow_apt_mark_fallback | bool | lower }}";
+Unattended-Upgrade::DevRelease "{{ unattended_upgrades_dev_release | string | lower }}";
+Unattended-Upgrade::Keep-Debs-After-Install "{{ unattended_upgrades_keep_debs_after_install | bool | lower }}";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "{{ unattended_upgrades_remove_unused_kernel_packages | bool | lower }}";
+Unattended-Upgrade::Remove-New-Unused-Dependencies "{{ unattended_upgrades_remove_new_unused_dependencies | bool | lower }}";
+Unattended-Upgrade::Remove-Unused-Dependencies "{{ unattended_upgrades_remove_unused_dependencies | bool | lower }}";
+Unattended-Upgrade::Mail "{{ unattended_upgrades_mail }}";
+Unattended-Upgrade::Sender "{{ unattended_upgrades_sender }}";
+Unattended-Upgrade::MailReport "{{ unattended_upgrades_mail_report }}";
+Unattended-Upgrade::Automatic-Reboot "{{ unattended_upgrades_automatic_reboot | bool | lower }}";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "{{ unattended_upgrades_automatic_reboot_with_users | bool | lower }}";
+Unattended-Upgrade::Automatic-Reboot-WithSystemUsers "{{ unattended_upgrades_automatic_reboot_with_system_users | bool | lower }}";
+Unattended-Upgrade::Automatic-Reboot-IgnoredUsers "{{ unattended_upgrades_automatic_reboot_ignored_users | join(',') }}";
+Unattended-Upgrade::Automatic-Reboot-Time "{{ unattended_upgrades_automatic_reboot_time }}";
+Unattended-Upgrade::SyslogEnable "{{ unattended_upgrades_syslog_enable | bool | lower }}";
+Unattended-Upgrade::SyslogFacility "{{ unattended_upgrades_syslog_facility }}";
+Unattended-Upgrade::Verbose "{{ unattended_upgrades_verbose | bool | lower }}";
+Unattended-Upgrade::Debug "{{ unattended_upgrades_debug | bool | lower }}";
+{% if unattended_upgrades_dl_limit | int > 0 %}
+
+Acquire::http::Dl-Limit "{{ unattended_upgrades_dl_limit }}";
+{% endif %}
+{% if unattended_upgrades_dpkg_options | length > 0 %}
+
+Dpkg::Options {
+{% for option in unattended_upgrades_dpkg_options %}
+    "{{ option }}";
+{% endfor %}
+};
+{% endif %}
