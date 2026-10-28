@@ -108,7 +108,15 @@ frontend web
 {% endif %}
 {% endfor %}
 
-    http-request set-var(txn.req_hdrs) req.hdrs
+    # Header dump for debugging, with credential values redacted BEFORE they
+    # reach the var (and therefore the log line and the journal). Names stay
+    # so the dump still shows which headers were sent. Case-insensitive (h2
+    # lowercases names); `(^|\n)` anchors on a header-line start because
+    # regsub has no multiline flag. Single-quoted regex inside a double-quoted
+    # expression: `\\` reaches the regex engine as `\`, `\1` is a backref.
+    # Nothing captures txn.resp_hdrs, so resp_hdrs logs empty; any future
+    # capture of `res.hdrs` must go through the same regsub.
+    http-request set-var(txn.req_hdrs) "req.hdrs,regsub('(^|\\n)((Authorization|Proxy-Authorization|Cookie|Set-Cookie|X-Api-Key):)[^\\r\\n]*','\\1\\2 [redacted]',gi)"
 {% if haproxy_coraza_enabled %}
     log-format "${HAPROXY_HTTP_LOG_FMT} spoa-error:\ %[var(txn.coraza.error)]\ waf-hit:\ %[var(txn.coraza.fail)] req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
 {% else %}
