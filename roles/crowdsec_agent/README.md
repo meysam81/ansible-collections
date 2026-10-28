@@ -60,6 +60,14 @@ collections:
           - crowdsecurity/linux
 ```
 
+### APT key pinning
+
+The CrowdSec signing key is only installed when its sha256 matches
+`crowdsec_agent_apt_key_sha256`. When the key changes the run fails closed:
+review the new key, then set the new value
+(`curl -fsSL <crowdsec_agent_apt_key_url> | sha256sum`), or set it to `""` to
+skip the check.
+
 Install CrowdSec Security Engine agent with acquisition sources and collections
 
 ## Table of contents
@@ -69,6 +77,8 @@ Install CrowdSec Security Engine agent with acquisition sources and collections
   - [crowdsec_agent_acquis_extra](#crowdsec_agent_acquis_extra)
   - [crowdsec_agent_acquis_filename](#crowdsec_agent_acquis_filename)
   - [crowdsec_agent_apt_codename](#crowdsec_agent_apt_codename)
+  - [crowdsec_agent_apt_key_sha256](#crowdsec_agent_apt_key_sha256)
+  - [crowdsec_agent_apt_key_url](#crowdsec_agent_apt_key_url)
   - [crowdsec_agent_collections](#crowdsec_agent_collections)
   - [crowdsec_agent_enrollment_key](#crowdsec_agent_enrollment_key)
   - [crowdsec_agent_lapi_listen](#crowdsec_agent_lapi_listen)
@@ -106,6 +116,22 @@ crowdsec_agent_acquis_filename: egress
 
 ```YAML
 crowdsec_agent_apt_codename: "{{ ansible_facts['distribution_release'] }}"
+```
+
+### crowdsec_agent_apt_key_sha256
+
+#### Default value
+
+```YAML
+crowdsec_agent_apt_key_sha256: cd5729fe6f95d29efc48f1cfe63e0d4a3088506cf99f3cf74b572c4b70429980
+```
+
+### crowdsec_agent_apt_key_url
+
+#### Default value
+
+```YAML
+crowdsec_agent_apt_key_url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
 ```
 
 ### crowdsec_agent_collections

@@ -68,6 +68,13 @@ config text. Never inline a credential into `alloy_config`; put it in
 true` on the task) and reference the file path from `alloy_config`, e.g.
 `bearer_token_file = "/etc/alloy/secrets/remote-write-token"`.
 
+### APT key pinning
+
+The Grafana signing key is only installed when its sha256 matches
+`alloy_apt_key_sha256`. When Grafana rotates the key the run fails closed: review
+the new key, then set the new value (`curl -fsSL <alloy_apt_key_url> | sha256sum`),
+or set it to `""` to skip the check.
+
 Install Grafana Alloy from the Grafana APT repository and manage its configuration
 
 ## Table of contents
@@ -75,6 +82,7 @@ Install Grafana Alloy from the Grafana APT repository and manage its configurati
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [alloy_apt_key_path](#alloy_apt_key_path)
+  - [alloy_apt_key_sha256](#alloy_apt_key_sha256)
   - [alloy_apt_key_url](#alloy_apt_key_url)
   - [alloy_apt_repo](#alloy_apt_repo)
   - [alloy_config](#alloy_config)
@@ -108,6 +116,14 @@ Install Grafana Alloy from the Grafana APT repository and manage its configurati
 
 ```YAML
 alloy_apt_key_path: /etc/apt/keyrings/grafana.asc
+```
+
+### alloy_apt_key_sha256
+
+#### Default value
+
+```YAML
+alloy_apt_key_sha256: d8f5f6f4c174c3b9184cb6ebbf691a2ee69831a109425de4e821f5b43c53a2f8
 ```
 
 ### alloy_apt_key_url

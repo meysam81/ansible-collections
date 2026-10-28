@@ -20,11 +20,28 @@
   register: dnsproxy_tmp_dir
   when: dnsproxy_needs_install
 
+- name: Resolve dnsproxy archive sha256
+  ansible.builtin.set_fact:
+    dnsproxy_effective_sha256: >-
+      {{ dnsproxy_sha256 if dnsproxy_sha256 | length > 0
+      else (dnsproxy_known_sha256[dnsproxy_version][dnsproxy_arch] | default('')) }}
+  when: dnsproxy_needs_install
+
+- name: Warn that the dnsproxy archive is not verified
+  ansible.builtin.debug:
+    msg: >-
+      No sha256 known for dnsproxy {{ dnsproxy_version }} ({{ dnsproxy_arch }});
+      the archive is installed unverified. Set dnsproxy_sha256 to pin it.
+  when:
+    - dnsproxy_needs_install
+    - dnsproxy_effective_sha256 | length == 0
+
 - name: Download dnsproxy {{ dnsproxy_version }}
   ansible.builtin.get_url:
     url: "{{ dnsproxy_download_url }}"
     dest: "{{ dnsproxy_tmp_dir.path }}/{{ dnsproxy_download_url | basename }}"
     mode: "0644"
+    checksum: "{{ ('sha256:' ~ dnsproxy_effective_sha256) if dnsproxy_effective_sha256 | length > 0 else omit }}"
   register: dnsproxy_download
   when: dnsproxy_needs_install
 

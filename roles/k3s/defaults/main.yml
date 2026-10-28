@@ -7,6 +7,17 @@ k3s_download_url: >-
   https://github.com/k3s-io/k3s/releases/download/v{{ k3s_version }}/k3s{{ k3s_binary_suffix }}
 k3s_force_download: false
 
+# Integrity of the downloaded binary (it is installed as root).
+# k3s_binary_sha256: explicit pin of the binary for k3s_arch; wins when set.
+#   Take it from the release's sha256sum-<arch>.txt, e.g.
+#   curl -fsSL https://github.com/k3s-io/k3s/releases/download/v<version>/sha256sum-amd64.txt
+# k3s_checksum_url: used when k3s_binary_sha256 is empty; the binary is verified
+#   against the checksum file the release publishes (protects against a corrupted
+#   or tampered download, not against a compromised release).
+k3s_binary_sha256: ""
+k3s_checksum_url: >-
+  https://github.com/k3s-io/k3s/releases/download/v{{ k3s_version }}/sha256sum-{{ k3s_arch }}.txt
+
 # ── Token ───────────────────────────────────────────────────────────
 # Required — playbook must supply this value
 k3s_token: ""

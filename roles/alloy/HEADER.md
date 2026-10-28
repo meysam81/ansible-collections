@@ -67,3 +67,10 @@ config text. Never inline a credential into `alloy_config`; put it in
 `alloy_secrets` instead (written separately, mode `0600`, with `no_log:
 true` on the task) and reference the file path from `alloy_config`, e.g.
 `bearer_token_file = "/etc/alloy/secrets/remote-write-token"`.
+
+### APT key pinning
+
+The Grafana signing key is only installed when its sha256 matches
+`alloy_apt_key_sha256`. When Grafana rotates the key the run fails closed: review
+the new key, then set the new value (`curl -fsSL <alloy_apt_key_url> | sha256sum`),
+or set it to `""` to skip the check.

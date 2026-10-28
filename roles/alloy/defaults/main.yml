@@ -7,6 +7,11 @@ alloy_version: ""
 
 # URL of the Grafana APT signing key.
 alloy_apt_key_url: "https://apt.grafana.com/gpg-full.key"
+# sha256 of the file served at alloy_apt_key_url; the key is rejected on mismatch.
+# Grafana rotates its key (the current one expires in 2027): when the install
+# fails on a checksum mismatch, review the new key, then update this value
+# (curl -fsSL <alloy_apt_key_url> | sha256sum) or set it to "" to skip the check.
+alloy_apt_key_sha256: "d8f5f6f4c174c3b9184cb6ebbf691a2ee69831a109425de4e821f5b43c53a2f8"
 # Where the signing key is installed, referenced by alloy_apt_repo's signed-by=.
 alloy_apt_key_path: "/etc/apt/keyrings/grafana.asc"
 # APT source line for the Grafana package repository.

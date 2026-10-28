@@ -52,6 +52,19 @@ collections:
     k3s_disable_network_policy: false
 ```
 
+### Download integrity
+
+The binary runs as root, so it is verified before install. By default the role
+checks it against the `sha256sum-<arch>.txt` file published with the release
+(`k3s_checksum_url`). To pin an explicit hash instead, which takes precedence:
+
+```yaml
+- name: meysam81.general.k3s
+  vars:
+    k3s_token: "{{ cluster_token }}"
+    k3s_binary_sha256: "<sha256 from the release's sha256sum-amd64.txt>"
+```
+
 Install and configure K3s lightweight Kubernetes distribution
 
 ## Table of contents
@@ -59,7 +72,9 @@ Install and configure K3s lightweight Kubernetes distribution
 - [Requirements](#requirements)
 - [Default Variables](#default-variables)
   - [k3s_arch](#k3s_arch)
+  - [k3s_binary_sha256](#k3s_binary_sha256)
   - [k3s_binary_suffix](#k3s_binary_suffix)
+  - [k3s_checksum_url](#k3s_checksum_url)
   - [k3s_disable_components](#k3s_disable_components)
   - [k3s_disable_network_policy](#k3s_disable_network_policy)
   - [k3s_download_url](#k3s_download_url)
@@ -93,12 +108,29 @@ Install and configure K3s lightweight Kubernetes distribution
 k3s_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
 ```
 
+### k3s_binary_sha256
+
+#### Default value
+
+```YAML
+k3s_binary_sha256: ''
+```
+
 ### k3s_binary_suffix
 
 #### Default value
 
 ```YAML
 k3s_binary_suffix: "{{ '-arm64' if k3s_arch == 'arm64' else '' }}"
+```
+
+### k3s_checksum_url
+
+#### Default value
+
+```YAML
+k3s_checksum_url: >-
+  https://github.com/k3s-io/k3s/releases/download/v{{ k3s_version }}/sha256sum-{{ k3s_arch }}.txt
 ```
 
 ### k3s_disable_components

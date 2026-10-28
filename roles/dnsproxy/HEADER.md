@@ -51,3 +51,16 @@ collections:
     dnsproxy_disable_resolvers: false
     dnsproxy_manage_resolv_conf: false
 ```
+
+### Download integrity
+
+AdGuard does not publish a checksum file, so the role ships sha256 pins for the
+default version (`dnsproxy_known_sha256`). When you override `dnsproxy_version`,
+pin the archive yourself, otherwise it is installed unverified and the role warns:
+
+```yaml
+- name: meysam81.general.dnsproxy
+  vars:
+    dnsproxy_version: "<version>"
+    dnsproxy_sha256: "<output of: curl -fsSL <dnsproxy_download_url> | sha256sum>"
+```
