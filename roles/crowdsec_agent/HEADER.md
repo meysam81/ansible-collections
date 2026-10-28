@@ -59,3 +59,11 @@ collections:
           - crowdsecurity/iptables
           - crowdsecurity/linux
 ```
+
+### APT key pinning
+
+The CrowdSec signing key is only installed when its sha256 matches
+`crowdsec_agent_apt_key_sha256`. When the key changes the run fails closed:
+review the new key, then set the new value
+(`curl -fsSL <crowdsec_agent_apt_key_url> | sha256sum`), or set it to `""` to
+skip the check.
