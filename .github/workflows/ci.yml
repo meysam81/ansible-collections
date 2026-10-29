@@ -173,7 +173,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@5fac056c45595896c973fbde871f01f6cb14d74c # main
+        uses: ansible/ansible-lint@3ac7c75dc4f0c963abae154a396e94d7c5328bdb # main
         with:
           setup_python: "true"
           requirements_file: requirements.yml
@@ -187,7 +187,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # master
+        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
