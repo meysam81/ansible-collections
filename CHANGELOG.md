@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.1](https://github.com/meysam81/ansible-collections/compare/v1.13.0...v1.13.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **haproxy_config:** redact credential headers in the request header log ([#126](https://github.com/meysam81/ansible-collections/issues/126)) ([a4b8202](https://github.com/meysam81/ansible-collections/commit/a4b8202c9bd42a1c5236188eae6a3f61f6a629c4))
+* **k3s,dnsproxy,alloy,crowdsec_agent:** verify downloads that run as root; gate publish on ansible-lint ([#127](https://github.com/meysam81/ansible-collections/issues/127)) ([487e368](https://github.com/meysam81/ansible-collections/commit/487e368edc48e471ed1ea6c34f1cda1b37771654))
+
 ## [1.13.0](https://github.com/meysam81/ansible-collections/compare/v1.12.0...v1.13.0) (2026-10-16)
 
 
