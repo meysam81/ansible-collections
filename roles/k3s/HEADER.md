@@ -51,3 +51,16 @@ collections:
     k3s_flannel_backend: "vxlan"
     k3s_disable_network_policy: false
 ```
+
+### Download integrity
+
+The binary runs as root, so it is verified before install. By default the role
+checks it against the `sha256sum-<arch>.txt` file published with the release
+(`k3s_checksum_url`). To pin an explicit hash instead, which takes precedence:
+
+```yaml
+- name: meysam81.general.k3s
+  vars:
+    k3s_token: "{{ cluster_token }}"
+    k3s_binary_sha256: "<sha256 from the release's sha256sum-amd64.txt>"
+```

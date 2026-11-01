@@ -43,6 +43,8 @@
     url: "{{ k3s_download_url }}"
     dest: "{{ k3s_tmp_dir.path }}/k3s"
     mode: "0755"
+    checksum: >-
+      sha256:{{ k3s_binary_sha256 if k3s_binary_sha256 | length > 0 else k3s_checksum_url }}
   register: k3s_download
   when: k3s_needs_install
 

@@ -12,6 +12,12 @@ crowdsec_agent_acquis_filename: egress
 
 crowdsec_agent_lapi_listen: "127.0.0.1:8080"
 
+# CrowdSec's APT signing key. The key is rejected when its sha256 differs;
+# set crowdsec_agent_apt_key_sha256 to "" to skip the check. Compute the value with:
+# curl -fsSL <crowdsec_agent_apt_key_url> | sha256sum
+crowdsec_agent_apt_key_url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+crowdsec_agent_apt_key_sha256: "cd5729fe6f95d29efc48f1cfe63e0d4a3088506cf99f3cf74b572c4b70429980"
+
 # Override apt codename when the detected release isn't available upstream.
 # e.g. set to "bookworm" on Debian Trixie where CrowdSec lacks a repo.
 crowdsec_agent_apt_codename: "{{ ansible_facts['distribution_release'] }}"

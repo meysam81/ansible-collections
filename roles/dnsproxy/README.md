@@ -52,6 +52,19 @@ collections:
     dnsproxy_manage_resolv_conf: false
 ```
 
+### Download integrity
+
+AdGuard does not publish a checksum file, so the role ships sha256 pins for the
+default version (`dnsproxy_known_sha256`). When you override `dnsproxy_version`,
+pin the archive yourself, otherwise it is installed unverified and the role warns:
+
+```yaml
+- name: meysam81.general.dnsproxy
+  vars:
+    dnsproxy_version: "<version>"
+    dnsproxy_sha256: "<output of: curl -fsSL <dnsproxy_download_url> | sha256sum>"
+```
+
 Install and configure AdguardTeam/dnsproxy as a local encrypted DNS forwarder
 
 ## Table of contents
@@ -70,6 +83,7 @@ Install and configure AdguardTeam/dnsproxy as a local encrypted DNS forwarder
   - [dnsproxy_fallbacks](#dnsproxy_fallbacks)
   - [dnsproxy_force_download](#dnsproxy_force_download)
   - [dnsproxy_http3](#dnsproxy_http3)
+  - [dnsproxy_known_sha256](#dnsproxy_known_sha256)
   - [dnsproxy_listen](#dnsproxy_listen)
   - [dnsproxy_manage_resolv_conf](#dnsproxy_manage_resolv_conf)
   - [dnsproxy_max_goroutines](#dnsproxy_max_goroutines)
@@ -77,6 +91,7 @@ Install and configure AdguardTeam/dnsproxy as a local encrypted DNS forwarder
   - [dnsproxy_port](#dnsproxy_port)
   - [dnsproxy_refuse_any](#dnsproxy_refuse_any)
   - [dnsproxy_resolvconf_nameservers](#dnsproxy_resolvconf_nameservers)
+  - [dnsproxy_sha256](#dnsproxy_sha256)
   - [dnsproxy_timeout](#dnsproxy_timeout)
   - [dnsproxy_upstream_mode](#dnsproxy_upstream_mode)
   - [dnsproxy_upstreams](#dnsproxy_upstreams)
@@ -195,6 +210,17 @@ dnsproxy_force_download: false
 dnsproxy_http3: true
 ```
 
+### dnsproxy_known_sha256
+
+#### Default value
+
+```YAML
+dnsproxy_known_sha256:
+  0.81.0:
+    amd64: 1624c33b8dc6449f66ad7c54e5d909c5c54e85066c406fae66cf2624b73f792b
+    arm64: 244654937e32e405435532975c3333fd4a22e0c3b30c8ddfc6856308e8ee48a2
+```
+
 ### dnsproxy_listen
 
 #### Default value
@@ -251,6 +277,14 @@ dnsproxy_refuse_any: true
 dnsproxy_resolvconf_nameservers: |
   nameserver 127.0.0.1
   nameserver ::1
+```
+
+### dnsproxy_sha256
+
+#### Default value
+
+```YAML
+dnsproxy_sha256: ''
 ```
 
 ### dnsproxy_timeout

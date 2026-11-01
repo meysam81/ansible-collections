@@ -17,6 +17,7 @@
   ansible.builtin.get_url:
     url: "{{ alloy_apt_key_url }}"
     dest: "{{ alloy_apt_key_path }}"
+    checksum: "{{ ('sha256:' ~ alloy_apt_key_sha256) if alloy_apt_key_sha256 | length > 0 else omit }}"
     owner: root
     group: root
     mode: "0644"

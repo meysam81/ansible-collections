@@ -141,6 +141,9 @@ jobs:
     needs:
       # test are flaky now and got to be revisited again
       # - test
+      # ansible-lint is deterministic and green on main; the build step of this
+      # job already proves the collection packages.
+      - ansible-lint
       - release-please
     if: needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest

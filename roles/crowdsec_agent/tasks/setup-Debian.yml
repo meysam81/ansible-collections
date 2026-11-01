@@ -16,9 +16,10 @@
 
 - name: Download CrowdSec GPG key
   ansible.builtin.get_url:
-    url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+    url: "{{ crowdsec_agent_apt_key_url }}"
     dest: /etc/apt/keyrings/crowdsec.asc
     mode: "0644"
+    checksum: "{{ ('sha256:' ~ crowdsec_agent_apt_key_sha256) if crowdsec_agent_apt_key_sha256 | length > 0 else omit }}"
 
 - name: Dearmor CrowdSec GPG key
   ansible.builtin.command:
