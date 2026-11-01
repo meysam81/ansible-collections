@@ -22,6 +22,9 @@ Defaults are tuned for production-grade public exposure:
   Permissions-Policy. These apply to *every* response — backend, redirect,
   errorfile, and inline-responder — via `http-after-response`.
 - **Rate limiting default-on** with conservative per-IP burst limits.
+- **No credentials in the request log:** the `req_hdrs` header dump in the
+  access log replaces the values of `Authorization`, `Proxy-Authorization`,
+  `Cookie`, `Set-Cookie` and `X-Api-Key` with `[redacted]` (names are kept).
 
 Loosening any of these is the caller's explicit decision via overrides.
 
