@@ -1,0 +1,27 @@
+---
+# One login after a rollback step. Vars: ssh_ca_trust_test_login_key (a key
+# name in the key directory), ssh_ca_trust_test_login_user and
+# ssh_ca_trust_test_login_expect (success or denied).
+- name: "Try the login {{ ssh_ca_trust_test_login_key ~ ' -> ' ~ ssh_ca_trust_test_login_user }}"
+  ansible.builtin.script:
+    cmd: >-
+      {{ playbook_dir }}/tests/ssh_ca_trust/try-login.sh
+      {{ ssh_ca_trust_test_tmp.path }}/{{ ssh_ca_trust_test_login_key }} {{ ssh_ca_trust_test_login_user }}
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_test_login
+  # A reload a moment ago can still refuse the connection; never a denial.
+  retries: 3
+  delay: 2
+  until: ssh_ca_trust_test_login.rc == 0 or 'Permission denied' in ssh_ca_trust_test_login.stderr
+
+- name: "Assert the login {{ ssh_ca_trust_test_login_key ~ ' -> ' ~ ssh_ca_trust_test_login_user ~ ': ' ~ ssh_ca_trust_test_login_expect }}"
+  ansible.builtin.assert:
+    that: >-
+      (ssh_ca_trust_test_login_expect == 'success' and ssh_ca_trust_test_login.rc == 0)
+      or (ssh_ca_trust_test_login_expect == 'denied' and ssh_ca_trust_test_login.rc != 0
+          and 'Permission denied' in ssh_ca_trust_test_login.stderr)
+    fail_msg: >-
+      expected {{ ssh_ca_trust_test_login_expect }}, got rc={{ ssh_ca_trust_test_login.rc }}
+      stderr={{ ssh_ca_trust_test_login.stderr | trim }}
+    success_msg: "{{ ssh_ca_trust_test_login_key }} -> {{ ssh_ca_trust_test_login_user }}: {{ ssh_ca_trust_test_login_expect }}"
