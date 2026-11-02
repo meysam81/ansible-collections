@@ -41,6 +41,11 @@
         node_textfile_metrics_dir: /var/lib/node-textfile-metrics
     - role: unattended_upgrades
       tags: unattended_upgrades
+      vars:
+        unattended_upgrades_timer_on_calendar: hourly
+        unattended_upgrades_reboot_window_enabled: true
+        unattended_upgrades_reboot_window_condition: "true"
+        unattended_upgrades_reboot_window_kexec: true
     - role: vmagent
       tags: vmagent
       vars:

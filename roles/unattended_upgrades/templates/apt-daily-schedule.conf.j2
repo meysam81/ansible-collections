@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+[Timer]
+# The empty assignment drops the distro's schedule instead of adding to it.
+OnCalendar=
+OnCalendar={{ unattended_upgrades_timer_on_calendar }}
+RandomizedDelaySec={{ unattended_upgrades_timer_random_delay_sec }}

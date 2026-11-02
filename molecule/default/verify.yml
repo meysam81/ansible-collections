@@ -216,6 +216,24 @@
         - reboot-if-required.timer
       tags: unattended_upgrades
 
+    - name: Read the apt-daily timer schedules and the kexec-tools debconf answer
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      register: unattended_upgrades_schedule
+      changed_when: false
+      loop:
+        - systemctl show apt-daily.timer apt-daily-upgrade.timer -p TimersCalendar
+        - debconf-show kexec-tools
+      tags: unattended_upgrades
+
+    - name: Assert hourly checks, and kexec kept out of ordinary reboots
+      ansible.builtin.assert:
+        that:
+          - unattended_upgrades_schedule.results[0].stdout_lines | select('search', 'OnCalendar=\\*-\\*-\\* \\*:00:00') | list | length == 2
+          - "'APT::Periodic::Unattended-Upgrade \"always\"' in unattended_upgrades_config.stdout"
+          - "'kexec-tools/load_kexec: false' in unattended_upgrades_schedule.results[1].stdout"
+      tags: unattended_upgrades
+
     - name: Assert apt-daily and reboot-if-required timers are active and enabled
       ansible.builtin.assert:
         that:

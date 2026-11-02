@@ -35,6 +35,19 @@ window.
   counts as running), and gives up when the window closes. The service
   refuses manual starts, so a stray `systemctl start` cannot reboot the host
   outside the window; a missed window does not fire at boot.
+  - `unattended_upgrades_reboot_window_condition`: a shell command that must
+    succeed first (a peer still serving, no backup running), retried every
+    minute until the window closes.
+  - `unattended_upgrades_reboot_window_kexec`: reboot through `kexec` into the
+    default kernel symlink (`/boot/vmlinuz` on Ubuntu, `/vmlinuz` on Debian)
+    with the running command line, skipping firmware and boot loader; any
+    failure falls back to a normal reboot. `kexec-tools` is installed with
+    `load_kexec` off, so ordinary reboots stay firmware reboots.
+- **Faster checks** (opt-in, `unattended_upgrades_timer_on_calendar`, e.g.
+  `hourly`): drop-ins replace the schedule of `apt-daily.timer` and
+  `apt-daily-upgrade.timer`, so a security fix installs within the period
+  instead of up to a day later. `APT::Periodic` intervals then default to
+  `always`, since `apt.systemd.daily` skips runs younger than its interval.
 - Ensures `apt-daily.timer` and `apt-daily-upgrade.timer` are enabled.
 - Every feature is reversible: disabling it removes its files and units.
 
@@ -47,7 +60,7 @@ window.
 3. Packages that need a reboot (kernel, libc) create `/run/reboot-required`.
 4. With the reboot window on: at the window start (plus up to
    `unattended_upgrades_reboot_window_random_delay_sec`), the host reboots if
-   that file exists.
+   that file exists, no upgrade is running and the condition (if any) holds.
 
 ## Platform support
 
@@ -138,6 +151,21 @@ reboot.
 ```yaml
       vars:
         unattended_upgrades_reboot_window_enabled: true
+```
+
+### Hourly security checks, weekly window with a guard and kexec
+
+```yaml
+      vars:
+        unattended_upgrades_timer_on_calendar: hourly
+        unattended_upgrades_reboot_window_enabled: true
+        unattended_upgrades_reboot_window_on_calendar: Mon *-*-* 04:15:00 UTC
+        unattended_upgrades_reboot_window_duration_sec: 2700
+        unattended_upgrades_reboot_window_random_delay_sec: 900
+        # Skip the reboot while a peer is down.
+        unattended_upgrades_reboot_window_condition: >-
+          dig +short +time=2 +tries=1 @ns1.example.com example.com SOA | grep -q .
+        unattended_upgrades_reboot_window_kexec: true
 ```
 
 ### Weekday reboot window in local time, 1h
@@ -240,10 +268,19 @@ Defaults follow unattended-upgrades and apt upstream except where noted.
 | `unattended_upgrades_automatic_reboot_time` | `now` | `Automatic-Reboot-Time`: `now` or `HH:MM`. |
 | `unattended_upgrades_automatic_reboot_with_system_users` | `true` | `Automatic-Reboot-WithSystemUsers`. |
 | `unattended_upgrades_automatic_reboot_with_users` | `true` | `Automatic-Reboot-WithUsers`. |
+| `unattended_upgrades_reboot_window_condition` | `""` | Shell command (`/bin/sh -c`) that must succeed before the window reboots; retried every minute until the window closes. Empty: no condition. |
 | `unattended_upgrades_reboot_window_duration_sec` | `7200` | The reboot happens within this many seconds of the window start, or not at all. |
 | `unattended_upgrades_reboot_window_enabled` | `false` | Reboot only inside the window, only when required. |
+| `unattended_upgrades_reboot_window_kexec` | `false` | Reboot the window's way through `kexec` (no firmware, no boot loader), falling back to a normal reboot. Needs the window. |
 | `unattended_upgrades_reboot_window_on_calendar` | `Sun *-*-* 00:00:00 UTC` | systemd `OnCalendar` of the window start. |
 | `unattended_upgrades_reboot_window_random_delay_sec` | `1800` | `RandomizedDelaySec`; must be shorter than the window. |
+
+### apt-daily timers
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `unattended_upgrades_timer_on_calendar` | `""` | systemd `OnCalendar` for `apt-daily.timer` and `apt-daily-upgrade.timer`, e.g. `hourly`. Empty keeps the distro's schedule. |
+| `unattended_upgrades_timer_random_delay_sec` | `600` | `RandomizedDelaySec` for both timers when the schedule is overridden. |
 
 ### APT::Periodic
 
@@ -261,8 +298,8 @@ Intervals are days, or take an `s`/`m`/`h`/`d` suffix, or `always`.
 | `unattended_upgrades_periodic_max_age` | `"0"` | `MaxAge`. |
 | `unattended_upgrades_periodic_max_size` | `"0"` | `MaxSize` in MB. |
 | `unattended_upgrades_periodic_min_age` | `"2"` | `MinAge`. |
-| `unattended_upgrades_periodic_unattended_upgrade` | `"1"` | `Unattended-Upgrade` (upstream `0`). |
-| `unattended_upgrades_periodic_update_package_lists` | `"1"` | `Update-Package-Lists` (upstream `0`). |
+| `unattended_upgrades_periodic_unattended_upgrade` | `"1"`, `always` with an overridden timer schedule | `Unattended-Upgrade` (upstream `0`). |
+| `unattended_upgrades_periodic_update_package_lists` | `"1"`, `always` with an overridden timer schedule | `Update-Package-Lists` (upstream `0`). |
 | `unattended_upgrades_periodic_verbose` | `"0"` | `Verbose`: 0 none, 1 progress, 2 command output, 3 trace. |
 
 unattended-upgrades with live security updates, regular updates delayed through a rolling APT archive snapshot, and an optional reboot window.
@@ -308,8 +345,10 @@ unattended-upgrades with live security updates, regular updates delayed through 
   - [unattended_upgrades_periodic_unattended_upgrade](#unattended_upgrades_periodic_unattended_upgrade)
   - [unattended_upgrades_periodic_update_package_lists](#unattended_upgrades_periodic_update_package_lists)
   - [unattended_upgrades_periodic_verbose](#unattended_upgrades_periodic_verbose)
+  - [unattended_upgrades_reboot_window_condition](#unattended_upgrades_reboot_window_condition)
   - [unattended_upgrades_reboot_window_duration_sec](#unattended_upgrades_reboot_window_duration_sec)
   - [unattended_upgrades_reboot_window_enabled](#unattended_upgrades_reboot_window_enabled)
+  - [unattended_upgrades_reboot_window_kexec](#unattended_upgrades_reboot_window_kexec)
   - [unattended_upgrades_reboot_window_on_calendar](#unattended_upgrades_reboot_window_on_calendar)
   - [unattended_upgrades_reboot_window_random_delay_sec](#unattended_upgrades_reboot_window_random_delay_sec)
   - [unattended_upgrades_remove_new_unused_dependencies](#unattended_upgrades_remove_new_unused_dependencies)
@@ -319,6 +358,8 @@ unattended-upgrades with live security updates, regular updates delayed through 
   - [unattended_upgrades_skip_updates_on_metered_connections](#unattended_upgrades_skip_updates_on_metered_connections)
   - [unattended_upgrades_syslog_enable](#unattended_upgrades_syslog_enable)
   - [unattended_upgrades_syslog_facility](#unattended_upgrades_syslog_facility)
+  - [unattended_upgrades_timer_on_calendar](#unattended_upgrades_timer_on_calendar)
+  - [unattended_upgrades_timer_random_delay_sec](#unattended_upgrades_timer_random_delay_sec)
   - [unattended_upgrades_update_days](#unattended_upgrades_update_days)
   - [unattended_upgrades_verbose](#unattended_upgrades_verbose)
 - [Dependencies](#dependencies)
@@ -610,7 +651,7 @@ unattended_upgrades_periodic_min_age: '2'
 #### Default value
 
 ```YAML
-unattended_upgrades_periodic_unattended_upgrade: '1'
+unattended_upgrades_periodic_unattended_upgrade: "{{ 'always' if unattended_upgrades_timer_on_calendar else '1' }}"
 ```
 
 ### unattended_upgrades_periodic_update_package_lists
@@ -618,7 +659,7 @@ unattended_upgrades_periodic_unattended_upgrade: '1'
 #### Default value
 
 ```YAML
-unattended_upgrades_periodic_update_package_lists: '1'
+unattended_upgrades_periodic_update_package_lists: "{{ 'always' if unattended_upgrades_timer_on_calendar else '1' }}"
 ```
 
 ### unattended_upgrades_periodic_verbose
@@ -627,6 +668,14 @@ unattended_upgrades_periodic_update_package_lists: '1'
 
 ```YAML
 unattended_upgrades_periodic_verbose: '0'
+```
+
+### unattended_upgrades_reboot_window_condition
+
+#### Default value
+
+```YAML
+unattended_upgrades_reboot_window_condition: ''
 ```
 
 ### unattended_upgrades_reboot_window_duration_sec
@@ -643,6 +692,14 @@ unattended_upgrades_reboot_window_duration_sec: 7200
 
 ```YAML
 unattended_upgrades_reboot_window_enabled: false
+```
+
+### unattended_upgrades_reboot_window_kexec
+
+#### Default value
+
+```YAML
+unattended_upgrades_reboot_window_kexec: false
 ```
 
 ### unattended_upgrades_reboot_window_on_calendar
@@ -715,6 +772,22 @@ unattended_upgrades_syslog_enable: false
 
 ```YAML
 unattended_upgrades_syslog_facility: daemon
+```
+
+### unattended_upgrades_timer_on_calendar
+
+#### Default value
+
+```YAML
+unattended_upgrades_timer_on_calendar: ''
+```
+
+### unattended_upgrades_timer_random_delay_sec
+
+#### Default value
+
+```YAML
+unattended_upgrades_timer_random_delay_sec: 600
 ```
 
 ### unattended_upgrades_update_days
