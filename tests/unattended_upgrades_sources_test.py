@@ -1,4 +1,4 @@
-"""Parser checks for roles/unattended_upgrades/library/unattended_upgrades_sources.py.
+"""Parser checks for plugins/modules/unattended_upgrades_sources.py.
 
 Run: python3 tests/unattended_upgrades_sources_test.py (needs ansible importable).
 """
@@ -8,7 +8,7 @@ import pathlib
 
 _path = (
     pathlib.Path(__file__).resolve().parent.parent
-    / "roles/unattended_upgrades/library/unattended_upgrades_sources.py"
+    / "plugins/modules/unattended_upgrades_sources.py"
 )
 _spec = importlib.util.spec_from_file_location("uus", _path)
 uus = importlib.util.module_from_spec(_spec)

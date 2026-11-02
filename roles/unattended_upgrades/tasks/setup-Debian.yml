@@ -90,7 +90,7 @@
     # Security suites are exempted wherever they appear. Opt-ins go only into
     # the distro's own files, see unattended_upgrades_distro_sources_files.
     - name: Keep security sources live and opt archive sources in to the snapshot
-      unattended_upgrades_sources:
+      meysam81.general.unattended_upgrades_sources:
         path: "{{ item }}"
         snapshot_no:
           - "{{ ansible_facts['distribution_release'] }}-security"
