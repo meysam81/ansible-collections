@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: ssh_ca_trust
+  description: >-
+    OpenSSH certificate trust: a trusted user CA with per-user principals,
+    per-user CA binding in authorized_keys, break-glass keys, users and
+    sudoers, with a dead-man rollback of every sshd change.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - ssh
+    - openssh
+    - certificates
+    - security
+allow_duplicates: false
+
+dependencies: []

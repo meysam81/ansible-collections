@@ -1,0 +1,133 @@
+---
+# Everything here is throwaway: the CAs, keys and the plain-key user exist
+# only so verify.yml can prove each login the role allows and denies.
+- name: Install openssh-server
+  ansible.builtin.apt:
+    name: openssh-server
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Start ssh
+  ansible.builtin.systemd:
+    name: ssh
+    state: started
+
+- name: Wait for sshd on 127.0.0.1:22
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 22
+    timeout: 30
+
+- name: Create the throwaway key directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: .ssh_ca_trust
+  register: ssh_ca_trust_test_tmp
+
+# The second role run in verify.yml is a separate ansible-playbook as the
+# unprivileged controller user: it must reach vars.yml, never the keys.
+- name: Let the controller user traverse the key directory
+  ansible.builtin.file:
+    path: "{{ ssh_ca_trust_test_tmp.path }}"
+    state: directory
+    mode: "0711"
+
+- name: Generate the throwaway CAs and user keys
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -q
+      - -t
+      - ed25519
+      - -N
+      - ""
+      - -C
+      - "{{ item }}"
+      - -f
+      - "{{ ssh_ca_trust_test_tmp.path }}/{{ item }}"
+    creates: "{{ ssh_ca_trust_test_tmp.path }}/{{ item }}"
+  loop:
+    - op_ca
+    - ci_ca
+    - op_user
+    - ci_user
+    - plain
+
+- name: Sign the operator key (principal operator)
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -q
+      - -s
+      - "{{ ssh_ca_trust_test_tmp.path }}/op_ca"
+      - -I
+      - operator:test
+      - -n
+      - operator
+      - -V
+      - -5m:+1h
+      - "{{ ssh_ca_trust_test_tmp.path }}/op_user.pub"
+    creates: "{{ ssh_ca_trust_test_tmp.path }}/op_user-cert.pub"
+
+- name: Sign the CI key (principals test-jump, test-deploy; forwarding only)
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -q
+      - -s
+      - "{{ ssh_ca_trust_test_tmp.path }}/ci_ca"
+      - -I
+      - ci:test
+      - -n
+      - test-jump,test-deploy
+      - -O
+      - clear
+      - -O
+      - permit-port-forwarding
+      - -V
+      - -5m:+1h
+      - "{{ ssh_ca_trust_test_tmp.path }}/ci_user.pub"
+    creates: "{{ ssh_ca_trust_test_tmp.path }}/ci_user-cert.pub"
+
+- name: Read the public keys
+  ansible.builtin.slurp:
+    src: "{{ ssh_ca_trust_test_tmp.path }}/{{ item }}.pub"
+  loop:
+    - op_ca
+    - ci_ca
+    - plain
+  register: ssh_ca_trust_test_slurp
+
+- name: Index the public keys by name
+  ansible.builtin.set_fact:
+    ssh_ca_trust_test_pub: >-
+      {{ dict(ssh_ca_trust_test_slurp.results | map(attribute='item')
+         | zip(ssh_ca_trust_test_slurp.results | map(attribute='content') | map('b64decode') | map('trim'))) }}
+
+# A static key that exists before the role runs must keep working after it:
+# a RevokedKeys file sshd cannot read would make it refuse every key.
+- name: Create the plain-key user
+  ansible.builtin.user:
+    name: plain-test
+    shell: /bin/bash
+  register: ssh_ca_trust_test_plain_user
+
+- name: Create the plain-key user's .ssh
+  ansible.builtin.file:
+    path: "{{ ssh_ca_trust_test_plain_user.home }}/.ssh"
+    state: directory
+    owner: plain-test
+    mode: "0700"
+
+- name: Authorize the plain key
+  ansible.builtin.copy:
+    content: "{{ ssh_ca_trust_test_pub.plain }}\n"
+    dest: "{{ ssh_ca_trust_test_plain_user.home }}/.ssh/authorized_keys"
+    owner: plain-test
+    mode: "0600"
+
+- name: Log in with the plain key before the role runs
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/tests/ssh_ca_trust/try-login.sh {{ ssh_ca_trust_test_tmp.path }}/plain plain-test"
+  changed_when: false
