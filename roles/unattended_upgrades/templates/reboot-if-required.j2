@@ -40,11 +40,25 @@ reboot_required() {
     required_by="reboot-required file"
     pkgs=$(tr '\n' ' ' < "$required_file.pkgs" 2>/dev/null || true)
 {% if unattended_upgrades_reboot_window_trigger %}
-  elif /bin/sh -c {{ unattended_upgrades_reboot_window_trigger | quote }}; then
-    required_by="reboot trigger"
-{% endif %}
+  else
+    # Exit 0 requires a reboot, 1 does not; anything else (not found, not
+    # executable, a signal) means the answer is unknown, which must not read
+    # as "no".
+    trigger_rc=0
+    /bin/sh -c {{ unattended_upgrades_reboot_window_trigger | quote }} || trigger_rc=$?
+    case "$trigger_rc" in
+      0) required_by="reboot trigger" ;;
+      1) return 1 ;;
+      *)
+        echo "reboot trigger failed (exit $trigger_rc)" >&2
+        record skipped "reboot trigger failed (exit $trigger_rc)"
+        exit 1
+        ;;
+    esac
+{% else %}
   else
     return 1
+{% endif %}
   fi
 }
 

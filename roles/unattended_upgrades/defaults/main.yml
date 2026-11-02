@@ -130,7 +130,8 @@ unattended_upgrades_reboot_window_condition: ""
 # Shell command (run with /bin/sh -c) whose success requires a reboot even
 # without /run/reboot-required, e.g. a service still running a replaced
 # library. Checked once the wait for apt-daily-upgrade and the condition
-# ends. Empty means only the file counts.
+# ends. Exit 0 requires a reboot, 1 does not, anything else is an error
+# (recorded as skipped, the unit fails). Empty means only the file counts.
 unattended_upgrades_reboot_window_trigger: ""
 
 # Reboot through kexec instead of the firmware: skips POST and the boot

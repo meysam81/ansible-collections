@@ -43,6 +43,10 @@ window.
     requires a reboot even without `/run/reboot-required`, e.g. a service
     still running a replaced library (see Usage). Asked once the wait ends,
     so an upgrade that ran inside the window counts.
+    Exit 0 requires a reboot, exit 1 does not, and any other exit (not found,
+    not executable, a signal) is an error: the run records `skipped`, does
+    not reboot and fails the unit. Make a failing check exit 2, or a
+    pipeline will report grep's status instead.
   - `unattended_upgrades_reboot_window_kexec`: reboot through `kexec` into the
     default kernel symlink (`/boot/vmlinuz` on Ubuntu, `/vmlinuz` on Debian)
     with the running command line, skipping firmware and boot loader; any
@@ -83,8 +87,9 @@ reason=apt-daily-upgrade.service still active at deadline
 - `outcome`: `not-required`; `rebooting`, written just before the reboot; or
   `skipped`: a reboot was required, but a running upgrade or the condition
   held it past the window. The next window tries again.
-- `reason`: `not required`, `reboot-required file`, `reboot trigger`, or what
-  held the reboot, ending in `at deadline`.
+- `reason`: `not required`, `reboot-required file`, `reboot trigger`, what
+  held the reboot (ending in `at deadline`), or `reboot trigger failed (exit
+  N)`, which comes with `skipped` and a failed service.
 
 A run that does not finish fails `reboot-if-required.service` instead:
 `TimeoutStartSec` is the window minus its random delay, plus 600 s. That is
@@ -93,8 +98,9 @@ so a condition or trigger that hangs cannot hold back later windows. Keep
 both quick.
 
 `rebooting` with a `time` after the current boot means the reboot never
-happened. Alert on that, on `skipped`, and on a failed
-`reboot-if-required.service`.
+happened. Alert on that, on `skipped` (a failed trigger shows as `skipped` with
+the reason `reboot trigger failed (exit N)`, and the unit fails), and on a
+failed `reboot-if-required.service`.
 
 ## Platform support
 
@@ -212,7 +218,8 @@ reboot.
       vars:
         unattended_upgrades_reboot_window_enabled: true
         unattended_upgrades_reboot_window_trigger: >-
-          needrestart -b -r l | grep -q '^NEEDRESTART-SVC: '
+          out=$(needrestart -b -r l) || exit 2
+          printf '%s\n' "$out" | grep -q '^NEEDRESTART-SVC: '
 ```
 
 ### Weekday reboot window in local time, 1h
@@ -321,7 +328,7 @@ Defaults follow unattended-upgrades and apt upstream except where noted.
 | `unattended_upgrades_reboot_window_kexec` | `false` | Reboot the window's way through `kexec` (no firmware, no boot loader), falling back to a normal reboot. Needs the window. |
 | `unattended_upgrades_reboot_window_on_calendar` | `Sun *-*-* 00:00:00 UTC` | systemd `OnCalendar` of the window start. |
 | `unattended_upgrades_reboot_window_random_delay_sec` | `1800` | `RandomizedDelaySec`; must be shorter than the window. |
-| `unattended_upgrades_reboot_window_trigger` | `""` | Shell command (`/bin/sh -c`) whose success requires a reboot even without `/run/reboot-required`; asked once the wait ends. Empty: only the file counts. Needs the window. |
+| `unattended_upgrades_reboot_window_trigger` | `""` | Shell command (`/bin/sh -c`) whose exit 0 requires a reboot even without `/run/reboot-required`, 1 does not, anything else is an error (`skipped`, the unit fails); asked once the wait ends. Empty: only the file counts. Needs the window. |
 
 ### apt-daily timers
 

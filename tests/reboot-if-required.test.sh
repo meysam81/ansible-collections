@@ -51,7 +51,7 @@ render() {
   fi
 }
 
-# run CASE TRIGGER REBOOT_REQUIRED_FILE(yes|no) APT_DAILY_UPGRADE_STATE
+# run CASE TRIGGER REBOOT_REQUIRED_FILE(yes|no) APT_DAILY_UPGRADE_STATE [EXIT_STATUS]
 run() {
   case=$1
   case_failed=0
@@ -80,7 +80,7 @@ run() {
     CALLS="$dir/calls" IS_ACTIVE=$4 PATH="$work/bin:$PATH" \
       timeout 60 /bin/sh "$dir/reboot-if-required"
   ) > "$dir/out" 2>&1 || rc=$?
-  check "exits 0 (got $rc)" test "$rc" -eq 0
+  check "exits ${5:-0} (got $rc)" test "$rc" -eq "${5:-0}"
   check "writes the status file" test -f "$status"
   check "status file is 0644" test -n "$(find "$status" -perm 0644 2>/dev/null)"
   check "status has a time" grep -qx 'time=[0-9][0-9]*' "$status"
@@ -127,11 +127,44 @@ check "does not reboot" not reboots
 check "outcome=not-required" line outcome=not-required "$status"
 done_case
 
+
+# A trigger that cannot answer is an error, not a "no": exit 1 alone means
+# not required.
+run "(g) no file, trigger cannot run (127)" "exit 127" no inactive 1
+check "does not reboot" not reboots
+check "outcome=skipped" line outcome=skipped "$status"
+check "reason names the exit status" line "reason=reboot trigger failed (exit 127)" "$status"
+done_case
+
+run "(h) no file, trigger fails (2)" "exit 2" no inactive 1
+check "does not reboot" not reboots
+check "outcome=skipped" line outcome=skipped "$status"
+check "reason names the exit status" line "reason=reboot trigger failed (exit 2)" "$status"
+done_case
+
+run "(i) no file, trigger killed by a signal" 'kill -TERM $$' no inactive 1
+check "does not reboot" not reboots
+check "outcome=skipped" line outcome=skipped "$status"
+check "reason names the exit status" line "reason=reboot trigger failed (exit 143)" "$status"
+done_case
+
+run "(j) no file, trigger says no (1)" "exit 1" no inactive
+check "does not reboot" not reboots
+check "outcome=not-required" line outcome=not-required "$status"
+check "reason=not required" line "reason=not required" "$status"
+done_case
+
+run "(k) no file, trigger cannot run, upgrade runs past the deadline" "exit 127" no activating 1
+check "does not reboot" not reboots
+check "outcome=skipped" line outcome=skipped "$status"
+check "reason names the exit status" line "reason=reboot trigger failed (exit 127)" "$status"
+done_case
+
 # Only the unit's start timeout ends a run whose condition or trigger hangs,
 # so it must outlast the script's own deadline plus one more poll.
-case="(f) the unit times out only after the script's deadline and last poll"
+case="(l) the unit times out only after the script's deadline and last poll"
 case_failed=0
-dir="$work/f"
+dir="$work/l"
 mkdir -p "$dir"
 vars='{"unattended_upgrades_reboot_window_duration_sec": 7200,
   "unattended_upgrades_reboot_window_random_delay_sec": 1800,
