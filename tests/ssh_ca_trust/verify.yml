@@ -104,8 +104,8 @@
   loop_control:
     label: "{{ item.item.name }}"
 
-# A separate ansible-playbook so its PLAY RECAP counts only the role's tasks.
-- name: Write the role variables for the second run
+# Separate ansible-playbook runs, so each PLAY RECAP counts only the role.
+- name: Write the role variables for the later runs
   ansible.builtin.copy:
     content: |
       {{ {'ssh_ca_trust_user_ca_keys': ssh_ca_trust_user_ca_keys,
@@ -115,7 +115,9 @@
     dest: "{{ ssh_ca_trust_test_tmp.path }}/vars.yml"
     mode: "0644"
 
-- name: Run the role a second time
+# The second run must change nothing. The third revokes the plain key: a
+# later change has to arm the rollback unit again, and RevokedKeys must bite.
+- name: Run the role again
   ansible.builtin.command:
     argv:
       - "{{ lookup('ansible.builtin.pipe', 'command -v ansible-playbook') }}"
@@ -125,6 +127,8 @@
       - local
       - -e
       - "@{{ ssh_ca_trust_test_tmp.path }}/vars.yml"
+      - -e
+      - "{{ item.extra_vars | to_json }}"
       - "{{ playbook_dir }}/tests/ssh_ca_trust/converge.yml"
     chdir: "{{ playbook_dir }}"
   environment:
@@ -132,14 +136,41 @@
     ANSIBLE_FORCE_COLOR: "0"
   become: false
   changed_when: false
-  register: ssh_ca_trust_test_second
+  register: ssh_ca_trust_test_reruns
+  loop_control:
+    label: "{{ item.name }}"
+  loop:
+    - name: second run, nothing to change
+      extra_vars: {}
+      recap: changed=0\s
+    - name: third run, plain key revoked
+      extra_vars:
+        ssh_ca_trust_revoked_keys:
+          - "{{ ssh_ca_trust_test_pub.plain }}"
+      recap: changed=[1-9]
 
-- name: Assert the second run changed nothing
+- name: Assert each run's recap
   ansible.builtin.assert:
     that:
-      - ssh_ca_trust_test_second.stdout is search('localhost\s*:\s*ok=\d+\s+changed=0\s+unreachable=0\s+failed=0')
-    fail_msg: "{{ ssh_ca_trust_test_second.stdout_lines[-4:] }}"
-    success_msg: "{{ ssh_ca_trust_test_second.stdout_lines[-2] | default('') }}"
+      - item.stdout is search('localhost\s*:\s*ok=\d+\s+' ~ item.item.recap ~ '.*unreachable=0\s+failed=0')
+    fail_msg: "{{ item.item.name }}: {{ item.stdout_lines[-4:] }}"
+    success_msg: "{{ item.item.name }}: {{ item.stdout | regex_search('localhost\\s*:.*') }}"
+  loop: "{{ ssh_ca_trust_test_reruns.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Try the revoked plain key
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/tests/ssh_ca_trust/try-login.sh {{ ssh_ca_trust_test_tmp.path }}/plain plain-test"
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_test_revoked
+
+- name: Assert the revoked plain key is refused
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_revoked.rc != 0
+      - "'Permission denied' in ssh_ca_trust_test_revoked.stderr"
 
 - name: Snapshot user_ca_keys
   ansible.builtin.command:
