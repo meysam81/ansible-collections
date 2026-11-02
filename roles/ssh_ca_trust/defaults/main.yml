@@ -36,8 +36,9 @@ ssh_ca_trust_locked_users: []
 ssh_ca_trust_revoked_keys: []
 
 # Seconds before the dead-man rollback restores the previous configuration
-# when the play cannot open a fresh connection after a change. Must outlast
-# the 30 s reconnect, so at least 60.
+# unless the change is confirmed by a fresh connection. The timer is armed
+# before the first write, so this covers the whole run plus the 30 s
+# reconnect: at least 60.
 ssh_ca_trust_rollback_seconds: 120
 
 # systemd unit (without .service) reloaded after a change.

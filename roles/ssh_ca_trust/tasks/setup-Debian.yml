@@ -1,7 +1,30 @@
 ---
-# Order matters: users, then a snapshot, then /etc/ssh/ssh_ca_trust (with
-# revoked_keys), then authorized_keys, and the sshd drop-in last, so the
-# drop-in never names a file that does not exist yet.
+# Order matters: users, then a snapshot and the armed dead-man rollback, then
+# /etc/ssh/ssh_ca_trust (with revoked_keys), then authorized_keys, and the
+# sshd drop-in last, so the drop-in never names a file that does not exist yet.
+
+# An armed timer means an earlier run never confirmed its change. Arming a new
+# one would cancel that rollback and snapshot the unconfirmed state instead.
+- name: Check for an unconfirmed earlier change
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - is-active
+      - ssh-ca-trust-rollback.timer
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  register: ssh_ca_trust_stale_timer
+
+- name: Assert no earlier change is waiting to roll back
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_stale_timer.stdout | trim != 'active'
+    fail_msg: >-
+      A previous SSH access change is unconfirmed and rolls back by itself
+      within {{ ssh_ca_trust_rollback_seconds | int }} s; re-run after it fires,
+      or disarm it by hand with `systemctl stop ssh-ca-trust-rollback.timer`.
+    quiet: true
 
 - name: Create the login users
   ansible.builtin.user:
@@ -85,8 +108,8 @@
     group: root
     mode: "0755"
 
-# Bookkeeping, not configuration: the snapshot is removed again below when
-# nothing else changes, so a converged host reports no change.
+# Bookkeeping, not configuration: the snapshot and the timer are removed
+# again below when nothing else changes, so a converged host reports no change.
 - name: Snapshot the managed paths before any write
   ansible.builtin.command:
     argv: "{{ [ssh_ca_trust_rollback_script, '--snapshot'] + ssh_ca_trust_managed_paths }}"
@@ -94,8 +117,38 @@
   register: ssh_ca_trust_snapshot
   when: not ansible_check_mode
 
-# authorized_keys and principals files are read on every login, so each write
-# below is live at once; any failure puts the snapshot back.
+# A transient unit left inactive or failed by an earlier run would make
+# systemd-run refuse the name.
+- name: Clear a stale rollback unit
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - "{{ item }}"
+      - ssh-ca-trust-rollback.timer
+      - ssh-ca-trust-rollback.service
+  loop:
+    - stop
+    - reset-failed
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+# authorized_keys and principals files are read on every login, so the writes
+# below are live at once. Arming first means a run that dies or loses the
+# host halfway still gets the snapshot back.
+- name: Arm the dead-man rollback
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --unit=ssh-ca-trust-rollback
+      - --description=Restore the SSH trust configuration unless the change is confirmed
+      - --on-active={{ ssh_ca_trust_rollback_seconds | int }}
+      - "{{ ssh_ca_trust_rollback_script }}"
+      - "{{ ssh_ca_trust_snapshot.stdout | trim }}"
+      - "{{ ssh_ca_trust_service }}"
+  changed_when: false
+  when: not ansible_check_mode
+
 - name: Write the trust configuration
   block:
     - name: Grant sudo
@@ -244,12 +297,7 @@
       register: ssh_ca_trust_dropin_result
   rescue:
     - name: Restore the snapshot after the failed write
-      ansible.builtin.command:
-        argv:
-          - "{{ ssh_ca_trust_rollback_script }}"
-          - "{{ ssh_ca_trust_snapshot.stdout | trim }}"
-          - "{{ ssh_ca_trust_service }}"
-      changed_when: true
+      ansible.builtin.include_tasks: restore.yml
       when: not ansible_check_mode
 
     - name: Stop after the failed write
@@ -273,6 +321,17 @@
   ansible.builtin.include_tasks: apply.yml
   when:
     - ssh_ca_trust_changed | bool
+    - not ansible_check_mode
+
+- name: Disarm the dead-man rollback, nothing changed
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - stop
+      - ssh-ca-trust-rollback.timer
+  changed_when: false
+  when:
+    - not (ssh_ca_trust_changed | bool)
     - not ansible_check_mode
 
 - name: Drop the unused snapshot

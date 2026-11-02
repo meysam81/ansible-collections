@@ -58,6 +58,25 @@
       alone may take 30); ssh_ca_trust_service must name a systemd unit.
     quiet: true
 
+# Locking the account the play logs in with cannot be rolled back: the
+# snapshot holds files, not accounts, and the next login is already gone.
+- name: Assert the connecting user is not locked
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_locked_users | intersect(ssh_ca_trust_connecting_users) | length == 0
+    fail_msg: >-
+      ssh_ca_trust_locked_users holds the connecting user
+      ({{ ssh_ca_trust_locked_users | intersect(ssh_ca_trust_connecting_users) | join(', ') }}):
+      locking it would shut this play out of the host for good.
+    quiet: true
+  vars:
+    # ansible_user when the inventory names it; SUDO_USER is the login user
+    # behind become: sudo; user_id is the login user without become.
+    ssh_ca_trust_connecting_users: >-
+      {{ [ansible_user | default(''),
+          (ansible_facts['env'] | default({}))['SUDO_USER'] | default(''),
+          ansible_facts['user_id'] | default('')] | select | list }}
+
 - name: Set up ssh_ca_trust on Debian/Ubuntu
   ansible.builtin.import_tasks: setup-Debian.yml
   when: ansible_facts['os_family'] == 'Debian'

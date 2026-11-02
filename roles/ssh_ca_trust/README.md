@@ -23,7 +23,9 @@ rolls itself back on the host.
   This is where a second CA is bound to exactly one user, with a
   `cert-authority,principals="..."` line, instead of trusting it for everyone.
 - Locks users (`ssh_ca_trust_locked_users`): password locked, shell
-  `/usr/sbin/nologin`, `authorized_keys` and `authorized_keys2` emptied.
+  `/usr/sbin/nologin`, `authorized_keys` and `authorized_keys2` emptied. The
+  user the play connects as (`ansible_user`, or `SUDO_USER` under become) is
+  refused.
 - Writes `/etc/ssh/sshd_config.d/10-ssh-ca-trust.conf` last:
 
   ```text
@@ -41,24 +43,38 @@ the same files.
 change can lock the operator out without any sshd reload. The role guards
 every run:
 
-1. Before the first write it saves every path it manages, and records the
+1. If `ssh-ca-trust-rollback.timer` is still armed from an earlier run, that
+   change was never confirmed: the role stops and lets the timer restore it
+   (or `systemctl stop ssh-ca-trust-rollback.timer` by hand).
+2. Before the first write it saves every path it manages, and records the
    ones that do not exist yet, in `/var/lib/ssh_ca_trust/snapshot-<epoch>/`
    (the newest 10 are kept; a run that changes nothing removes its own).
-2. If a write fails, it restores the snapshot at once and stops.
-3. If anything changed, it runs `sshd -t`, checks with `sshd -T` that the
-   drop-in is in effect, and restores the snapshot if either fails.
-4. It arms `systemd-run --unit=ssh-ca-trust-rollback
-   --on-active=<ssh_ca_trust_rollback_seconds>`, which runs
-   `/usr/local/sbin/ssh-ca-trust-rollback <snapshot>`.
-5. It runs `systemctl try-reload-or-restart ssh.service`, drops the
-   connection and opens a fresh one (30 s timeout).
-6. Once the fresh connection works it stops the timer. If it does not, the
-   play fails with "the rollback restores the previous SSH config in N s",
-   and the host restores the snapshot and reloads sshd by itself.
+3. Still before the first write it arms `systemd-run
+   --unit=ssh-ca-trust-rollback --on-active=<ssh_ca_trust_rollback_seconds>`,
+   which runs `/usr/local/sbin/ssh-ca-trust-rollback <snapshot>`. A run that
+   dies or loses the host halfway is restored by the timer.
+4. If nothing changed, it disarms the timer and drops the snapshot.
+5. If anything changed, it runs `sshd -t`, checks with `sshd -T` that the
+   drop-in is in effect, and runs `systemctl try-reload-or-restart
+   ssh.service`, then drops the connection and opens a fresh one (30 s
+   timeout).
+6. Once the fresh connection works and the timer has not fired, it disarms
+   the timer.
 
-The restore deletes the paths that did not exist, extracts the saved ones,
-and reloads sshd only if `sshd -t` accepts the result. User accounts, locked
-passwords and shells are not part of the snapshot.
+Any failure while the host is reachable (a write, `sshd -t`, `sshd -T`, the
+reload, a timer that fired too early) restores the snapshot at once, disarms
+the timer and stops. If the fresh connection fails, the play stops with "the
+rollback restores the previous SSH config in N s" and the host does it by
+itself. `ssh_ca_trust_rollback_seconds` covers the whole run from the first
+write, so raise it for a slow connection or many users.
+
+A restore refuses a damaged snapshot without touching anything. Otherwise it
+extracts the saved files, removes the drop-in if it did not exist, and reloads
+sshd only if `sshd -t` accepts the result; only then does it delete the other
+paths that did not exist. `revoked_keys` and its directory are never deleted
+(an empty `revoked_keys` is harmless, a missing one makes sshd refuse every
+key). User accounts, locked passwords and shells are not part of the
+snapshot, which is why the role refuses to lock the user it connects as.
 
 By hand:
 
