@@ -217,7 +217,7 @@ reboot.
 ```yaml
       vars:
         unattended_upgrades_reboot_window_enabled: true
-        unattended_upgrades_reboot_window_trigger: >-
+        unattended_upgrades_reboot_window_trigger: |-
           out=$(needrestart -b -r l) || exit 2
           printf '%s\n' "$out" | grep -q '^NEEDRESTART-SVC: '
 ```
