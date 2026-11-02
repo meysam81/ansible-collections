@@ -1,0 +1,27 @@
+---
+- name: Assert needrestart variables
+  ansible.builtin.assert:
+    that:
+      - needrestart_restart_mode in ['a', 'l', 'i']
+      - needrestart_skip_services is sequence and needrestart_skip_services is not string
+    fail_msg: >-
+      needrestart_restart_mode must be a, l or i; needrestart_skip_services
+      must be a list of regexes.
+    quiet: true
+
+- name: Install needrestart
+  ansible.builtin.apt:
+    name: needrestart
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# conf.d, not needrestart.conf, so the package's conffile stays untouched.
+- name: Deploy the needrestart configuration
+  ansible.builtin.template:
+    src: needrestart.conf.j2
+    dest: /etc/needrestart/conf.d/50-ansible.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: perl -c %s

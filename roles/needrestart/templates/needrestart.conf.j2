@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+$nrconf{restart} = '{{ needrestart_restart_mode }}';
+{% for pattern in needrestart_skip_services %}
+$nrconf{override_rc}{qr({{ pattern }})} = 0;
+{% endfor %}
