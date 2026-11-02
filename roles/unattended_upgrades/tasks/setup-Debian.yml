@@ -7,6 +7,7 @@
       - unattended_upgrades_mail_report in ['always', 'only-on-error', 'on-change']
       - not (unattended_upgrades_automatic_reboot | bool and unattended_upgrades_reboot_window_enabled | bool)
       - unattended_upgrades_reboot_window_random_delay_sec | int < unattended_upgrades_reboot_window_duration_sec | int
+      - unattended_upgrades_reboot_window_enabled | bool or not unattended_upgrades_reboot_window_kexec | bool
     fail_msg: >-
       unattended_upgrades_origins_patterns is required on
       {{ ansible_facts['distribution'] }} (only Debian and Ubuntu have
@@ -15,7 +16,8 @@
       on-change; unattended_upgrades_automatic_reboot and
       unattended_upgrades_reboot_window_enabled are mutually exclusive;
       unattended_upgrades_reboot_window_random_delay_sec must be shorter than
-      unattended_upgrades_reboot_window_duration_sec.
+      unattended_upgrades_reboot_window_duration_sec;
+      unattended_upgrades_reboot_window_kexec needs the reboot window.
     quiet: true
 
 - name: Install unattended-upgrades
@@ -144,6 +146,53 @@
     - Reload systemd daemon
     - Update APT cache
 
+- name: Override the apt-daily timer schedules
+  when: unattended_upgrades_timer_on_calendar | length > 0
+  block:
+    - name: Validate the apt-daily timers calendar expression
+      ansible.builtin.command:
+        cmd: systemd-analyze calendar "{{ unattended_upgrades_timer_on_calendar }}"
+      changed_when: false
+      check_mode: false
+
+    # Drop-ins, not override.conf, so an admin's `systemctl edit` survives.
+    - name: Create apt-daily timer drop-in directories
+      ansible.builtin.file:
+        path: /etc/systemd/system/{{ item }}.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+
+    - name: Deploy apt-daily timer schedules
+      ansible.builtin.template:
+        src: apt-daily-schedule.conf.j2
+        dest: /etc/systemd/system/{{ item }}.d/50-schedule.conf
+        owner: root
+        group: root
+        mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+      notify:
+        - Reload systemd daemon
+        - Restart apt-daily timers
+
+- name: Remove the apt-daily timer schedule overrides
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ item }}.d/50-schedule.conf
+    state: absent
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+  when: unattended_upgrades_timer_on_calendar | length == 0
+  notify:
+    - Reload systemd daemon
+    - Restart apt-daily timers
+
 - name: Enable the apt-daily timers
   ansible.builtin.systemd:
     name: "{{ item }}"
@@ -161,6 +210,21 @@
         cmd: systemd-analyze calendar "{{ unattended_upgrades_reboot_window_on_calendar }}"
       changed_when: false
       check_mode: false
+
+    # The package would otherwise turn every reboot into a kexec.
+    - name: Keep kexec-tools out of ordinary reboots
+      ansible.builtin.debconf:
+        name: kexec-tools
+        question: kexec-tools/load_kexec
+        value: "false"
+        vtype: boolean
+      when: unattended_upgrades_reboot_window_kexec | bool
+
+    - name: Install kexec-tools
+      ansible.builtin.apt:
+        name: kexec-tools
+        state: present
+      when: unattended_upgrades_reboot_window_kexec | bool
 
     - name: Deploy reboot-if-required script
       ansible.builtin.template:

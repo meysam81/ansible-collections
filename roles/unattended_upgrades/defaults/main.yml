@@ -119,13 +119,39 @@ unattended_upgrades_reboot_window_duration_sec: 7200
 # Spreads reboots across a fleet. Must be shorter than the window.
 unattended_upgrades_reboot_window_random_delay_sec: 1800
 
+# Shell command (run with /bin/sh -c) that must succeed before the window
+# reboots, e.g. a peer still serving or no backup running. Retried every
+# minute; when the window closes first, the reboot waits for the next window.
+# Empty means no condition.
+unattended_upgrades_reboot_window_condition: ""
+
+# Reboot through kexec instead of the firmware: skips POST and the boot
+# loader, which takes minutes on physical servers. Boots the kernel the
+# default symlink points at (/boot/vmlinuz or /vmlinuz) with the running
+# command line, and falls back to a normal reboot when that fails. Ordinary
+# reboots stay firmware reboots.
+unattended_upgrades_reboot_window_kexec: false
+
+# ── apt-daily timers ───────────────────────────────────────────────────────
+# systemd OnCalendar for both apt-daily.timer (package lists) and
+# apt-daily-upgrade.timer (the upgrade), e.g. "hourly" so a security fix
+# installs within the hour. Empty keeps the distro's schedule: lists twice a
+# day, the upgrade once, with up to 12h and 1h of random delay.
+unattended_upgrades_timer_on_calendar: ""
+
+# RandomizedDelaySec for both timers when the schedule is overridden. Keep it
+# well under the period.
+unattended_upgrades_timer_random_delay_sec: 600
+
 # ── APT::Periodic (apt-daily / apt-daily-upgrade timers) ───────────────────
 # Interval values are days, or with an s/m/h/d suffix, or "always".
 unattended_upgrades_periodic_enable: true
 
-unattended_upgrades_periodic_update_package_lists: "1"
+# apt.systemd.daily skips a run younger than these intervals, so an
+# overridden timer schedule needs "always" to take effect.
+unattended_upgrades_periodic_update_package_lists: "{{ 'always' if unattended_upgrades_timer_on_calendar else '1' }}"
 
-unattended_upgrades_periodic_unattended_upgrade: "1"
+unattended_upgrades_periodic_unattended_upgrade: "{{ 'always' if unattended_upgrades_timer_on_calendar else '1' }}"
 
 unattended_upgrades_periodic_download_upgradeable_packages: "0"
 

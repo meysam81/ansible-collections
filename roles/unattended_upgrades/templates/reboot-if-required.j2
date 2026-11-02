@@ -15,13 +15,44 @@ upgrading() {
   esac
 }
 
-# Rebooting mid-upgrade can leave dpkg half-configured: wait, but never past the window.
-while upgrading; do
-  sleep 60
+condition_holds() {
+{% if unattended_upgrades_reboot_window_condition %}
+  /bin/sh -c {{ unattended_upgrades_reboot_window_condition | quote }}
+{% else %}
+  true
+{% endif %}
+}
+
+# Rebooting mid-upgrade can leave dpkg half-configured, and the condition
+# guards whatever else must not be cut: wait for both, never past the window.
+while :; do
+  if upgrading; then
+    reason="apt-daily-upgrade still running"
+  elif ! condition_holds; then
+    reason="reboot condition not met"
+  else
+    break
+  fi
   if [ "$(date +%s)" -ge "$deadline" ]; then
-    echo "apt-daily-upgrade still running at window close; reboot skipped"
+    echo "$reason at window close; reboot skipped"
     exit 0
   fi
+  sleep 60
 done
-echo "Rebooting, required by: $(cat /run/reboot-required.pkgs 2>/dev/null || true)"
+
+pkgs=$(tr '\n' ' ' < /run/reboot-required.pkgs 2>/dev/null || true)
+{% if unattended_upgrades_reboot_window_kexec | bool %}
+# Ubuntu links the default kernel in /boot, Debian in /: either points at the
+# newest installed kernel, the one a normal boot picks.
+for kernel in /boot/vmlinuz /vmlinuz; do
+  [ -e "$kernel" ] && break
+done
+if kexec -l "$kernel" --initrd="${kernel%vmlinuz}initrd.img" --reuse-cmdline; then
+  echo "Rebooting via kexec into $(readlink -f "$kernel"), required by: $pkgs"
+  systemctl kexec && exit 0
+  kexec -u || true
+fi
+echo "kexec failed; rebooting through the firmware"
+{% endif %}
+echo "Rebooting, required by: $pkgs"
 systemctl reboot
