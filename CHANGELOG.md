@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.14.0](https://github.com/meysam81/ansible-collections/compare/v1.13.1...v1.14.0) (2026-11-02)
+
+
+### Features
+
+* **needrestart:** restart services running replaced libraries after upgrades ([#134](https://github.com/meysam81/ansible-collections/issues/134)) ([be5693e](https://github.com/meysam81/ansible-collections/commit/be5693e368e679805a3efb2730e6d1e72c9da9e7))
+* **unattended_upgrades:** hourly checks, a reboot condition, kexec reboots ([#133](https://github.com/meysam81/ansible-collections/issues/133)) ([4c3e87f](https://github.com/meysam81/ansible-collections/commit/4c3e87f660493c3a419e9d0be6c6784eff1dbe32))
+
+
+### Bug Fixes
+
+* **unattended_upgrades:** ship unattended_upgrades_sources as a collection module ([#131](https://github.com/meysam81/ansible-collections/issues/131)) ([6db217c](https://github.com/meysam81/ansible-collections/commit/6db217ce4354e7f9614d0407209b95941353a0d4))
+
 ## [1.13.1](https://github.com/meysam81/ansible-collections/compare/v1.13.0...v1.13.1) (2026-11-01)
 
 
