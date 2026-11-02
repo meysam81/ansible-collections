@@ -48,6 +48,9 @@ defaults
     mode http
     timeout connect {{ haproxy_timeout_connect }}
     timeout client {{ haproxy_timeout_client }}
+{% if haproxy_timeout_client_hs %}
+    timeout client-hs {{ haproxy_timeout_client_hs }}
+{% endif %}
     timeout server {{ haproxy_timeout_server }}
     timeout http-request {{ haproxy_timeout_http_request }}
     timeout http-keep-alive {{ haproxy_timeout_http_keep_alive }}
@@ -107,6 +110,9 @@ frontend web
     bind quic{{ '6' if is_v6 else '4' }}@{{ bind_addr }}:443 ssl crt {{ haproxy_base_certs_dir }}/ alpn h3
 {% endif %}
 {% endfor %}
+{% if haproxy_frontend_maxconn | int > 0 %}
+    maxconn {{ haproxy_frontend_maxconn }}
+{% endif %}
 
     # Header dump for debugging, with credential values redacted BEFORE they
     # reach the var (and therefore the log line and the journal). Names stay
@@ -248,9 +254,13 @@ frontend web
     acl is_static_asset var(txn.path) -m end {{ haproxy_static_extensions | map('regex_replace', '^', '.') | join(' ') }}
     acl is_hashed_asset var(txn.path) -m reg -i {{ haproxy_hashed_asset_regex }}
     acl has_cache_control res.hdr(Cache-Control) -m found
+    # The asset values are for a served asset only. A redirect or an error on
+    # an asset path (auth proxy 302, 404) must never be stored under them.
+    acl is_cacheable_status status {{ haproxy_cache_control_statuses | join(' ') }}
 
-    http-response set-header Cache-Control "{{ haproxy_cache_control_hashed }}" if is_hashed_asset
-    http-response set-header Cache-Control "{{ haproxy_cache_control_static }}" if is_static_asset !is_hashed_asset
+    http-response set-header Cache-Control "{{ haproxy_cache_control_hashed }}" if is_hashed_asset is_cacheable_status
+    http-response set-header Cache-Control "{{ haproxy_cache_control_static }}" if is_static_asset !is_hashed_asset is_cacheable_status
+    http-response set-header Cache-Control "{{ haproxy_cache_control_uncacheable }}" if is_static_asset !is_cacheable_status or is_hashed_asset !is_cacheable_status
     http-response set-header Cache-Control "{{ haproxy_cache_control_default }}" if !is_static_asset !has_cache_control
 {% endif %}
 

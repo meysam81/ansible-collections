@@ -1,11 +1,28 @@
 ---
 # Performance
+# Process-wide ceiling. When it is reached HAProxy stops accepting on EVERY
+# listener until a slot frees, so size it for the worst-case number of
+# *held* connections (an upstream CDN keeps idle origin connections open for
+# reuse, so a request burst turns into a connection plateau that lasts
+# `haproxy_timeout_http_keep_alive`), not for the request rate. Budget about
+# 2 x tune.bufsize + ~50 kB of TLS state per connection.
 haproxy_maxconn: 4096
+# Per-frontend ceiling for `frontend web`; 0 means "use the global value".
+# Set it below `haproxy_maxconn` so a flood on the public frontend queues in
+# its own listen backlog and never starves the stats/metrics and TCP
+# passthrough sections.
+haproxy_frontend_maxconn: 0
 haproxy_threads: "{{ ansible_facts['processor_vcpus'] }}"
 
 # Timeouts
 haproxy_timeout_connect: "5s"
 haproxy_timeout_client: "50s"
+# Bound for the TLS handshake alone. Unset, HAProxy falls back to
+# `haproxy_timeout_client`, so a client that opens a connection and never
+# finishes the handshake holds a maxconn slot for the full client timeout.
+# Real clients complete a handshake in well under a second. Requires
+# HAProxy >= 2.9; set to "" to omit the directive.
+haproxy_timeout_client_hs: "10s"
 haproxy_timeout_server: "50s"
 haproxy_timeout_http_request: "15s"
 haproxy_timeout_http_keep_alive: "15s"
@@ -199,6 +216,16 @@ haproxy_hsts_preload: true
 haproxy_cache_control_default: "no-cache"
 haproxy_cache_control_hashed: "public, max-age=31536000, immutable"
 haproxy_cache_control_static: "public, max-age=86400, must-revalidate"
+# The hashed/static values apply only to these response statuses. Any other
+# status on an asset path (a login redirect from an auth proxy, a 404, a 5xx)
+# gets `haproxy_cache_control_uncacheable`, replacing what the upstream sent:
+# a CDN stores a redirect on a `.js` path by default, and a stored login
+# redirect breaks the page for every signed-in visitor.
+haproxy_cache_control_statuses:
+  - 200
+  - 206
+  - 304
+haproxy_cache_control_uncacheable: "no-store"
 haproxy_static_extensions:
   - js
   - css

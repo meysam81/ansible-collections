@@ -25,8 +25,31 @@ Defaults are tuned for production-grade public exposure:
 - **No credentials in the request log:** the `req_hdrs` header dump in the
   access log replaces the values of `Authorization`, `Proxy-Authorization`,
   `Cookie`, `Set-Cookie` and `X-Api-Key` with `[redacted]` (names are kept).
+- **TLS handshakes are bounded** (`haproxy_timeout_client_hs`, 10s): a peer
+  that opens a connection and never completes the handshake cannot hold a
+  connection slot for the whole client timeout.
 
 Loosening any of these is the caller's explicit decision via overrides.
+
+## Connection limits
+
+`haproxy_maxconn` is the process-wide ceiling. When it is reached HAProxy
+pauses **every** listener until a slot frees, so an upstream that holds idle
+connections open (any CDN reusing origin connections) can turn a short
+request burst into an outage that lasts `haproxy_timeout_http_keep_alive`.
+Size it for held connections, not request rate: budget roughly
+`2 x haproxy_bufsize + 50 kB` per connection, and keep
+`2 x haproxy_maxconn` under the service's `LimitNOFILE`.
+
+`haproxy_frontend_maxconn` (default `0` = global) caps `frontend web` alone.
+Set it below the global value so a flood on the public frontend queues in its
+own listen backlog while the stats/metrics frontend and any TCP passthrough
+sections keep accepting:
+
+```yaml
+        haproxy_maxconn: 20000
+        haproxy_frontend_maxconn: 18000
+```
 
 > **HAProxy version:** OCSP stapling is enabled via the global
 > `ocsp-update.mode on` directive, which requires HAProxy >= 3.0. Set
@@ -110,6 +133,12 @@ enabled by default. Cloudflare enforcement is opt-in:
         haproxy_cache_control_enabled: true     # default
 ```
 
+The asset `Cache-Control` values (`haproxy_cache_control_hashed`,
+`haproxy_cache_control_static`) are set only on the statuses in
+`haproxy_cache_control_statuses` (200, 206, 304). Any other status on an asset
+path gets `haproxy_cache_control_uncacheable` (`no-store`), so a login redirect
+or a 404 for a `.js` file is never stored by a CDN or a browser.
+
 ### Stats
 
 The stats/Prometheus frontend (`/metrics`, `/stats`) binds loopback only by
@@ -164,6 +193,8 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_cache_control_enabled](#haproxy_cache_control_enabled)
   - [haproxy_cache_control_hashed](#haproxy_cache_control_hashed)
   - [haproxy_cache_control_static](#haproxy_cache_control_static)
+  - [haproxy_cache_control_statuses](#haproxy_cache_control_statuses)
+  - [haproxy_cache_control_uncacheable](#haproxy_cache_control_uncacheable)
   - [haproxy_cdn_domains](#haproxy_cdn_domains)
   - [haproxy_cloudflare_bypass_hosts](#haproxy_cloudflare_bypass_hosts)
   - [haproxy_cloudflare_enabled](#haproxy_cloudflare_enabled)
@@ -190,6 +221,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_dh_param_bits](#haproxy_dh_param_bits)
   - [haproxy_frontend_extra_acls](#haproxy_frontend_extra_acls)
   - [haproxy_frontend_extra_rules](#haproxy_frontend_extra_rules)
+  - [haproxy_frontend_maxconn](#haproxy_frontend_maxconn)
   - [haproxy_global_ciphers_extra](#haproxy_global_ciphers_extra)
   - [haproxy_global_extra](#haproxy_global_extra)
   - [haproxy_hashed_asset_regex](#haproxy_hashed_asset_regex)
@@ -226,6 +258,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_stats_port](#haproxy_stats_port)
   - [haproxy_threads](#haproxy_threads)
   - [haproxy_timeout_client](#haproxy_timeout_client)
+  - [haproxy_timeout_client_hs](#haproxy_timeout_client_hs)
   - [haproxy_timeout_connect](#haproxy_timeout_connect)
   - [haproxy_timeout_http_keep_alive](#haproxy_timeout_http_keep_alive)
   - [haproxy_timeout_http_request](#haproxy_timeout_http_request)
@@ -348,6 +381,25 @@ haproxy_cache_control_hashed: public, max-age=31536000, immutable
 
 ```YAML
 haproxy_cache_control_static: public, max-age=86400, must-revalidate
+```
+
+### haproxy_cache_control_statuses
+
+#### Default value
+
+```YAML
+haproxy_cache_control_statuses:
+  - 200
+  - 206
+  - 304
+```
+
+### haproxy_cache_control_uncacheable
+
+#### Default value
+
+```YAML
+haproxy_cache_control_uncacheable: no-store
 ```
 
 ### haproxy_cdn_domains
@@ -579,6 +631,14 @@ haproxy_frontend_extra_acls: []
 
 ```YAML
 haproxy_frontend_extra_rules: []
+```
+
+### haproxy_frontend_maxconn
+
+#### Default value
+
+```YAML
+haproxy_frontend_maxconn: 0
 ```
 
 ### haproxy_global_ciphers_extra
@@ -884,6 +944,14 @@ haproxy_threads: "{{ ansible_facts['processor_vcpus'] }}"
 
 ```YAML
 haproxy_timeout_client: 50s
+```
+
+### haproxy_timeout_client_hs
+
+#### Default value
+
+```YAML
+haproxy_timeout_client_hs: 10s
 ```
 
 ### haproxy_timeout_connect
