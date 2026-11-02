@@ -1,0 +1,25 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: needrestart
+  description: >-
+    needrestart restarts services still running replaced libraries after
+    every apt or dpkg run, unattended upgrades included.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - apt
+    - security
+    - updates
+allow_duplicates: false
+
+dependencies: []

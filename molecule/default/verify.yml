@@ -155,6 +155,20 @@
           - "'node_reboot_required' in (node_textfile_metrics_content.content | b64decode)"
       tags: node_textfile_metrics
 
+    # ── needrestart ────────────────────────────────
+    - name: Read needrestart's effective restart mode
+      ansible.builtin.command:
+        cmd: perl -e 'do "/etc/needrestart/needrestart.conf"; do $_ for glob "/etc/needrestart/conf.d/*.conf"; print $nrconf{restart}'
+      register: needrestart_mode
+      changed_when: false
+      tags: needrestart
+
+    - name: Assert needrestart restarts services automatically
+      ansible.builtin.assert:
+        that:
+          - needrestart_mode.stdout == 'a'
+      tags: needrestart
+
     # ── unattended_upgrades ────────────────────────
     - name: Read the effective unattended-upgrades configuration
       ansible.builtin.command:

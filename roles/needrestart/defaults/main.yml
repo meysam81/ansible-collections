@@ -1,0 +1,10 @@
+---
+# What needrestart does with services still running replaced libraries
+# after an apt or dpkg run: "a" restarts them, "l" only lists them, "i" asks.
+# Without a restart a library security fix is installed but not in effect.
+needrestart_restart_mode: a
+
+# Perl regexes of systemd units never restarted automatically, on top of
+# needrestart's own list (dbus, systemd-logind, getty, display managers),
+# e.g. ['^haproxy\.service$'] for a front door restarted by hand.
+needrestart_skip_services: []
