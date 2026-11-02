@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.1](https://github.com/meysam81/ansible-collections/compare/v1.14.0...v1.14.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **unattended_upgrades:** kexec-tools order, first --check, snapshot outages; ci: drop SonarCloud ([#135](https://github.com/meysam81/ansible-collections/issues/135)) ([1ea1551](https://github.com/meysam81/ansible-collections/commit/1ea1551b9e2c7163b0fd6155c17b211a798e4045))
+
 ## [1.14.0](https://github.com/meysam81/ansible-collections/compare/v1.13.1...v1.14.0) (2026-11-02)
 
 
