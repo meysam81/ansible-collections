@@ -2,9 +2,18 @@
 # {{ ansible_managed }}
 # Started by reboot-if-required.timer at the window start (plus a random delay).
 set -eu
-[ -f /run/reboot-required ] || exit 0
+umask 022
+required_file={{ _unattended_upgrades_reboot_required_file | quote }}
+status_dir={{ _unattended_upgrades_reboot_status_dir | quote }}
 # The timer's random delay is part of the window, so only what's left of it is ours.
 deadline=$(( $(date +%s) + {{ unattended_upgrades_reboot_window_duration_sec | int - unattended_upgrades_reboot_window_random_delay_sec | int }} ))
+
+# The outcome of this window, for monitoring; renamed into place so a reader
+# never sees half of it.
+record() {
+  printf 'time=%s\noutcome=%s\nreason=%s\n' "$(date +%s)" "$1" "$2" > "$status_dir/status.tmp"
+  mv -f "$status_dir/status.tmp" "$status_dir/status"
+}
 
 # apt-daily-upgrade is Type=oneshot: it reports "activating" while it runs,
 # which `systemctl is-active --quiet` counts as not running.
@@ -23,24 +32,52 @@ condition_holds() {
 {% endif %}
 }
 
+# Asked only after the wait: the upgrade it waited for may be what requires
+# the reboot.
+reboot_required() {
+  pkgs=""
+  if [ -f "$required_file" ]; then
+    required_by="reboot-required file"
+    pkgs=$(tr '\n' ' ' < "$required_file.pkgs" 2>/dev/null || true)
+{% if unattended_upgrades_reboot_window_trigger %}
+  elif /bin/sh -c {{ unattended_upgrades_reboot_window_trigger | quote }}; then
+    required_by="reboot trigger"
+{% endif %}
+  else
+    return 1
+  fi
+}
+
 # Rebooting mid-upgrade can leave dpkg half-configured, and the condition
 # guards whatever else must not be cut: wait for both, never past the window.
 while :; do
   if upgrading; then
-    reason="apt-daily-upgrade still running"
+    reason="apt-daily-upgrade.service still active"
   elif ! condition_holds; then
     reason="reboot condition not met"
   else
     break
   fi
   if [ "$(date +%s)" -ge "$deadline" ]; then
-    echo "$reason at window close; reboot skipped"
+    # A window that needed no reboot was not skipped, however long it waited.
+    if reboot_required; then
+      echo "$reason at deadline; reboot skipped"
+      record skipped "$reason at deadline"
+    else
+      record not-required "not required"
+    fi
     exit 0
   fi
   sleep 60
 done
 
-pkgs=$(tr '\n' ' ' < /run/reboot-required.pkgs 2>/dev/null || true)
+if ! reboot_required; then
+  record not-required "not required"
+  exit 0
+fi
+
+by=${pkgs:-$required_by}
+record rebooting "$required_by"
 {% if unattended_upgrades_reboot_window_kexec | bool %}
 # Ubuntu links the default kernel in /boot, Debian in /: either points at the
 # newest installed kernel, the one a normal boot picks.
@@ -48,11 +85,11 @@ for kernel in /boot/vmlinuz /vmlinuz; do
   [ -e "$kernel" ] && break
 done
 if kexec -l "$kernel" --initrd="${kernel%vmlinuz}initrd.img" --reuse-cmdline; then
-  echo "Rebooting via kexec into $(readlink -f "$kernel"), required by: $pkgs"
+  echo "Rebooting via kexec into $(readlink -f "$kernel"), required by: $by"
   systemctl kexec && exit 0
   kexec -u || true
 fi
 echo "kexec failed; rebooting through the firmware"
 {% endif %}
-echo "Rebooting, required by: $pkgs"
+echo "Rebooting, required by: $by"
 systemctl reboot

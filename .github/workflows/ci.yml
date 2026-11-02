@@ -98,6 +98,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Check ansible
         run: ansible --version
+      # The playbook deploys the reboot-if-required script but never runs it.
+      - name: Test the reboot-if-required script
+        if: matrix.role == 'unattended_upgrades'
+        run: tests/reboot-if-required.test.sh
       - name: Cache Ansible collections
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:

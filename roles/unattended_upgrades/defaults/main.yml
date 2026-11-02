@@ -106,7 +106,9 @@ unattended_upgrades_debug: false
 
 # ── Reboot window ──────────────────────────────────────────────────────────
 # Reboot only inside a recurring window, and only when /run/reboot-required
-# exists. Off by default: rebooting is the caller's decision.
+# exists or the trigger below succeeds. Each run records its outcome in
+# /var/lib/reboot-if-required/status. Off by default: rebooting is the
+# caller's decision.
 unattended_upgrades_reboot_window_enabled: false
 
 # systemd OnCalendar for the window start.
@@ -124,6 +126,12 @@ unattended_upgrades_reboot_window_random_delay_sec: 1800
 # minute; when the window closes first, the reboot waits for the next window.
 # Empty means no condition.
 unattended_upgrades_reboot_window_condition: ""
+
+# Shell command (run with /bin/sh -c) whose success requires a reboot even
+# without /run/reboot-required, e.g. a service still running a replaced
+# library. Checked once the wait for apt-daily-upgrade and the condition
+# ends. Empty means only the file counts.
+unattended_upgrades_reboot_window_trigger: ""
 
 # Reboot through kexec instead of the firmware: skips POST and the boot
 # loader, which takes minutes on physical servers. Boots the kernel the

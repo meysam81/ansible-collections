@@ -30,14 +30,19 @@ window.
     the delay plus two days. The live `Debian-Security` label keeps its full
     freshness check.
 - **Reboot window** (opt-in, `unattended_upgrades_reboot_window_enabled`): a
-  `reboot-if-required.timer` reboots only when `/run/reboot-required` exists,
-  waits for a running `apt-daily-upgrade` (a oneshot unit, so `activating`
-  counts as running), and gives up when the window closes. The service
+  `reboot-if-required.timer` waits for a running `apt-daily-upgrade` (a
+  oneshot unit, so `activating` counts as running), then reboots only when
+  `/run/reboot-required` exists or the trigger succeeds, and gives up when the
+  window closes. Every run records its [outcome](#window-outcome). The service
   refuses manual starts, so a stray `systemctl start` cannot reboot the host
   outside the window; a missed window does not fire at boot.
   - `unattended_upgrades_reboot_window_condition`: a shell command that must
     succeed first (a peer still serving, no backup running), retried every
     minute until the window closes.
+  - `unattended_upgrades_reboot_window_trigger`: a shell command whose success
+    requires a reboot even without `/run/reboot-required`, e.g. a service
+    still running a replaced library (see Usage). Asked once the wait ends,
+    so an upgrade that ran inside the window counts.
   - `unattended_upgrades_reboot_window_kexec`: reboot through `kexec` into the
     default kernel symlink (`/boot/vmlinuz` on Ubuntu, `/vmlinuz` on Debian)
     with the running command line, skipping firmware and boot loader; any
@@ -59,8 +64,31 @@ window.
    available version, so a security fix installs on the next run.
 3. Packages that need a reboot (kernel, libc) create `/run/reboot-required`.
 4. With the reboot window on: at the window start (plus up to
-   `unattended_upgrades_reboot_window_random_delay_sec`), the host reboots if
-   that file exists, no upgrade is running and the condition (if any) holds.
+   `unattended_upgrades_reboot_window_random_delay_sec`), the script waits
+   until no upgrade is running and the condition (if any) holds, then reboots
+   if that file exists or the trigger (if any) succeeds.
+
+### Window outcome
+
+Every window run replaces `/var/lib/reboot-if-required/status` (`0644`) with
+one `key=value` per line:
+
+```text
+time=1767225600
+outcome=skipped
+reason=apt-daily-upgrade.service still active at deadline
+```
+
+- `time`: when it was written, in seconds since the epoch.
+- `outcome`: `not-required`; `rebooting`, written just before the reboot; or
+  `skipped`: a reboot was required, but a running upgrade or the condition
+  held it past the window. The next window tries again.
+- `reason`: `not required`, `reboot-required file`, `reboot trigger`, or what
+  held the reboot, ending in `at deadline`.
+
+`rebooting` with a `time` after the current boot means the reboot never
+happened. Alert on that, on `skipped`, and on a failed
+`reboot-if-required.service`.
 
 ## Platform support
 
@@ -105,6 +133,9 @@ warns and the play carries on.
 
 - `node_textfile_metrics` exports `node_reboot_required` from the same
   `/run/reboot-required`: alert on hosts that stay pending past a window.
+- `needrestart` leaves services it must not restart (its own unsafe list,
+  `needrestart_skip_services`) running replaced libraries:
+  `unattended_upgrades_reboot_window_trigger` can reboot for them.
 - `proxy_client` sets apt's proxy; snapshot fetches go through it.
 
 ## Runbook
@@ -167,6 +198,15 @@ reboot.
         unattended_upgrades_reboot_window_condition: >-
           dig +short +time=2 +tries=1 @ns1.example.com example.com SOA | grep -q .
         unattended_upgrades_reboot_window_kexec: true
+```
+
+### Also reboot for services still running a replaced library
+
+```yaml
+      vars:
+        unattended_upgrades_reboot_window_enabled: true
+        unattended_upgrades_reboot_window_trigger: >-
+          needrestart -b -r l | grep -q '^NEEDRESTART-SVC: '
 ```
 
 ### Weekday reboot window in local time, 1h
@@ -275,6 +315,7 @@ Defaults follow unattended-upgrades and apt upstream except where noted.
 | `unattended_upgrades_reboot_window_kexec` | `false` | Reboot the window's way through `kexec` (no firmware, no boot loader), falling back to a normal reboot. Needs the window. |
 | `unattended_upgrades_reboot_window_on_calendar` | `Sun *-*-* 00:00:00 UTC` | systemd `OnCalendar` of the window start. |
 | `unattended_upgrades_reboot_window_random_delay_sec` | `1800` | `RandomizedDelaySec`; must be shorter than the window. |
+| `unattended_upgrades_reboot_window_trigger` | `""` | Shell command (`/bin/sh -c`) whose success requires a reboot even without `/run/reboot-required`; asked once the wait ends. Empty: only the file counts. Needs the window. |
 
 ### apt-daily timers
 
@@ -352,6 +393,7 @@ unattended-upgrades with live security updates, regular updates delayed through 
   - [unattended_upgrades_reboot_window_kexec](#unattended_upgrades_reboot_window_kexec)
   - [unattended_upgrades_reboot_window_on_calendar](#unattended_upgrades_reboot_window_on_calendar)
   - [unattended_upgrades_reboot_window_random_delay_sec](#unattended_upgrades_reboot_window_random_delay_sec)
+  - [unattended_upgrades_reboot_window_trigger](#unattended_upgrades_reboot_window_trigger)
   - [unattended_upgrades_remove_new_unused_dependencies](#unattended_upgrades_remove_new_unused_dependencies)
   - [unattended_upgrades_remove_unused_dependencies](#unattended_upgrades_remove_unused_dependencies)
   - [unattended_upgrades_remove_unused_kernel_packages](#unattended_upgrades_remove_unused_kernel_packages)
@@ -717,6 +759,14 @@ unattended_upgrades_reboot_window_on_calendar: Sun *-*-* 00:00:00 UTC
 
 ```YAML
 unattended_upgrades_reboot_window_random_delay_sec: 1800
+```
+
+### unattended_upgrades_reboot_window_trigger
+
+#### Default value
+
+```YAML
+unattended_upgrades_reboot_window_trigger: ''
 ```
 
 ### unattended_upgrades_remove_new_unused_dependencies
