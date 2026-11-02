@@ -70,8 +70,8 @@ window.
 
 ### Window outcome
 
-Every window run replaces `/var/lib/reboot-if-required/status` (`0644`) with
-one `key=value` per line:
+Every window run that finishes replaces `/var/lib/reboot-if-required/status`
+(`0644`) with one `key=value` per line:
 
 ```text
 time=1767225600
@@ -85,6 +85,12 @@ reason=apt-daily-upgrade.service still active at deadline
   held it past the window. The next window tries again.
 - `reason`: `not required`, `reboot-required file`, `reboot trigger`, or what
   held the reboot, ending in `at deadline`.
+
+A run that does not finish fails `reboot-if-required.service` instead:
+`TimeoutStartSec` is the window minus its random delay, plus 600 s. That is
+the script's own deadline plus room for a last poll, condition and trigger,
+so a condition or trigger that hangs cannot hold back later windows. Keep
+both quick.
 
 `rebooting` with a `time` after the current boot means the reboot never
 happened. Alert on that, on `skipped`, and on a failed

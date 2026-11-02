@@ -1,12 +1,12 @@
 #!/bin/sh
 # shellcheck disable=SC2329 # the helpers run through check()
 # Runs the rendered reboot-if-required script against a stubbed systemctl and
-# sleep, in a shortened window.
+# sleep, in a shortened window, and checks the unit's start timeout against it.
 # Run: tests/reboot-if-required.test.sh (needs ansible; no root).
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-template="$root/roles/unattended_upgrades/templates/reboot-if-required.j2"
+templates="$root/roles/unattended_upgrades/templates"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
@@ -40,6 +40,17 @@ not() { ! "$@"; }
 line() { grep -qx -- "$1" "$2"; }
 reboots() { line reboot "$dir/calls"; }
 
+# render TEMPLATE DEST VARS_JSON
+render() {
+  if ! ansible localhost -m ansible.builtin.template \
+    -a "src=$templates/$1 dest=$2 mode=0755" \
+    -e "$3" > "$2.log" 2>&1; then
+    cat "$2.log"
+    echo "not ok - $case: rendering $1 failed"
+    exit 1
+  fi
+}
+
 # run CASE TRIGGER REBOOT_REQUIRED_FILE(yes|no) APT_DAILY_UPGRADE_STATE
 run() {
   case=$1
@@ -60,13 +71,7 @@ run() {
     "_unattended_upgrades_reboot_required_file": "%s",
     "_unattended_upgrades_reboot_status_dir": "%s"}' \
     "$2" "$dir/reboot-required" "$dir/state")
-  if ! ansible localhost -m ansible.builtin.template \
-    -a "src=$template dest=$dir/reboot-if-required mode=0755" \
-    -e "$vars" > "$dir/render.log" 2>&1; then
-    cat "$dir/render.log"
-    echo "not ok - $case: render failed"
-    exit 1
-  fi
+  render reboot-if-required.j2 "$dir/reboot-if-required" "$vars"
   : > "$dir/calls"
   rc=0
   # umask 077: the status file must come out 0644 whatever the umask.
@@ -120,6 +125,30 @@ run "(e) no file, trigger fails, upgrade runs past the deadline" "exit 1" no act
 check "waits on apt-daily-upgrade" line "is-active apt-daily-upgrade.service" "$dir/calls"
 check "does not reboot" not reboots
 check "outcome=not-required" line outcome=not-required "$status"
+done_case
+
+# Only the unit's start timeout ends a run whose condition or trigger hangs,
+# so it must outlast the script's own deadline plus one more poll.
+case="(f) the unit times out only after the script's deadline and last poll"
+case_failed=0
+dir="$work/f"
+mkdir -p "$dir"
+vars='{"unattended_upgrades_reboot_window_duration_sec": 7200,
+  "unattended_upgrades_reboot_window_random_delay_sec": 1800,
+  "unattended_upgrades_reboot_window_condition": "",
+  "unattended_upgrades_reboot_window_kexec": false,
+  "unattended_upgrades_reboot_window_trigger": "",
+  "_unattended_upgrades_reboot_required_file": "/run/reboot-required",
+  "_unattended_upgrades_reboot_status_dir": "/var/lib/reboot-if-required"}'
+render reboot-if-required.service.j2 "$dir/unit" "$vars"
+render reboot-if-required.j2 "$dir/script" "$vars"
+cp "$dir/unit" "$dir/out"
+timeout_sec=$(sed -n 's/^TimeoutStartSec=//p' "$dir/unit")
+deadline_sec=$(sed -n 's/^deadline=.* + \([0-9][0-9]*\) ))$/\1/p' "$dir/script")
+poll_sec=$(sed -n 's/^  sleep \([0-9][0-9]*\)$/\1/p' "$dir/script")
+check "TimeoutStartSec=6000 (got '$timeout_sec')" test "$timeout_sec" = 6000
+check "outlasts the deadline (${deadline_sec}s) plus a poll (${poll_sec}s)" \
+  test "$timeout_sec" -gt "$((deadline_sec + poll_sec))"
 done_case
 
 exit "$failed"
