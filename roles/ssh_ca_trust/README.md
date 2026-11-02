@@ -145,8 +145,17 @@ collections:
                 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... ci-ca
 ```
 
-Then `ssh -J jump@bastion.example.com deploy@192.0.2.10` works and nothing
-else does: no shell on the jump host, no forward to an unlisted `host:port`.
+Then `ssh -J jump@bastion.example.com deploy@192.0.2.10` works, with no shell
+on the jump host and no local forward to an unlisted `host:port`.
+`port-forwarding` also re-enables remote forwards (`-R`), which `permitopen`
+does not limit. A deployment that wants local forwarding only adds an sshd
+`Match` block for its jump users:
+
+```text
+Match User jump
+  AllowTcpForwarding local
+  AllowStreamLocalForwarding no
+```
 
 ## Caveats
 

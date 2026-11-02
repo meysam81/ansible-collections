@@ -67,6 +67,10 @@
       key: ci_user
       user: operator-test
       expect: denied
+    - name: CI cert -> root
+      key: ci_user
+      user: root
+      expect: denied
     - name: CI cert -> jump-test -W 127.0.0.1:22
       key: ci_user
       user: jump-test
