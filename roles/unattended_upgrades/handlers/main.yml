@@ -32,3 +32,4 @@
   ansible.builtin.systemd:
     name: reboot-if-required.timer
     state: restarted
+  when: not (ansible_check_mode and unattended_upgrades_reboot_units is changed)
