@@ -98,7 +98,8 @@ Hosts need outbound HTTPS to `snapshot.ubuntu.com` or `snapshot.debian.org`
 (allow it in `egress_firewall` or the proxy behind `proxy_client`, if used).
 If the snapshot server is unreachable, archive indexes fail to update and no
 regular updates install that day. Security indexes still refresh and security
-updates still install.
+updates still install. The role's own index refresh behaves the same: it
+warns and the play carries on.
 
 ## Pairing with other roles
 

@@ -27,6 +27,25 @@
     update_cache: true
     cache_valid_time: 3600
 
+# The package would otherwise turn every reboot into a kexec.
+- name: Keep kexec-tools out of ordinary reboots
+  ansible.builtin.debconf:
+    name: kexec-tools
+    question: kexec-tools/load_kexec
+    value: "false"
+    vtype: boolean
+  when: unattended_upgrades_reboot_window_enabled | bool and unattended_upgrades_reboot_window_kexec | bool
+
+# Installed here, before the sources are edited: the cache refresh for
+# those edits is a handler that runs only at the end of the play.
+- name: Install kexec-tools
+  ansible.builtin.apt:
+    name: kexec-tools
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: unattended_upgrades_reboot_window_enabled | bool and unattended_upgrades_reboot_window_kexec | bool
+
 - name: Read the installed apt version
   ansible.builtin.command:
     cmd: dpkg-query -W -f=${Version} apt
@@ -211,21 +230,6 @@
       changed_when: false
       check_mode: false
 
-    # The package would otherwise turn every reboot into a kexec.
-    - name: Keep kexec-tools out of ordinary reboots
-      ansible.builtin.debconf:
-        name: kexec-tools
-        question: kexec-tools/load_kexec
-        value: "false"
-        vtype: boolean
-      when: unattended_upgrades_reboot_window_kexec | bool
-
-    - name: Install kexec-tools
-      ansible.builtin.apt:
-        name: kexec-tools
-        state: present
-      when: unattended_upgrades_reboot_window_kexec | bool
-
     - name: Deploy reboot-if-required script
       ansible.builtin.template:
         src: reboot-if-required.j2
@@ -244,16 +248,19 @@
       loop:
         - reboot-if-required.service
         - reboot-if-required.timer
+      register: unattended_upgrades_reboot_units
       notify:
         - Reload systemd daemon
         - Restart reboot-if-required timer
 
+    # --check writes no unit, so a first dry run would fail to find it.
     - name: Enable reboot-if-required timer
       ansible.builtin.systemd:
         name: reboot-if-required.timer
         state: started
         enabled: true
         daemon_reload: true
+      when: not (ansible_check_mode and unattended_upgrades_reboot_units is changed)
 
 - name: Remove the reboot window
   when: not unattended_upgrades_reboot_window_enabled | bool
