@@ -1,0 +1,285 @@
+---
+# Order matters: users, then a snapshot, then /etc/ssh/ssh_ca_trust (with
+# revoked_keys), then authorized_keys, and the sshd drop-in last, so the
+# drop-in never names a file that does not exist yet.
+
+- name: Create the login users
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    create_home: true
+  loop: "{{ ssh_ca_trust_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: ssh_ca_trust_users_result
+
+- name: Read the account database
+  ansible.builtin.getent:
+    database: passwd
+
+- name: Assert every authorized_keys user exists
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_authorized_keys | map(attribute='user') | reject('in', ansible_facts.getent_passwd) | list | length == 0
+    fail_msg: >-
+      ssh_ca_trust_authorized_keys names users that do not exist:
+      {{ ssh_ca_trust_authorized_keys | map(attribute='user') | reject('in', ansible_facts.getent_passwd) | join(', ') }}.
+      Create them with ssh_ca_trust_users.
+    quiet: true
+
+# A locked user that does not exist stays absent: creating accounts only to
+# lock them would leave debris on every host.
+- name: Lock the locked users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    password_lock: true
+    shell: /usr/sbin/nologin
+  loop: "{{ ssh_ca_trust_locked_users | select('in', ansible_facts.getent_passwd) | list }}"
+  register: ssh_ca_trust_locked_result
+
+- name: Find the principals files on the host
+  ansible.builtin.find:
+    paths: "{{ ssh_ca_trust_dir }}/principals"
+    file_type: any
+    hidden: true
+  register: ssh_ca_trust_principals_found
+
+# Debian's default AuthorizedKeysFile also reads authorized_keys2.
+- name: Find the locked users' authorized_keys
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.getent_passwd[item.0][4] }}/.ssh/{{ item.1 }}"
+  loop: >-
+    {{ ssh_ca_trust_locked_users | select('in', ansible_facts.getent_passwd)
+       | product(['authorized_keys', 'authorized_keys2']) | list }}
+  register: ssh_ca_trust_locked_keys_stat
+
+- name: Work out the files to write and remove
+  ansible.builtin.set_fact:
+    ssh_ca_trust_principals_stray: >-
+      {{ ssh_ca_trust_principals_found.files | map(attribute='path')
+         | reject('in', ssh_ca_trust_principals.keys() | map('regex_replace', '^', ssh_ca_trust_dir ~ '/principals/') | list)
+         | list }}
+    ssh_ca_trust_locked_keys: >-
+      {{ ssh_ca_trust_locked_keys_stat.results | selectattr('stat.exists') | map(attribute='stat.path') | list }}
+
+# The drop-in comes first: a restore deletes recorded missing paths in this
+# order, so the drop-in goes before the files it names.
+- name: List the paths a rollback restores
+  ansible.builtin.set_fact:
+    ssh_ca_trust_managed_paths: >-
+      {{ [ssh_ca_trust_dropin, ssh_ca_trust_dir, ssh_ca_trust_dir ~ '/principals',
+          ssh_ca_trust_dir ~ '/user_ca_keys', ssh_ca_trust_dir ~ '/revoked_keys']
+         + ssh_ca_trust_principals.keys() | map('regex_replace', '^', ssh_ca_trust_dir ~ '/principals/') | list
+         + ssh_ca_trust_principals_stray
+         + ssh_ca_trust_authorized_keys | map(attribute='user') | map('extract', ansible_facts.getent_passwd)
+           | map(attribute='4') | product(['/.ssh/authorized_keys']) | map('join') | list
+         + ssh_ca_trust_locked_keys
+         + ssh_ca_trust_users | map(attribute='name') | map('regex_replace', '[^A-Za-z0-9_-]', '_')
+           | map('regex_replace', '^', '/etc/sudoers.d/ssh-ca-trust-') | list }}
+
+- name: Install the rollback script
+  ansible.builtin.copy:
+    src: ssh-ca-trust-rollback
+    dest: "{{ ssh_ca_trust_rollback_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+# Bookkeeping, not configuration: the snapshot is removed again below when
+# nothing else changes, so a converged host reports no change.
+- name: Snapshot the managed paths before any write
+  ansible.builtin.command:
+    argv: "{{ [ssh_ca_trust_rollback_script, '--snapshot'] + ssh_ca_trust_managed_paths }}"
+  changed_when: false
+  register: ssh_ca_trust_snapshot
+  when: not ansible_check_mode
+
+# authorized_keys and principals files are read on every login, so each write
+# below is live at once; any failure puts the snapshot back.
+- name: Write the trust configuration
+  block:
+    - name: Grant sudo
+      ansible.builtin.template:
+        src: sudoers.j2
+        dest: "/etc/sudoers.d/ssh-ca-trust-{{ item.name | regex_replace('[^A-Za-z0-9_-]', '_') }}"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: visudo -cf %s
+      loop: "{{ ssh_ca_trust_users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.sudo | default(false) | bool
+      register: ssh_ca_trust_sudo_result
+
+    - name: Revoke sudo
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/ssh-ca-trust-{{ item.name | regex_replace('[^A-Za-z0-9_-]', '_') }}"
+        state: absent
+      loop: "{{ ssh_ca_trust_users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: not (item.sudo | default(false) | bool)
+      register: ssh_ca_trust_nosudo_result
+
+    # sshd opens a principals file as the user logging in, so the tree must be
+    # world-readable, and root-owned to pass StrictModes.
+    - name: Create the trust directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ ssh_ca_trust_dir }}"
+        - "{{ ssh_ca_trust_dir }}/principals"
+      register: ssh_ca_trust_dirs_result
+
+    # Always written, even empty: a RevokedKeys file sshd cannot read makes it
+    # refuse every public key, static ones included.
+    - name: Write the revoked keys
+      ansible.builtin.template:
+        src: lines.j2
+        dest: "{{ ssh_ca_trust_dir }}/revoked_keys"
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        ssh_ca_trust_lines: "{{ ssh_ca_trust_revoked_keys }}"
+      register: ssh_ca_trust_revoked_result
+
+    - name: Write the trusted user CA keys
+      ansible.builtin.template:
+        src: lines.j2
+        dest: "{{ ssh_ca_trust_dir }}/user_ca_keys"
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        ssh_ca_trust_lines: "{{ ssh_ca_trust_user_ca_keys }}"
+      register: ssh_ca_trust_ca_result
+
+    - name: Write the principals files
+      ansible.builtin.template:
+        src: lines.j2
+        dest: "{{ ssh_ca_trust_dir }}/principals/{{ item.key }}"
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        ssh_ca_trust_lines: "{{ item.value }}"
+      loop: "{{ ssh_ca_trust_principals | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      register: ssh_ca_trust_principals_result
+
+    # A user dropped from ssh_ca_trust_principals loses certificate logins.
+    - name: Remove principals files of users no longer listed
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ ssh_ca_trust_principals_stray }}"
+      register: ssh_ca_trust_stray_result
+
+    - name: Create .ssh for authorized_keys users
+      ansible.builtin.file:
+        path: "{{ ansible_facts.getent_passwd[item.user][4] }}/.ssh"
+        state: directory
+        owner: "{{ item.user }}"
+        group: "{{ ansible_facts.getent_passwd[item.user][2] }}"
+        mode: "0700"
+      loop: "{{ ssh_ca_trust_authorized_keys }}"
+      loop_control:
+        label: "{{ item.user }}"
+      register: ssh_ca_trust_dotssh_result
+
+    - name: Write exclusive authorized_keys
+      ansible.builtin.template:
+        src: lines.j2
+        dest: "{{ ansible_facts.getent_passwd[item.user][4] }}/.ssh/authorized_keys"
+        owner: "{{ item.user }}"
+        group: "{{ ansible_facts.getent_passwd[item.user][2] }}"
+        mode: "0600"
+      vars:
+        ssh_ca_trust_lines: "{{ item['keys'] }}"
+      loop: "{{ ssh_ca_trust_authorized_keys }}"
+      loop_control:
+        label: "{{ item.user }}"
+      when: item.exclusive | default(false) | bool
+      register: ssh_ca_trust_exclusive_result
+
+    # Lines already in the file stay: existing static keys keep working.
+    - name: Add authorized_keys lines
+      ansible.builtin.lineinfile:
+        path: "{{ ansible_facts.getent_passwd[item.0.user][4] }}/.ssh/authorized_keys"
+        line: "{{ item.1 }}"
+        create: true
+        owner: "{{ item.0.user }}"
+        group: "{{ ansible_facts.getent_passwd[item.0.user][2] }}"
+        mode: "0600"
+      loop: "{{ ssh_ca_trust_authorized_keys | subelements('keys') }}"
+      loop_control:
+        label: "{{ item.0.user }}"
+      when: not (item.0.exclusive | default(false) | bool)
+      register: ssh_ca_trust_lines_result
+
+    - name: Empty the locked users' authorized_keys
+      ansible.builtin.template:
+        src: lines.j2
+        dest: "{{ item }}"
+        mode: "0600"
+      vars:
+        ssh_ca_trust_lines: []
+      loop: "{{ ssh_ca_trust_locked_keys }}"
+      register: ssh_ca_trust_emptied_result
+
+    - name: Write the sshd drop-in
+      ansible.builtin.template:
+        src: 10-ssh-ca-trust.conf.j2
+        dest: "{{ ssh_ca_trust_dropin }}"
+        owner: root
+        group: root
+        mode: "0644"
+      register: ssh_ca_trust_dropin_result
+  rescue:
+    - name: Restore the snapshot after the failed write
+      ansible.builtin.command:
+        argv:
+          - "{{ ssh_ca_trust_rollback_script }}"
+          - "{{ ssh_ca_trust_snapshot.stdout | trim }}"
+          - "{{ ssh_ca_trust_service }}"
+      changed_when: true
+      when: not ansible_check_mode
+
+    - name: Stop after the failed write
+      ansible.builtin.fail:
+        msg: >-
+          Writing the SSH trust configuration failed at
+          "{{ ansible_failed_task.name }}"; the previous files were restored.
+          {{ ansible_failed_result.msg | default('') }}
+
+- name: Decide whether anything changed
+  ansible.builtin.set_fact:
+    ssh_ca_trust_changed: >-
+      {{ [ssh_ca_trust_users_result, ssh_ca_trust_locked_result, ssh_ca_trust_sudo_result,
+          ssh_ca_trust_nosudo_result, ssh_ca_trust_dirs_result, ssh_ca_trust_revoked_result,
+          ssh_ca_trust_ca_result, ssh_ca_trust_principals_result, ssh_ca_trust_stray_result,
+          ssh_ca_trust_dotssh_result, ssh_ca_trust_exclusive_result, ssh_ca_trust_lines_result,
+          ssh_ca_trust_emptied_result, ssh_ca_trust_dropin_result]
+         | select('changed') | list | length > 0 }}
+
+- name: Apply the change behind the dead-man rollback
+  ansible.builtin.include_tasks: apply.yml
+  when:
+    - ssh_ca_trust_changed | bool
+    - not ansible_check_mode
+
+- name: Drop the unused snapshot
+  ansible.builtin.file:
+    path: "{{ ssh_ca_trust_snapshot.stdout | trim }}"
+    state: absent
+  changed_when: false
+  when:
+    - not (ssh_ca_trust_changed | bool)
+    - not ansible_check_mode

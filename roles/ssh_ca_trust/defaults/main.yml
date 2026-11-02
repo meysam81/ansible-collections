@@ -1,0 +1,44 @@
+---
+# Lines of /etc/ssh/ssh_ca_trust/user_ca_keys (TrustedUserCAKeys): the public
+# keys of the CAs whose certificates may log in as any user that has a
+# principals file. Required, at least one.
+# e.g. ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... operator-ca"]
+ssh_ca_trust_user_ca_keys: []
+
+# {user: [principal, ...]}, one /etc/ssh/ssh_ca_trust/principals/<user> each.
+# A certificate from a trusted CA logs in as <user> only when it carries one
+# of these principals; a user without an entry accepts no certificate from
+# user_ca_keys. Principals files of users missing here are removed, so
+# dropping an entry revokes that user's certificate logins. Required.
+# e.g. {admin: [operator]}
+ssh_ca_trust_principals: {}
+
+# Login users to create: [{name, sudo: false, shell: /bin/bash}].
+# sudo: true writes /etc/sudoers.d/ssh-ca-trust-<name> (NOPASSWD, checked with
+# visudo); sudo: false removes it.
+ssh_ca_trust_users: []
+
+# authorized_keys lines per user: [{user, keys: [line, ...], exclusive: false}].
+# exclusive: true renders the whole file from keys (break-glass root keys, or a
+# user whose only key is a CA binding); otherwise each line is added and
+# every other line is kept. Bind a CA to one user here, never in user_ca_keys:
+#   cert-authority,principals="deploy" ssh-ed25519 AAAA... ci-ca
+ssh_ca_trust_authorized_keys: []
+
+# Existing users to shut out: password locked, shell /usr/sbin/nologin,
+# authorized_keys and authorized_keys2 emptied. Users that do not exist are
+# skipped, never created.
+ssh_ca_trust_locked_users: []
+
+# Lines of /etc/ssh/ssh_ca_trust/revoked_keys (RevokedKeys): public keys or
+# certificates sshd must refuse. The file always exists, empty by default:
+# sshd refuses every public key when RevokedKeys names a missing file.
+ssh_ca_trust_revoked_keys: []
+
+# Seconds before the dead-man rollback restores the previous configuration
+# when the play cannot open a fresh connection after a change. Must outlast
+# the 30 s reconnect, so at least 60.
+ssh_ca_trust_rollback_seconds: 120
+
+# systemd unit (without .service) reloaded after a change.
+ssh_ca_trust_service: ssh

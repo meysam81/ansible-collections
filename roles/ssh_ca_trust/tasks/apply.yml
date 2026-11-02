@@ -1,0 +1,131 @@
+---
+# Included only when something changed: meta: reset_connection ignores
+# `when`, so the whole sequence lives in its own file.
+
+- name: Check the new sshd configuration
+  block:
+    - name: Test the sshd configuration
+      ansible.builtin.command:
+        argv:
+          - /usr/sbin/sshd
+          - -t
+      changed_when: false
+
+    - name: Read the effective sshd configuration
+      ansible.builtin.command:
+        argv:
+          - /usr/sbin/sshd
+          - -T
+      changed_when: false
+      register: ssh_ca_trust_sshd_effective
+
+    # sshd keeps the first value it reads for each keyword, and only reads
+    # the drop-in when sshd_config includes sshd_config.d/*.conf.
+    - name: Assert the drop-in is in effect
+      ansible.builtin.assert:
+        that:
+          - ('trustedusercakeys ' ~ ssh_ca_trust_dir ~ '/user_ca_keys') in ssh_ca_trust_sshd_effective.stdout_lines
+          - ('authorizedprincipalsfile ' ~ ssh_ca_trust_dir ~ '/principals/%u') in ssh_ca_trust_sshd_effective.stdout_lines
+          - ('revokedkeys ' ~ ssh_ca_trust_dir ~ '/revoked_keys') in ssh_ca_trust_sshd_effective.stdout_lines
+        fail_msg: >-
+          {{ ssh_ca_trust_dropin }} is not in effect: another sshd_config line
+          sets TrustedUserCAKeys, AuthorizedPrincipalsFile or RevokedKeys
+          first, or sshd_config does not include sshd_config.d/*.conf.
+        quiet: true
+  rescue:
+    - name: Restore the snapshot after the rejected configuration
+      ansible.builtin.command:
+        argv:
+          - "{{ ssh_ca_trust_rollback_script }}"
+          - "{{ ssh_ca_trust_snapshot.stdout | trim }}"
+          - "{{ ssh_ca_trust_service }}"
+      changed_when: true
+
+    - name: Stop on the rejected configuration
+      ansible.builtin.fail:
+        msg: >-
+          sshd rejected the new configuration; the previous files were
+          restored. {{ ansible_failed_result.msg | default('') }}
+          {{ ansible_failed_result.stderr | default('') }}
+
+# systemd's module has no reset-failed and no try-reload-or-restart, and a
+# transient unit that is gone is an error to it rather than a state.
+- name: Clear a stale rollback unit
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - "{{ item }}"
+      - ssh-ca-trust-rollback.timer
+      - ssh-ca-trust-rollback.service
+  loop:
+    - stop
+    - reset-failed
+  changed_when: false
+  failed_when: false
+
+- name: Arm the dead-man rollback
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --unit=ssh-ca-trust-rollback
+      - --description=Restore the SSH trust configuration unless the change is confirmed
+      - --on-active={{ ssh_ca_trust_rollback_seconds | int }}
+      - "{{ ssh_ca_trust_rollback_script }}"
+      - "{{ ssh_ca_trust_snapshot.stdout | trim }}"
+      - "{{ ssh_ca_trust_service }}"
+  changed_when: true
+
+- name: Reload sshd and log in afresh
+  block:
+    # On a socket-activated ssh.service that is not running this is a no-op:
+    # the next connection starts sshd with the new configuration.
+    - name: Reload sshd
+      ansible.builtin.command: # noqa: command-instead-of-module
+        argv:
+          - systemctl
+          - try-reload-or-restart
+          - "{{ ssh_ca_trust_service }}.service"
+      changed_when: true
+
+    - name: Drop the current connection
+      ansible.builtin.meta: reset_connection
+
+    - name: Log in again with the new configuration
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+  rescue:
+    - name: Stop with the rollback still armed
+      ansible.builtin.fail:
+        msg: >-
+          A fresh connection failed after the SSH trust change; the rollback
+          restores the previous SSH config in {{ ssh_ca_trust_rollback_seconds | int }} s.
+
+# The timer is gone once it fires: then the host already rolled back and the
+# play must not report success.
+- name: Check the rollback has not fired
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - is-active
+      - ssh-ca-trust-rollback.timer
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_timer_state
+
+- name: Assert the rollback has not fired
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_timer_state.stdout == 'active'
+    fail_msg: >-
+      The dead-man rollback already ran before the change was confirmed: the
+      host is back on the previous SSH config. Raise
+      ssh_ca_trust_rollback_seconds if the reconnect is slow.
+    quiet: true
+
+- name: Disarm the dead-man rollback
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - stop
+      - ssh-ca-trust-rollback.timer
+  changed_when: true

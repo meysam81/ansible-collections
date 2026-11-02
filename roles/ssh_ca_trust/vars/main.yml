@@ -1,0 +1,6 @@
+---
+# Fixed paths: other provisioning (cloud-init, images) writes the same files,
+# so they are a contract, not a setting.
+ssh_ca_trust_dir: /etc/ssh/ssh_ca_trust
+ssh_ca_trust_dropin: /etc/ssh/sshd_config.d/10-ssh-ca-trust.conf
+ssh_ca_trust_rollback_script: /usr/local/sbin/ssh-ca-trust-rollback

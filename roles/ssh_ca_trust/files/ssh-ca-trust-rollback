@@ -1,0 +1,94 @@
+#!/bin/sh
+# Snapshot and restore the files the ssh_ca_trust Ansible role manages.
+#
+#   ssh-ca-trust-rollback --snapshot PATH...
+#     Saves each absolute PATH (a directory entry is saved without its
+#     contents) into a new /var/lib/ssh_ca_trust/snapshot-<epoch>/ and prints
+#     that directory. PATHs that do not exist are recorded, so a restore
+#     deletes them again. Keeps the newest 10 snapshots.
+#
+#   ssh-ca-trust-rollback SNAPSHOT [SERVICE]
+#     Deletes the recorded missing PATHs, extracts the saved ones, then
+#     reloads SERVICE (default: ssh) if `sshd -t` accepts the result.
+#
+# The role arms the restore on a systemd timer before it reloads sshd and
+# disarms it once a fresh connection works, so a change that breaks the next
+# login undoes itself.
+set -eu
+
+root=/var/lib/ssh_ca_trust
+keep=10
+
+usage() {
+	echo "usage: $0 --snapshot PATH... | $0 SNAPSHOT [SERVICE]" >&2
+	exit 2
+}
+
+snapshot() {
+	for path in "$@"; do
+		case $path in
+		/?*) ;;
+		*)
+			echo "not an absolute path: $path" >&2
+			exit 2
+			;;
+		esac
+	done
+	umask 077
+	mkdir -p "$root"
+	# One snapshot per second at most; wait rather than mix two runs.
+	dir="$root/snapshot-$(date +%s)"
+	while [ -e "$dir" ]; do
+		sleep 1
+		dir="$root/snapshot-$(date +%s)"
+	done
+	mkdir "$dir"
+	: >"$dir/present"
+	: >"$dir/absent"
+	for path in "$@"; do
+		if [ -e "$path" ] || [ -L "$path" ]; then
+			printf '%s\n' "${path#/}" >>"$dir/present"
+		else
+			printf '%s\n' "$path" >>"$dir/absent"
+		fi
+	done
+	tar -C / --numeric-owner --no-recursion -cpf "$dir/files.tar" -T "$dir/present"
+	# Epoch names sort in time order.
+	find "$root" -mindepth 1 -maxdepth 1 -type d -name "snapshot-*" | sort | head -n "-$keep" | xargs -r rm -rf --
+	echo "$dir"
+}
+
+restore() {
+	dir=$1
+	service=${2:-ssh}
+	if [ ! -f "$dir/files.tar" ] || [ ! -f "$dir/absent" ]; then
+		echo "not a snapshot: $dir" >&2
+		exit 2
+	fi
+	# Paths were recorded in the role's order, the sshd drop-in first, so the
+	# drop-in never names a file this loop already removed.
+	while IFS= read -r path; do
+		case $path in
+		/?*) rm -rf -- "$path" ;;
+		esac
+	done <"$dir/absent"
+	tar -C / --numeric-owner -xpf "$dir/files.tar"
+	if ! /usr/sbin/sshd -t; then
+		echo "sshd -t rejects the restored configuration; $service not reloaded" >&2
+		exit 1
+	fi
+	# An inactive socket-activated ssh.service stays inactive; the next
+	# connection starts it with the restored configuration.
+	systemctl try-reload-or-restart "$service.service"
+	echo "restored $dir"
+}
+
+case ${1:-} in
+--snapshot)
+	shift
+	[ $# -gt 0 ] || usage
+	snapshot "$@"
+	;;
+"" | -h | --help) usage ;;
+*) restore "$@" ;;
+esac

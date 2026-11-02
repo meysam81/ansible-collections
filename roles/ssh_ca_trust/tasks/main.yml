@@ -1,2 +1,63 @@
 ---
-[]
+# Every check fails before the role writes anything: a half-applied trust
+# configuration is how a host locks its operators out.
+- name: Assert ssh_ca_trust variables
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_user_ca_keys is sequence and ssh_ca_trust_user_ca_keys is not string
+      - ssh_ca_trust_user_ca_keys | length > 0
+      # sshd skips a malformed TrustedUserCAKeys line silently, so catch it here.
+      - >-
+        ssh_ca_trust_user_ca_keys
+        | reject('match', '^(ssh|ecdsa|sk)-[A-Za-z0-9@.-]+ [A-Za-z0-9+/]+=*( .*)?$')
+        | list | length == 0
+      - ssh_ca_trust_principals is mapping and ssh_ca_trust_principals | length > 0
+      - ssh_ca_trust_principals.values() | select('string') | list | length == 0
+      - ssh_ca_trust_principals.values() | reject('sequence') | list | length == 0
+      - ssh_ca_trust_principals.values() | map('length') | min > 0
+      - ssh_ca_trust_users is sequence and ssh_ca_trust_users is not string
+      - ssh_ca_trust_users | rejectattr('name', 'defined') | list | length == 0
+      - ssh_ca_trust_authorized_keys is sequence and ssh_ca_trust_authorized_keys is not string
+      - ssh_ca_trust_authorized_keys | rejectattr('user', 'defined') | list | length == 0
+      # 'keys' is also a dict method, so test for the key itself.
+      - ssh_ca_trust_authorized_keys | map('list') | reject('contains', 'keys') | list | length == 0
+      - ssh_ca_trust_authorized_keys | map(attribute='keys') | select('string') | list | length == 0
+      - ssh_ca_trust_authorized_keys | map(attribute='keys') | reject('sequence') | list | length == 0
+      # Two entries for one user would fight over the same file every run.
+      - >-
+        ssh_ca_trust_authorized_keys | map(attribute='user') | unique | list | length
+        == ssh_ca_trust_authorized_keys | length
+      - ssh_ca_trust_locked_users is sequence and ssh_ca_trust_locked_users is not string
+      # Names become file names under principals/ and sudoers.d.
+      - >-
+        (ssh_ca_trust_principals.keys() | list
+         + ssh_ca_trust_users | map(attribute='name') | list
+         + ssh_ca_trust_authorized_keys | map(attribute='user') | list
+         + ssh_ca_trust_locked_users | list)
+        | reject('match', '^[A-Za-z0-9_][A-Za-z0-9_.-]*$') | list | length == 0
+      # root keeps its break-glass keys; a locked user that is also managed
+      # would flip between the two states on every run.
+      - "'root' not in ssh_ca_trust_locked_users"
+      - >-
+        ssh_ca_trust_locked_users
+        | intersect(ssh_ca_trust_users | map(attribute='name') | list
+                    + ssh_ca_trust_authorized_keys | map(attribute='user') | list
+                    + ssh_ca_trust_principals.keys() | list)
+        | length == 0
+      - ssh_ca_trust_revoked_keys is sequence and ssh_ca_trust_revoked_keys is not string
+      - ssh_ca_trust_rollback_seconds | int >= 60
+      - ssh_ca_trust_service is string and ssh_ca_trust_service | length > 0
+    fail_msg: >-
+      ssh_ca_trust_user_ca_keys must list at least one CA public key line;
+      ssh_ca_trust_principals must map each user to a non-empty list of
+      principals; ssh_ca_trust_users entries need a name;
+      ssh_ca_trust_authorized_keys entries need a user and a list of keys, one
+      entry per user; user names may hold only letters, digits, '_', '.' and
+      '-'; ssh_ca_trust_locked_users must not hold root or any user this role
+      manages; ssh_ca_trust_rollback_seconds must be at least 60 (the reconnect
+      alone may take 30); ssh_ca_trust_service must name a systemd unit.
+    quiet: true
+
+- name: Set up ssh_ca_trust on Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
