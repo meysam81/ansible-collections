@@ -11,11 +11,17 @@
   changed_when: true
   notify: Update APT cache
 
-# Snapshot servers answer with intermittent 5xx under load.
+# apt-get, not the apt module: python-apt raises FetchFailedException when
+# any index cannot be fetched, so a snapshot server outage (they answer 5xx
+# under load, for hours at times) failed the whole play. apt-get keeps the
+# previous index, warns and exits 0, as on the apt-daily timer; malformed
+# sources or bad signatures still fail. The retries cover a concurrent
+# apt-daily run holding the lists lock.
 - name: Update APT cache
-  ansible.builtin.apt:
-    update_cache: true
+  ansible.builtin.command: # noqa: command-instead-of-module
+    cmd: apt-get update
   register: unattended_upgrades_apt_update
+  changed_when: true
   until: unattended_upgrades_apt_update is succeeded
   retries: 3
   delay: 30
