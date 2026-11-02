@@ -27,6 +27,25 @@
     update_cache: true
     cache_valid_time: 3600
 
+# The package would otherwise turn every reboot into a kexec.
+- name: Keep kexec-tools out of ordinary reboots
+  ansible.builtin.debconf:
+    name: kexec-tools
+    question: kexec-tools/load_kexec
+    value: "false"
+    vtype: boolean
+  when: unattended_upgrades_reboot_window_enabled | bool and unattended_upgrades_reboot_window_kexec | bool
+
+# Installed here, before the sources are edited: the cache refresh for
+# those edits is a handler that runs only at the end of the play.
+- name: Install kexec-tools
+  ansible.builtin.apt:
+    name: kexec-tools
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: unattended_upgrades_reboot_window_enabled | bool and unattended_upgrades_reboot_window_kexec | bool
+
 - name: Read the installed apt version
   ansible.builtin.command:
     cmd: dpkg-query -W -f=${Version} apt
@@ -210,21 +229,6 @@
         cmd: systemd-analyze calendar "{{ unattended_upgrades_reboot_window_on_calendar }}"
       changed_when: false
       check_mode: false
-
-    # The package would otherwise turn every reboot into a kexec.
-    - name: Keep kexec-tools out of ordinary reboots
-      ansible.builtin.debconf:
-        name: kexec-tools
-        question: kexec-tools/load_kexec
-        value: "false"
-        vtype: boolean
-      when: unattended_upgrades_reboot_window_kexec | bool
-
-    - name: Install kexec-tools
-      ansible.builtin.apt:
-        name: kexec-tools
-        state: present
-      when: unattended_upgrades_reboot_window_kexec | bool
 
     - name: Deploy reboot-if-required script
       ansible.builtin.template:
