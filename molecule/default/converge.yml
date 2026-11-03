@@ -105,6 +105,7 @@
         unattended_upgrades_reboot_window_enabled: true
         unattended_upgrades_timer_on_calendar: hourly
         unattended_upgrades_reboot_window_condition: "true"
+        unattended_upgrades_reboot_window_trigger: "false"
         unattended_upgrades_reboot_window_kexec: true
     - role: vmagent
       tags: vmagent

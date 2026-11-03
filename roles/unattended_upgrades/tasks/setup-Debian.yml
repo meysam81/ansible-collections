@@ -8,6 +8,7 @@
       - not (unattended_upgrades_automatic_reboot | bool and unattended_upgrades_reboot_window_enabled | bool)
       - unattended_upgrades_reboot_window_random_delay_sec | int < unattended_upgrades_reboot_window_duration_sec | int
       - unattended_upgrades_reboot_window_enabled | bool or not unattended_upgrades_reboot_window_kexec | bool
+      - unattended_upgrades_reboot_window_enabled | bool or unattended_upgrades_reboot_window_trigger | length == 0
     fail_msg: >-
       unattended_upgrades_origins_patterns is required on
       {{ ansible_facts['distribution'] }} (only Debian and Ubuntu have
@@ -17,7 +18,8 @@
       unattended_upgrades_reboot_window_enabled are mutually exclusive;
       unattended_upgrades_reboot_window_random_delay_sec must be shorter than
       unattended_upgrades_reboot_window_duration_sec;
-      unattended_upgrades_reboot_window_kexec needs the reboot window.
+      unattended_upgrades_reboot_window_kexec needs the reboot window;
+      unattended_upgrades_reboot_window_trigger needs the reboot window.
     quiet: true
 
 - name: Install unattended-upgrades
@@ -230,6 +232,14 @@
       changed_when: false
       check_mode: false
 
+    - name: Create the reboot-if-required status directory
+      ansible.builtin.file:
+        path: "{{ _unattended_upgrades_reboot_status_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: Deploy reboot-if-required script
       ansible.builtin.template:
         src: reboot-if-required.j2
@@ -285,4 +295,5 @@
         - /etc/systemd/system/reboot-if-required.timer
         - /etc/systemd/system/reboot-if-required.service
         - /usr/local/sbin/reboot-if-required
+        - "{{ _unattended_upgrades_reboot_status_dir }}"
       notify: Reload systemd daemon

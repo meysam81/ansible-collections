@@ -8,3 +8,8 @@ RefuseManualStart=yes
 [Service]
 Type=oneshot
 ExecStart=/usr/local/sbin/reboot-if-required
+# A oneshot never times out by default, and a run that hangs (a condition or
+# trigger that never returns) would swallow every later window. The script
+# stops polling at its deadline, the window minus the timer's random delay
+# from its own start; 600s more covers a last poll, condition and trigger.
+TimeoutStartSec={{ unattended_upgrades_reboot_window_duration_sec | int - unattended_upgrades_reboot_window_random_delay_sec | int + 600 }}

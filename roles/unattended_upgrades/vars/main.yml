@@ -38,3 +38,8 @@ unattended_upgrades_distro_sources_files:
   - /etc/apt/sources.list
   - /etc/apt/sources.list.d/ubuntu.sources
   - /etc/apt/sources.list.d/debian.sources
+
+# Paths the reboot window reads and writes, variables so its test can point
+# them at a scratch directory.
+_unattended_upgrades_reboot_required_file: /run/reboot-required
+_unattended_upgrades_reboot_status_dir: /var/lib/reboot-if-required
