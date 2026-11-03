@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.2](https://github.com/meysam81/ansible-collections/compare/v1.14.1...v1.14.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* **unattended_upgrades:** a reboot trigger and a recorded window outcome ([#137](https://github.com/meysam81/ansible-collections/issues/137)) ([4cd27b7](https://github.com/meysam81/ansible-collections/commit/4cd27b702973c2e12761aa000e968992d3a8a0fc))
+
 ## [1.14.1](https://github.com/meysam81/ansible-collections/compare/v1.14.0...v1.14.1) (2026-11-02)
 
 
