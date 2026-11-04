@@ -1,0 +1,9 @@
+---
+# Second run of the role for the idempotence check in verify.yml; the
+# variables come in with -e @vars.yml.
+- name: Converge ssh_ca_trust
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - role: ssh_ca_trust

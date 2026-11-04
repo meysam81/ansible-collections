@@ -1,0 +1,4 @@
+---
+# No handlers: the sshd reload must run between arming and disarming the
+# dead-man rollback, so it is a task in tasks/apply.yml.
+[]

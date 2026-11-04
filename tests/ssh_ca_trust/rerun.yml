@@ -1,0 +1,25 @@
+---
+# The role in a separate ansible-playbook as the controller user, so its PLAY
+# RECAP counts only the role. Vars: ssh_ca_trust_test_run_name and
+# ssh_ca_trust_test_run_vars (extra vars on top of vars.yml).
+- name: "Run the role: {{ ssh_ca_trust_test_run_name }}"
+  ansible.builtin.command:
+    argv:
+      - "{{ lookup('ansible.builtin.pipe', 'command -v ansible-playbook') }}"
+      - -i
+      - localhost,
+      - -c
+      - local
+      - -e
+      - "@{{ ssh_ca_trust_test_tmp.path }}/vars.yml"
+      - -e
+      - "{{ ssh_ca_trust_test_run_vars | to_json }}"
+      - "{{ playbook_dir }}/tests/ssh_ca_trust/converge.yml"
+    chdir: "{{ playbook_dir }}"
+  environment:
+    ANSIBLE_NOCOLOR: "1"
+    ANSIBLE_FORCE_COLOR: "0"
+  become: false
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_test_run

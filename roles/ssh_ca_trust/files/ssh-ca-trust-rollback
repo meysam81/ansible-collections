@@ -1,0 +1,135 @@
+#!/bin/sh
+# Snapshot and restore the files the ssh_ca_trust Ansible role manages.
+#
+#   ssh-ca-trust-rollback --snapshot PATH...
+#     Saves each absolute PATH (a directory entry is saved without its
+#     contents) into a new /var/lib/ssh_ca_trust/snapshot-<epoch>/ and prints
+#     that directory. PATHs that do not exist are recorded, so a restore
+#     deletes them again. Keeps the newest 10 snapshots.
+#
+#   ssh-ca-trust-rollback SNAPSHOT [SERVICE]
+#     Extracts the saved PATHs and removes the sshd drop-in if it did not
+#     exist, reloads SERVICE (default: ssh) if `sshd -t` accepts the result,
+#     and only then deletes the other PATHs that did not exist, except
+#     revoked_keys (emptied instead) and its parent directories.
+#
+# The role arms the restore on a systemd timer before its first write and
+# disarms it once a fresh connection works, so a change that breaks the next
+# login undoes itself.
+set -eu
+
+root=/var/lib/ssh_ca_trust
+keep=10
+dropin=/etc/ssh/sshd_config.d/10-ssh-ca-trust.conf
+revoked=/etc/ssh/ssh_ca_trust/revoked_keys
+
+usage() {
+	echo "usage: $0 --snapshot PATH... | $0 SNAPSHOT [SERVICE]" >&2
+	exit 2
+}
+
+snapshot() {
+	for path in "$@"; do
+		case $path in
+		/?*) ;;
+		*)
+			echo "not an absolute path: $path" >&2
+			exit 2
+			;;
+		esac
+	done
+	umask 077
+	mkdir -p "$root"
+	# One snapshot per second at most; wait rather than mix two runs.
+	dir="$root/snapshot-$(date +%s)"
+	while [ -e "$dir" ]; do
+		sleep 1
+		dir="$root/snapshot-$(date +%s)"
+	done
+	mkdir "$dir"
+	: >"$dir/present"
+	: >"$dir/absent"
+	for path in "$@"; do
+		if [ -e "$path" ] || [ -L "$path" ]; then
+			printf '%s\n' "${path#/}" >>"$dir/present"
+		else
+			printf '%s\n' "$path" >>"$dir/absent"
+		fi
+	done
+	tar -C / --numeric-owner --no-recursion -cpf "$dir/files.tar" -T "$dir/present"
+	# Epoch names sort in time order.
+	find "$root" -mindepth 1 -maxdepth 1 -type d -name "snapshot-*" | sort | head -n "-$keep" | xargs -r rm -rf --
+	echo "$dir"
+}
+
+# sshd refuses every public key while RevokedKeys names a missing file, so a
+# restore never leaves the drop-in without its revoked_keys; an empty one is
+# harmless.
+keep_revoked() {
+	if [ ! -e "$revoked" ]; then
+		mkdir -p "${revoked%/*}"
+		: >"$revoked"
+		chmod 0644 "$revoked"
+	fi
+}
+
+restore() {
+	dir=$1
+	service=${2:-ssh}
+	if [ ! -f "$dir/files.tar" ] || [ ! -f "$dir/absent" ]; then
+		echo "not a snapshot: $dir" >&2
+		exit 2
+	fi
+	# Read the whole archive before touching anything: a damaged snapshot
+	# changes nothing.
+	if ! tar -tf "$dir/files.tar" >/dev/null; then
+		echo "damaged snapshot, nothing restored: $dir" >&2
+		exit 1
+	fi
+	if ! tar -C / --numeric-owner -xpf "$dir/files.tar"; then
+		keep_revoked
+		echo "extracting $dir failed; files that did not exist were kept" >&2
+		exit 1
+	fi
+	# The drop-in goes first, so sshd stops naming the files removed below.
+	if grep -qxF "$dropin" "$dir/absent"; then
+		rm -f -- "$dropin"
+	fi
+	keep_revoked
+	if ! /usr/sbin/sshd -t; then
+		echo "sshd -t rejects the restored configuration; $service not reloaded" >&2
+		exit 1
+	fi
+	# An inactive socket-activated ssh.service stays inactive; the next
+	# connection starts it with the restored configuration.
+	if ! systemctl try-reload-or-restart "$service.service"; then
+		echo "reloading $service failed; files that did not exist were kept" >&2
+		exit 1
+	fi
+	# Only now, with sshd on the restored configuration, remove what did not
+	# exist. revoked_keys and its parent directories stay; revoked_keys is
+	# emptied instead, so revocations made by the undone change go too.
+	while IFS= read -r path; do
+		case $path in
+		"$dropin" | "") ;;
+		"$revoked") : >"$revoked" ;;
+		/?*)
+			case $revoked in
+			"$path"/*) ;;
+			*) rm -rf -- "$path" ;;
+			esac
+			;;
+		esac
+	done <"$dir/absent"
+	echo "restored $dir"
+}
+
+case ${1:-} in
+--snapshot)
+	shift
+	[ $# -gt 0 ] || usage
+	snapshot "$@"
+	;;
+"" | -h | --help) usage ;;
+*) restore "$@" ;;
+esac

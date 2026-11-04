@@ -82,3 +82,42 @@
       tags: oathkeeper
     - role: vm_identity_gcp
       tags: vm_identity_gcp
+
+# ssh_ca_trust rewrites sshd and creates login users, so it gets its own play
+# with throwaway CAs and keys: run it only on a disposable host or CI runner.
+- name: Test ssh_ca_trust
+  hosts: all
+  gather_facts: true
+  become: true
+  tags: ssh_ca_trust
+  vars:
+    ssh_ca_trust_user_ca_keys:
+      - "{{ ssh_ca_trust_test_pub.op_ca }}"
+    ssh_ca_trust_principals:
+      operator-test:
+        - operator
+    ssh_ca_trust_users:
+      - name: operator-test
+        sudo: true
+      - name: deploy
+        sudo: true
+      - name: jump-test
+        shell: /usr/sbin/nologin
+    ssh_ca_trust_authorized_keys:
+      - user: deploy
+        keys:
+          - cert-authority,principals="test-deploy" {{ ssh_ca_trust_test_pub.ci_ca }}
+      - user: jump-test
+        exclusive: true
+        keys:
+          - >-
+            restrict,port-forwarding,permitopen="127.0.0.1:22",command="/usr/sbin/nologin",cert-authority,principals="test-jump"
+            {{ ssh_ca_trust_test_pub.ci_ca }}
+  tasks:
+    - name: Prepare sshd, throwaway CAs and a pre-existing plain key
+      ansible.builtin.import_tasks: tests/ssh_ca_trust/prepare.yml
+    - name: Apply ssh_ca_trust
+      ansible.builtin.import_role:
+        name: ssh_ca_trust
+    - name: Verify every login the role allows and denies
+      ansible.builtin.import_tasks: tests/ssh_ca_trust/verify.yml

@@ -1,0 +1,385 @@
+---
+- name: Wait for sshd on 127.0.0.1:22
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 22
+    timeout: 30
+
+- name: Read the effective sshd configuration
+  ansible.builtin.command:
+    cmd: sshd -T
+  changed_when: false
+  register: ssh_ca_trust_test_sshd_t
+
+- name: Assert the drop-in is in effect
+  ansible.builtin.assert:
+    that:
+      - "'trustedusercakeys /etc/ssh/ssh_ca_trust/user_ca_keys' in ssh_ca_trust_test_sshd_t.stdout_lines"
+      - "'authorizedprincipalsfile /etc/ssh/ssh_ca_trust/principals/%u' in ssh_ca_trust_test_sshd_t.stdout_lines"
+      - "'revokedkeys /etc/ssh/ssh_ca_trust/revoked_keys' in ssh_ca_trust_test_sshd_t.stdout_lines"
+
+# A transient unit vanishes once stopped, which the systemd module reports
+# as an error rather than a state.
+- name: Check the dead-man rollback timer
+  ansible.builtin.command: # noqa: command-instead-of-module
+    cmd: systemctl is-active ssh-ca-trust-rollback.timer
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_test_timer
+
+- name: Assert the dead-man rollback was disarmed
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_timer.stdout != 'active'
+
+# expect: success = `true` ran; denied = the server refused the key;
+# no_shell = authenticated, but the forced command refused a session;
+# banner = the -W forward reached an SSH server; prohibited = the server
+# refused to open the -W forward.
+- name: Try each login
+  ansible.builtin.script:
+    cmd: >-
+      {{ playbook_dir }}/tests/ssh_ca_trust/try-login.sh
+      {{ ssh_ca_trust_test_tmp.path }}/{{ item.key }} {{ item.user }} {{ item.forward | default('') }}
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_test_logins
+  loop_control:
+    label: "{{ item.name }}"
+  loop:
+    - name: operator cert -> operator-test
+      key: op_user
+      user: operator-test
+      expect: success
+    - name: operator cert -> root
+      key: op_user
+      user: root
+      expect: denied
+    - name: operator cert -> deploy
+      key: op_user
+      user: deploy
+      expect: denied
+    - name: CI cert -> deploy
+      key: ci_user
+      user: deploy
+      expect: success
+    - name: CI cert -> operator-test
+      key: ci_user
+      user: operator-test
+      expect: denied
+    - name: CI cert -> root
+      key: ci_user
+      user: root
+      expect: denied
+    - name: CI cert -> jump-test -W 127.0.0.1:22
+      key: ci_user
+      user: jump-test
+      forward: 127.0.0.1:22
+      expect: banner
+    - name: CI cert -> jump-test -W 127.0.0.1:2222
+      key: ci_user
+      user: jump-test
+      forward: 127.0.0.1:2222
+      expect: prohibited
+    - name: CI cert -> jump-test shell
+      key: ci_user
+      user: jump-test
+      expect: no_shell
+    - name: pre-existing plain key -> plain-test
+      key: plain
+      user: plain-test
+      expect: success
+
+- name: Assert each login
+  ansible.builtin.assert:
+    that: >-
+      (item.item.expect == 'success' and item.rc == 0)
+      or (item.item.expect == 'denied' and item.rc != 0 and 'Permission denied' in item.stderr)
+      or (item.item.expect == 'no_shell' and item.rc != 0 and 'Permission denied' not in item.stderr
+          and 'not available' in (item.stdout ~ item.stderr))
+      or (item.item.expect == 'banner' and item.stdout is search('^SSH-2\.0-'))
+      or (item.item.expect == 'prohibited' and item.stdout is not search('SSH-2\.0-')
+          and 'administratively prohibited' in item.stderr)
+    fail_msg: >-
+      {{ item.item.name }}: expected {{ item.item.expect }}, got rc={{ item.rc }}
+      stdout={{ item.stdout | trim }} stderr={{ item.stderr | trim }}
+    success_msg: "{{ item.item.name }}: {{ item.item.expect }}"
+  loop: "{{ ssh_ca_trust_test_logins.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+
+- name: Write the role variables for the later runs
+  ansible.builtin.copy:
+    content: |
+      {{ {'ssh_ca_trust_user_ca_keys': ssh_ca_trust_user_ca_keys,
+          'ssh_ca_trust_principals': ssh_ca_trust_principals,
+          'ssh_ca_trust_users': ssh_ca_trust_users,
+          'ssh_ca_trust_authorized_keys': ssh_ca_trust_authorized_keys} | to_nice_yaml }}
+    dest: "{{ ssh_ca_trust_test_tmp.path }}/vars.yml"
+    mode: "0644"
+
+- name: Run the role a second time
+  ansible.builtin.import_tasks: rerun.yml
+  vars:
+    ssh_ca_trust_test_run_name: second run, nothing to change
+    ssh_ca_trust_test_run_vars: {}
+
+- name: Assert the second run changed nothing
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_run.stdout is search('localhost\s*:\s*ok=\d+\s+changed=0\s+unreachable=0\s+failed=0')
+    fail_msg: "{{ ssh_ca_trust_test_run.stdout_lines[-4:] }}"
+    success_msg: "second run: {{ ssh_ca_trust_test_run.stdout | regex_search('localhost\\s*:.*') }}"
+
+# A damaged snapshot must change nothing: above all, revoked_keys stays, or
+# sshd would refuse every key.
+- name: Snapshot the files sshd names
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/ssh-ca-trust-rollback
+      - --snapshot
+      - /etc/ssh/sshd_config.d/10-ssh-ca-trust.conf
+      - /etc/ssh/ssh_ca_trust/user_ca_keys
+      - /etc/ssh/ssh_ca_trust/revoked_keys
+  changed_when: true
+  register: ssh_ca_trust_test_damaged
+
+- name: Damage the snapshot archive
+  ansible.builtin.command:
+    argv:
+      - truncate
+      - --size=700
+      - "{{ ssh_ca_trust_test_damaged.stdout | trim }}/files.tar"
+  changed_when: true
+
+- name: Restore the damaged snapshot
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/ssh-ca-trust-rollback
+      - "{{ ssh_ca_trust_test_damaged.stdout | trim }}"
+  changed_when: false
+  failed_when: false
+  register: ssh_ca_trust_test_damaged_restore
+
+- name: Check revoked_keys after the damaged restore
+  ansible.builtin.stat:
+    path: /etc/ssh/ssh_ca_trust/revoked_keys
+  register: ssh_ca_trust_test_damaged_revoked
+
+- name: Assert the damaged snapshot was refused and revoked_keys kept
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_damaged_restore.rc != 0
+      - "'damaged snapshot' in ssh_ca_trust_test_damaged_restore.stderr"
+      - ssh_ca_trust_test_damaged_revoked.stat.exists
+    success_msg: "damaged snapshot: {{ ssh_ca_trust_test_damaged_restore.stderr_lines[-1] }}"
+
+- name: Log in with the plain key after the damaged restore
+  ansible.builtin.import_tasks: login.yml
+  vars:
+    ssh_ca_trust_test_login_key: plain
+    ssh_ca_trust_test_login_user: plain-test
+    ssh_ca_trust_test_login_expect: success
+
+- name: Snapshot user_ca_keys
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/ssh-ca-trust-rollback
+      - --snapshot
+      - /etc/ssh/ssh_ca_trust/user_ca_keys
+  changed_when: true
+  register: ssh_ca_trust_test_snapshot
+
+- name: Checksum user_ca_keys before the breakage
+  ansible.builtin.stat:
+    path: /etc/ssh/ssh_ca_trust/user_ca_keys
+  register: ssh_ca_trust_test_before
+
+- name: Break user_ca_keys
+  ansible.builtin.copy:
+    content: "not a key\n"
+    dest: /etc/ssh/ssh_ca_trust/user_ca_keys
+    mode: "0644"
+
+- name: Log in with the operator cert and the broken CA file
+  ansible.builtin.import_tasks: login.yml
+  vars:
+    ssh_ca_trust_test_login_key: op_user
+    ssh_ca_trust_test_login_user: operator-test
+    ssh_ca_trust_test_login_expect: denied
+
+- name: Roll back to the snapshot
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/ssh-ca-trust-rollback
+      - "{{ ssh_ca_trust_test_snapshot.stdout | trim }}"
+  changed_when: true
+
+- name: Checksum user_ca_keys after the rollback
+  ansible.builtin.stat:
+    path: /etc/ssh/ssh_ca_trust/user_ca_keys
+  register: ssh_ca_trust_test_after
+
+- name: Assert the rollback restored user_ca_keys byte for byte
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_after.stat.checksum == ssh_ca_trust_test_before.stat.checksum
+
+- name: Log in with the operator cert after the rollback
+  ansible.builtin.import_tasks: login.yml
+  vars:
+    ssh_ca_trust_test_login_key: op_user
+    ssh_ca_trust_test_login_user: operator-test
+    ssh_ca_trust_test_login_expect: success
+
+# The real timer path: a snapshot taken while revoked_keys and a principals
+# file did not exist. When the timer fires, the principals file must go and
+# revoked_keys must stay (emptied), or sshd would refuse every key.
+- name: Move revoked_keys aside for the timer snapshot
+  ansible.builtin.command:
+    argv:
+      - mv
+      - /etc/ssh/ssh_ca_trust/revoked_keys
+      - "{{ ssh_ca_trust_test_tmp.path }}/revoked_keys"
+  changed_when: true
+
+- name: Snapshot while revoked_keys and principals/fire-test do not exist
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/ssh-ca-trust-rollback
+      - --snapshot
+      - /etc/ssh/ssh_ca_trust/revoked_keys
+      - /etc/ssh/ssh_ca_trust/principals/fire-test
+  changed_when: true
+  register: ssh_ca_trust_test_fire
+
+- name: Put revoked_keys back
+  ansible.builtin.command:
+    argv:
+      - mv
+      - "{{ ssh_ca_trust_test_tmp.path }}/revoked_keys"
+      - /etc/ssh/ssh_ca_trust/revoked_keys
+  changed_when: true
+
+- name: Create principals/fire-test after the snapshot
+  ansible.builtin.copy:
+    content: "operator\n"
+    dest: /etc/ssh/ssh_ca_trust/principals/fire-test
+    mode: "0644"
+
+- name: Arm a 3 s rollback timer
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --unit=ssh-ca-trust-rollback
+      - --on-active=3
+      - /usr/local/sbin/ssh-ca-trust-rollback
+      - "{{ ssh_ca_trust_test_fire.stdout | trim }}"
+  changed_when: true
+
+- name: Wait for the timer to remove principals/fire-test
+  ansible.builtin.wait_for:
+    path: /etc/ssh/ssh_ca_trust/principals/fire-test
+    state: absent
+    timeout: 30
+
+- name: Check revoked_keys after the timer fired
+  ansible.builtin.stat:
+    path: /etc/ssh/ssh_ca_trust/revoked_keys
+  register: ssh_ca_trust_test_fire_revoked
+
+- name: Assert the timer kept revoked_keys
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_fire_revoked.stat.exists
+      - ssh_ca_trust_test_fire_revoked.stat.size == 0
+
+- name: Log in with the operator cert after the timer fired
+  ansible.builtin.import_tasks: login.yml
+  vars:
+    ssh_ca_trust_test_login_key: op_user
+    ssh_ca_trust_test_login_user: operator-test
+    ssh_ca_trust_test_login_expect: success
+
+- name: Log in with the plain key after the timer fired
+  ansible.builtin.import_tasks: login.yml
+  vars:
+    ssh_ca_trust_test_login_key: plain
+    ssh_ca_trust_test_login_user: plain-test
+    ssh_ca_trust_test_login_expect: success
+
+# An armed timer from an unconfirmed earlier change must stop the role
+# before it overrides that rollback.
+- name: Arm a long rollback timer by hand
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --unit=ssh-ca-trust-rollback
+      - --on-active=600
+      - /bin/true
+  changed_when: true
+
+- name: Run the role with an armed timer
+  ansible.builtin.import_tasks: rerun.yml
+  vars:
+    ssh_ca_trust_test_run_name: unconfirmed earlier change
+    ssh_ca_trust_test_run_vars: {}
+
+- name: Disarm the hand-made timer
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - stop
+      - ssh-ca-trust-rollback.timer
+  changed_when: true
+
+- name: Assert the role refused to override the armed timer
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_run.rc != 0
+      - "'previous SSH access change is unconfirmed' in ssh_ca_trust_test_run.stdout"
+      - ssh_ca_trust_test_run.stdout is search('localhost\s*:\s*ok=\d+\s+changed=0\s')
+    fail_msg: "{{ ssh_ca_trust_test_run.stdout_lines[-6:] }}"
+    success_msg: "armed timer: {{ ssh_ca_trust_test_run.stdout | regex_search('previous SSH access change[^\"]*') }}"
+
+- name: Run the role locking the connecting user
+  ansible.builtin.import_tasks: rerun.yml
+  vars:
+    ssh_ca_trust_test_run_name: lock the connecting user
+    ssh_ca_trust_test_run_vars:
+      ssh_ca_trust_locked_users:
+        - "{{ lookup('ansible.builtin.env', 'USER') }}"
+
+- name: Assert the role refused to lock the connecting user
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_run.rc != 0
+      - "'locking it would shut this play out' in ssh_ca_trust_test_run.stdout"
+      - ssh_ca_trust_test_run.stdout is search('localhost\s*:\s*ok=\d+\s+changed=0\s')
+    fail_msg: "{{ ssh_ca_trust_test_run.stdout_lines[-6:] }}"
+    success_msg: "connecting user: {{ ssh_ca_trust_test_run.stdout | regex_search('ssh_ca_trust_locked_users holds[^\"]*') }}"
+
+# A later change re-arms the rollback unit, and RevokedKeys must bite.
+- name: Run the role revoking the plain key
+  ansible.builtin.import_tasks: rerun.yml
+  vars:
+    ssh_ca_trust_test_run_name: plain key revoked
+    ssh_ca_trust_test_run_vars:
+      ssh_ca_trust_revoked_keys:
+        - "{{ ssh_ca_trust_test_pub.plain }}"
+
+- name: Assert the revoking run changed and passed
+  ansible.builtin.assert:
+    that:
+      - ssh_ca_trust_test_run.rc == 0
+      - ssh_ca_trust_test_run.stdout is search('localhost\s*:\s*ok=\d+\s+changed=[1-9]\d*\s+unreachable=0\s+failed=0')
+    fail_msg: "{{ ssh_ca_trust_test_run.stdout_lines[-6:] }}"
+    success_msg: "revoking run: {{ ssh_ca_trust_test_run.stdout | regex_search('localhost\\s*:.*') }}"
+
+- name: Log in with the revoked plain key
+  ansible.builtin.import_tasks: login.yml
+  vars:
+    ssh_ca_trust_test_login_key: plain
+    ssh_ca_trust_test_login_user: plain-test
+    ssh_ca_trust_test_login_expect: denied

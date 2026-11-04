@@ -1,0 +1,19 @@
+---
+# The host is still reachable: put the snapshot back now rather than wait for
+# the timer, then disarm the timer so it does not restore a second time.
+# The caller fails the play afterwards.
+- name: Restore the snapshot
+  ansible.builtin.command:
+    argv:
+      - "{{ ssh_ca_trust_rollback_script }}"
+      - "{{ ssh_ca_trust_snapshot.stdout | trim }}"
+      - "{{ ssh_ca_trust_service }}"
+  changed_when: true
+
+- name: Disarm the dead-man rollback after the restore
+  ansible.builtin.command: # noqa: command-instead-of-module
+    argv:
+      - systemctl
+      - stop
+      - ssh-ca-trust-rollback.timer
+  changed_when: true
