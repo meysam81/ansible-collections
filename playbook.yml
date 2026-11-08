@@ -82,3 +82,30 @@
       tags: oathkeeper
     - role: vm_identity_gcp
       tags: vm_identity_gcp
+    - role: zot
+      tags: zot
+      vars:
+        zot_config:
+          distSpecVersion: "1.1.1"
+          storage:
+            rootDirectory: /var/lib/zot
+          http:
+            address: 127.0.0.1
+            port: "5000"
+  post_tasks:
+    - name: Zot answers the distribution API
+      ansible.builtin.uri:
+        url: http://127.0.0.1:5000/v2/
+        status_code: 200
+      tags: zot
+    - name: Stat the zot entrypoint
+      ansible.builtin.stat:
+        path: /usr/local/bin/zot
+      register: zot_test_entrypoint
+      tags: zot
+    - name: The entrypoint is a symlink to the pinned release
+      ansible.builtin.assert:
+        that:
+          - zot_test_entrypoint.stat.islnk
+          - zot_test_entrypoint.stat.lnk_target is search('zot-2\.1\.23$')
+      tags: zot
