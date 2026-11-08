@@ -63,6 +63,29 @@
   loop_control:
     label: "{{ item.path }}"
 
+# Written before the config: `zot verify` checks the files it references.
+- name: Write the htpasswd file
+  ansible.builtin.copy:
+    content: "{{ zot_htpasswd_entries | join('\n') }}\n"
+    dest: "{{ zot_htpasswd_path }}"
+    owner: root
+    group: "{{ zot_group }}"
+    mode: "0640"
+  when: zot_htpasswd_entries | length > 0
+  no_log: true
+  notify: Restart zot
+
+- name: Write the sync credentials file
+  ansible.builtin.copy:
+    content: "{{ zot_sync_credentials | to_nice_json }}\n"
+    dest: "{{ zot_sync_credentials_path }}"
+    owner: root
+    group: "{{ zot_group }}"
+    mode: "0640"
+  when: zot_sync_credentials | length > 0
+  no_log: true
+  notify: Restart zot
+
 - name: Write zot configuration
   ansible.builtin.copy:
     content: "{{ zot_config | to_nice_json }}\n"

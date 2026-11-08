@@ -29,6 +29,22 @@ zot_config_dir: /etc/zot
 # stays deployment-agnostic; validated with `zot verify` before it is written.
 zot_config: {}
 
+# htpasswd lines ("user:<bcrypt hash>"), written verbatim so re-runs stay
+# idempotent. Generate one with `htpasswd -nbBC 12 <user> <password>`.
+# Reference the file from zot_config as http.auth.htpasswd.path:
+# "{{ zot_htpasswd_path }}". Secret: pass it via a lookup, never commit it.
+zot_htpasswd_entries: []
+# Where zot_htpasswd_entries are written (root-owned, group-readable).
+zot_htpasswd_path: "{{ zot_config_dir }}/htpasswd"
+
+# Upstream credentials for the sync extension, keyed by registry host:
+#   { "registry.example.com": { "username": "...", "password": "..." } }
+# Reference the file from zot_config as extensions.sync.credentialsFile:
+# "{{ zot_sync_credentials_path }}". Secret: pass it via a lookup.
+zot_sync_credentials: {}
+# Where zot_sync_credentials are written (root-owned, group-readable).
+zot_sync_credentials_path: "{{ zot_config_dir }}/sync-credentials.json"
+
 # Mount points the unit requires before it starts (systemd RequiresMountsFor).
 # List the mount that holds storage.rootDirectory: without it, a missing
 # volume at boot makes zot start an empty store on the root disk.
