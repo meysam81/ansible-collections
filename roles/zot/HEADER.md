@@ -39,6 +39,12 @@ caller provides, one read-only user:
             rootDirectory: /srv/registry/zot
             dedupe: true
             gc: true
+            # Keep digest-pinned pulls: they are stored untagged (see below).
+            retention:
+              policies:
+                - repositories: ["**"]
+                  deleteReferrers: false
+                  deleteUntagged: false
           http:
             address: 192.0.2.10
             port: "443"
@@ -81,6 +87,11 @@ Clients then pull `registry.example.com/docker.io/library/alpine:3`.
   for them while the upstream is down before the cached copy is served.
   Digest-pinned pulls are served from the cache without asking upstream.
   `zot verify` rejects `maxRetries` without a `retryDelay`, even at `0`.
+- A retention policy with `deleteUntagged: false` for every repository: a pull
+  by digest (`image@sha256:...`) is stored untagged, and with `gc: true` zot
+  deletes untagged manifests 24 h after they were synced unless a matching
+  policy says otherwise; a repository that matches no policy gets
+  `deleteUntagged: true`. A policy without `keepTags` prunes no tags.
 
 ### Logs
 
