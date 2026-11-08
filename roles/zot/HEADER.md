@@ -1,0 +1,103 @@
+# zot
+
+Install the [zot](https://zotregistry.dev/) OCI registry from its GitHub releases (sha256-verified against the release's `checksums.sha256.txt`) and run it under a sandboxed systemd unit. zot serves as a private registry or, with its `sync` extension, as a pull-through cache in front of Docker Hub, ghcr.io, quay.io and other upstreams.
+
+The role is deployment-agnostic: the caller passes the full zot configuration as a dict in `zot_config`, and credentials in `zot_htpasswd_entries` and `zot_sync_credentials`.
+
+## Install
+
+### requirements.yml
+
+```yaml
+collections:
+  - name: meysam81.general
+    version: 1.15.0
+```
+
+## Usage
+
+### playbook.yml
+
+A pull-through cache for Docker Hub on a private address, TLS from files the
+caller provides, one read-only user:
+
+```yaml
+---
+- name: Playbook
+  gather_facts: true
+  become: true
+  hosts: all
+  roles:
+    - name: meysam81.general.zot
+      vars:
+        zot_requires_mounts_for: [/srv/registry]
+        zot_htpasswd_entries:
+          - "{{ lookup('env', 'ZOT_PULL_HTPASSWD') }}"  # htpasswd -nbBC 12 puller <password>
+        zot_config:
+          distSpecVersion: "1.1.1"
+          storage:
+            rootDirectory: /srv/registry/zot
+            dedupe: true
+            gc: true
+          http:
+            address: 192.0.2.10
+            port: "443"
+            compat: [docker2s2]
+            tls:
+              cert: /etc/ssl/registry.example.com.crt
+              key: /etc/ssl/registry.example.com.key
+            auth:
+              htpasswd:
+                path: "{{ zot_htpasswd_path }}"
+            accessControl:
+              repositories:
+                "**":
+                  policies:
+                    - users: [puller]
+                      actions: [read]
+                  defaultPolicy: []
+          extensions:
+            sync:
+              enable: true
+              registries:
+                - urls: ["https://registry-1.docker.io"]
+                  onDemand: true
+                  tlsVerify: true
+                  maxRetries: 0
+                  content:
+                    - prefix: "**"
+                      destination: /docker.io
+```
+
+Clients then pull `registry.example.com/docker.io/library/alpine:3`.
+
+### Pull-through cache settings that matter
+
+- `http.compat: ["docker2s2"]` keeps Docker-format images in their original
+  media type, so a digest-pinned pull (`image@sha256:...`) gets the same
+  digest from the cache as from upstream.
+- `maxRetries: 0` on each sync registry: with retries, every tag pull waits
+  for them while the upstream is down before the cached copy is served.
+  Digest-pinned pulls are served from the cache without asking upstream.
+
+### Logs
+
+Leave `zot_config.log.output` unset; the role refuses it. zot then logs to the
+journal (`journalctl -u zot`). A log file set there is created root-owned by
+`zot verify`, after which the service cannot open it and exits.
+
+### Secrets
+
+`zot_htpasswd_entries` and `zot_sync_credentials` are written with
+`no_log: true` to root-owned, group-readable files and referenced from
+`zot_config` through `zot_htpasswd_path` and `zot_sync_credentials_path`.
+Never inline a password into `zot_config`; it is written without `no_log`.
+htpasswd lines are written verbatim (pre-hashed), so re-runs stay idempotent;
+changing one restarts zot.
+
+### Storage and privileges
+
+List the mount holding `storage.rootDirectory` in `zot_requires_mounts_for`:
+otherwise a volume missing at boot makes zot start an empty store on the root
+disk. When `http.port` is below 1024 the unit grants `CAP_NET_BIND_SERVICE`
+and nothing else; zot always runs as `zot_user`.
