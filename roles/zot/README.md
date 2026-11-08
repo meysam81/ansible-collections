@@ -64,6 +64,7 @@ caller provides, one read-only user:
                   onDemand: true
                   tlsVerify: true
                   maxRetries: 0
+                  retryDelay: 1s  # zot requires it whenever maxRetries is set
                   content:
                     - prefix: "**"
                       destination: /docker.io
@@ -79,6 +80,7 @@ Clients then pull `registry.example.com/docker.io/library/alpine:3`.
 - `maxRetries: 0` on each sync registry: with retries, every tag pull waits
   for them while the upstream is down before the cached copy is served.
   Digest-pinned pulls are served from the cache without asking upstream.
+  `zot verify` rejects `maxRetries` without a `retryDelay`, even at `0`.
 
 ### Logs
 
