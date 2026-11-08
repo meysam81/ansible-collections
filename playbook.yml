@@ -128,11 +128,10 @@
         force_basic_auth: true
         status_code: 200
       tags: zot
-    - name: Read the zot unit's mount requirement
-      ansible.builtin.command:
-        cmd: systemctl show zot -p RequiresMountsFor --value
-      register: zot_test_mounts
-      changed_when: false
+    - name: Read the zot unit's properties
+      ansible.builtin.systemd_service:
+        name: zot
+      register: zot_test_unit
       tags: zot
     - name: Stat the htpasswd file
       ansible.builtin.stat:
@@ -142,7 +141,7 @@
     - name: The unit waits for the data mount and the htpasswd file is private
       ansible.builtin.assert:
         that:
-          - "'/var/lib' in zot_test_mounts.stdout"
+          - "'/var/lib' in zot_test_unit.status.RequiresMountsFor"
           - zot_test_htpasswd.stat.mode == '0640'
       tags: zot
     - name: Stat the zot entrypoint
