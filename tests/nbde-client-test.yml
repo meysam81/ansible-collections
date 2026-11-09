@@ -213,10 +213,14 @@
   ansible.builtin.shell:
     cmd: |
       set -eu
-      slot=$(printf %s test-passphrase | cryptsetup open --test-passphrase --verbose --key-file - {{ nbde_test_dev }} 2>&1 | sed -n 's/^Key slot \([0-9]*\) unlocked.*/\1/p')
-      cryptsetup luksDump --dump-json-metadata {{ nbde_test_dev }} \
-        | python3 -c "import json,sys; t=[v for v in json.load(sys.stdin)['tokens'].values() if v['type']=='clevis'][0]; t['keyslots']=['$slot']; print(json.dumps(t))" \
-        | cryptsetup token import {{ nbde_test_dev }}
+      slot=$(printf %s test-passphrase \
+        | cryptsetup open --test-passphrase --verbose --key-file - {{ nbde_test_dev }} 2>&1 \
+        | sed -n 's/^Key slot \([0-9]*\) unlocked.*/\1/p')
+      cryptsetup luksDump --dump-json-metadata {{ nbde_test_dev }} | python3 -c "
+      import json, sys
+      t = [v for v in json.load(sys.stdin)['tokens'].values() if v['type'] == 'clevis'][0]
+      t['keyslots'] = ['$slot']
+      print(json.dumps(t))" | cryptsetup token import {{ nbde_test_dev }}
       echo "$slot"
     executable: /bin/bash
   register: nbde_test_planted

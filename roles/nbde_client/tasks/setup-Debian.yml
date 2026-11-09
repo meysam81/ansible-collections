@@ -201,12 +201,14 @@
     - name: Remove the other clevis tokens
       ansible.builtin.shell:
         cmd: |
+          set -o pipefail
           if [ -n "$slot" ] && clevis luks pass -d "$dev" -s "$slot" 2>/dev/null \
                | cryptsetup open --test-passphrase --key-slot "$slot" --key-file - "$dev" 2>/dev/null; then
             clevis luks unbind -f -d "$dev" -s "$slot"
           else
             cryptsetup token remove --token-id "$tid" "$dev"
           fi
+        executable: /bin/bash
       environment:
         dev: "{{ nbde_client_device }}"
         tid: "{{ item.id }}"
