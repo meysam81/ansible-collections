@@ -193,14 +193,24 @@
         that: nbde_client_matching | length >= 1
         fail_msg: No clevis token on {{ nbde_client_device }} matches the pinned Tang servers.
 
-    # A token without a keyslot blocks the passphrase prompt in the initramfs
-    # (Debian #1109055), so it goes by token id.
+    # A token's keyslot claim can be stale (after a volume-key change the slots
+    # are renumbered and may now hold the passphrase): a keyslot goes only when
+    # the token's own key opens it. Otherwise only the token goes, and the
+    # keyslot stays. A token without a keyslot blocks the passphrase prompt in
+    # the initramfs (Debian #1109055), so it goes by token id.
     - name: Remove the other clevis tokens
-      ansible.builtin.command:
-        argv: >-
-          {{ ['clevis', 'luks', 'unbind', '-f', '-d', nbde_client_device, '-s', item.keyslots[0]]
-             if item.keyslots | length > 0
-             else ['cryptsetup', 'token', 'remove', '--token-id', item.id, nbde_client_device] }}
+      ansible.builtin.shell:
+        cmd: |
+          if [ -n "$slot" ] && clevis luks pass -d "$dev" -s "$slot" 2>/dev/null \
+               | cryptsetup open --test-passphrase --key-slot "$slot" --key-file - "$dev" 2>/dev/null; then
+            clevis luks unbind -f -d "$dev" -s "$slot"
+          else
+            cryptsetup token remove --token-id "$tid" "$dev"
+          fi
+      environment:
+        dev: "{{ nbde_client_device }}"
+        tid: "{{ item.id }}"
+        slot: "{{ item.keyslots[0] | default('') }}"
       loop: "{{ (nbde_client_tokens | rejectattr('matches') | list) + nbde_client_matching[1:] }}"
       loop_control:
         label: "token {{ item.id }}"

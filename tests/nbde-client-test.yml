@@ -207,6 +207,45 @@
       - (nbde_test_tokens.stdout | from_json).tokens | length == 1
       - (nbde_test_tokens.stdout | from_json).tokens[0].pin == 'sss'
 
+# A stale token claiming the passphrase's keyslot (as after a volume-key
+# change): the role removes the token and must leave the keyslot alone.
+- name: NBDE | plant a token that claims the passphrase keyslot
+  ansible.builtin.shell:
+    cmd: |
+      set -eu
+      slot=$(printf %s test-passphrase | cryptsetup open --test-passphrase --verbose --key-file - {{ nbde_test_dev }} 2>&1 | sed -n 's/^Key slot \([0-9]*\) unlocked.*/\1/p')
+      cryptsetup luksDump --dump-json-metadata {{ nbde_test_dev }} \
+        | python3 -c "import json,sys; t=[v for v in json.load(sys.stdin)['tokens'].values() if v['type']=='clevis'][0]; t['keyslots']=['$slot']; print(json.dumps(t))" \
+        | cryptsetup token import {{ nbde_test_dev }}
+      echo "$slot"
+    executable: /bin/bash
+  register: nbde_test_planted
+  changed_when: true
+
+- name: NBDE | run over the stale token
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars: *nbde_vars
+
+- name: NBDE | the passphrase keyslot survived
+  ansible.builtin.command:
+    cmd: cryptsetup open --test-passphrase --key-slot {{ nbde_test_planted.stdout_lines[-1] }} --key-file /dev/stdin {{ nbde_test_dev }}
+    stdin: test-passphrase
+    stdin_add_newline: false
+  changed_when: false
+
+- name: NBDE | inspect after the stale token
+  ansible.builtin.command:
+    argv: [/usr/local/sbin/nbde-token-thumbprints, "{{ nbde_test_dev }}"]
+  register: nbde_test_tokens
+  changed_when: false
+
+- name: NBDE | only the real token is left
+  ansible.builtin.assert:
+    that: (nbde_test_tokens.stdout | from_json).tokens | length == 1
+
 - name: NBDE | metrics with the binding current
   ansible.builtin.command:
     cmd: cat {{ nbde_test_metrics }}/nbde.prom
