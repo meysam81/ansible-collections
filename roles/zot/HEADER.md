@@ -48,6 +48,7 @@ caller provides, one read-only user:
           http:
             address: 192.0.2.10
             port: "443"
+            writeTimeout: 15m  # above syncTimeout (see below)
             compat: [docker2s2]
             tls:
               cert: /etc/ssl/registry.example.com.crt
@@ -71,6 +72,7 @@ caller provides, one read-only user:
                   tlsVerify: true
                   maxRetries: 0
                   retryDelay: 1s  # zot requires it whenever maxRetries is set
+                  syncTimeout: 10m
                   content:
                     - prefix: "**"
                       destination: /docker.io
@@ -87,6 +89,11 @@ Clients then pull `registry.example.com/docker.io/library/alpine:3`.
   for them while the upstream is down before the cached copy is served.
   Digest-pinned pulls are served from the cache without asking upstream.
   `zot verify` rejects `maxRetries` without a `retryDelay`, even at `0`.
+- `http.writeTimeout` above every registry's `syncTimeout` (default 3h): zot
+  answers a pull of an image it does not hold yet only once the whole image
+  is synced, and its default 60 s write deadline cuts off any such pull that
+  takes longer. The client gets an empty reply, though zot still caches the
+  image.
 - A retention policy with `deleteUntagged: false` for every repository: a pull
   by digest (`image@sha256:...`) is stored untagged, and with `gc: true` zot
   deletes untagged manifests 24 h after they were synced unless a matching
