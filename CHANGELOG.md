@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.3](https://github.com/meysam81/ansible-collections/compare/v0.14.3...v1.14.3) (2026-11-09)
+
+
+### Miscellaneous Chores
+
+* prepare release 1.14.3 ([0f6f596](https://github.com/meysam81/ansible-collections/commit/0f6f596ac3569d1cfeced4b3df86a7c7664a15cf))
+
 ## [0.14.3](https://github.com/meysam81/ansible-collections/compare/v1.14.2...v0.14.3) (2026-11-09)
 
 
