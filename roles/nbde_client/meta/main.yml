@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: nbde_client
+  description: Clevis binding of a LUKS2 device to Tang servers, verified against pinned thumbprints, with an initramfs watchdog and binding-drift metrics.
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+    - name: Ubuntu
+      versions:
+        - noble
+  license: Apache-2.0
+  galaxy_tags:
+    - security
+    - encryption
+    - luks
+    - clevis
+    - tang
+allow_duplicates: true
+
+dependencies: []

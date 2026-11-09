@@ -1,0 +1,122 @@
+#!/usr/bin/python3
+"""Show which Tang servers a LUKS2 device's clevis tokens trust.
+
+Reads token metadata only (cryptsetup luksDump --dump-json-metadata), never key
+material, and prints JSON:
+
+  {"tokens": [{"id": "0", "keyslots": ["1"], "pin": "sss", "t": 1,
+               "pins": [{"url": "http://192.0.2.10", "thp": ["<S256 thumbprint>"]}],
+               "matches": true}]}
+
+clevis does not store the thumbprint a binding was made with, but it embeds the
+advertisement it encrypted to. "thp" lists the signing keys of that embedded
+advertisement (RFC 7638, SHA-256), the same values tang-show-keys prints.
+
+usage: nbde-token-thumbprints DEVICE [--expect JSON]   JSON: {"t": 1, "pins": [{"url": U, "thp": T}]}
+       nbde-token-thumbprints --slot DEVICE            keyslot of the only clevis token
+"""
+
+import base64
+import hashlib
+import json
+import subprocess
+import sys
+
+# RFC 7638 required members per key type.
+MEMBERS = {
+    "EC": ("crv", "kty", "x", "y"),
+    "RSA": ("e", "kty", "n"),
+    "OKP": ("crv", "kty", "x"),
+}
+
+
+def b64d(s):
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def thumbprint(jwk):
+    members = {k: jwk[k] for k in MEMBERS[jwk["kty"]]}
+    digest = hashlib.sha256(
+        json.dumps(members, separators=(",", ":"), sort_keys=True).encode()
+    ).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+
+
+def header(jwe):
+    """Protected header of a compact JWE, or of a flattened one's "protected" member."""
+    return json.loads(b64d(jwe.split(".")[0]))
+
+
+def pins(clevis):
+    if clevis["pin"] == "tang":
+        keys = clevis["tang"]["adv"]["keys"]
+        return [
+            {
+                "url": clevis["tang"]["url"],
+                "thp": sorted(
+                    thumbprint(k) for k in keys if "verify" in k.get("key_ops", [])
+                ),
+            }
+        ]
+    if clevis["pin"] == "sss":
+        return [p for jwe in clevis["sss"]["jwe"] for p in pins(header(jwe)["clevis"])]
+    return [{"pin": clevis["pin"]}]
+
+
+def matches(token, expect):
+    if (
+        token["pin"] != "sss"
+        or token["t"] != expect["t"]
+        or len(token["pins"]) != len(expect["pins"])
+    ):
+        return False
+    trusted = {p.get("url"): p.get("thp", []) for p in token["pins"]}
+    return all(e["thp"] in trusted.get(e["url"], []) for e in expect["pins"])
+
+
+def tokens(device):
+    dump = subprocess.run(
+        ["cryptsetup", "luksDump", "--dump-json-metadata", device],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    out = []
+    for tid, tok in sorted(json.loads(dump).get("tokens", {}).items()):
+        if tok.get("type") != "clevis":
+            continue
+        clevis = header(tok["jwe"]["protected"])["clevis"]
+        out.append(
+            {
+                "id": tid,
+                "keyslots": tok.get("keyslots", []),
+                "pin": clevis["pin"],
+                "t": clevis.get("sss", {}).get("t"),
+                "pins": pins(clevis),
+            }
+        )
+    return out
+
+
+def main(argv):
+    if len(argv) == 3 and argv[1] == "--slot":
+        found = tokens(argv[2])
+        if len(found) != 1 or len(found[0]["keyslots"]) != 1:
+            sys.exit(
+                "expected exactly one clevis token with one keyslot, found %d"
+                % len(found)
+            )
+        print(found[0]["keyslots"][0])
+        return
+    if len(argv) not in (2, 4) or (len(argv) == 4 and argv[2] != "--expect"):
+        sys.exit(__doc__)
+    found = tokens(argv[1])
+    if len(argv) == 4:
+        expect = json.loads(argv[3])
+        for tok in found:
+            tok["matches"] = matches(tok, expect)
+    json.dump({"tokens": found}, sys.stdout)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

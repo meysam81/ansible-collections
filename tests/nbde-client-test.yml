@@ -1,0 +1,315 @@
+---
+# nbde_client against a loop-file LUKS2 device and a local Tang server.
+# manage_boot is off: the runner's own boot is not under test; the watchdog
+# scripts are rendered and run directly instead.
+- name: NBDE | a Tang server to bind to
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [nbde_client]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+
+- name: NBDE | test parameters
+  ansible.builtin.set_fact:
+    nbde_test_url: http://{{ ansible_default_ipv4.address }}
+    nbde_test_thp: "{{ tang_server_thumbprints[0] }}"
+    nbde_test_img: /var/tmp/nbde-test.img
+    nbde_test_metrics: /var/tmp/nbde-textfile
+
+- name: NBDE | no metrics from an earlier run
+  ansible.builtin.file:
+    path: "{{ nbde_test_metrics }}"
+    state: absent
+
+- name: NBDE | cryptsetup for the test device
+  ansible.builtin.apt:
+    name: cryptsetup-bin
+    state: present
+
+- name: NBDE | loop-file LUKS2 device
+  ansible.builtin.shell:
+    cmd: |
+      set -eu
+      losetup -j {{ nbde_test_img }} | cut -d: -f1 | xargs -r -n1 losetup -d
+      rm -f {{ nbde_test_img }}
+      truncate -s 256M {{ nbde_test_img }}
+      dev=$(losetup -f --show {{ nbde_test_img }})
+      printf %s test-passphrase | cryptsetup luksFormat -q --type luks2 --pbkdf pbkdf2 --pbkdf-force-iterations 1000 "$dev" -
+      echo "$dev"
+    executable: /bin/bash
+  register: nbde_test_loop
+  changed_when: true
+
+- name: NBDE | role parameters
+  ansible.builtin.set_fact:
+    nbde_test_dev: "{{ nbde_test_loop.stdout_lines[-1] }}"
+    nbde_test_role_vars: &nbde_vars
+      nbde_client_device: "{{ nbde_test_loop.stdout_lines[-1] }}"
+      nbde_client_tang_servers: [{url: "{{ nbde_test_url }}", thp: "{{ nbde_test_thp }}"}]
+      nbde_client_luks_passphrase: test-passphrase
+      nbde_client_manage_boot: false
+      nbde_client_textfile_dir: "{{ nbde_test_metrics }}"
+
+- name: NBDE | first run binds
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars: *nbde_vars
+
+- name: NBDE | inspect after the first run
+  ansible.builtin.command:
+    argv: [/usr/local/sbin/nbde-token-thumbprints, "{{ nbde_test_dev }}"]
+  register: nbde_test_tokens
+  changed_when: false
+
+- name: NBDE | keyslot digests after the first run
+  ansible.builtin.shell:
+    cmd: >-
+      cryptsetup luksDump --dump-json-metadata {{ nbde_test_dev }}
+      | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["keyslots"], sort_keys=True))'
+  register: nbde_test_slots1
+  changed_when: false
+
+- name: NBDE | one sss token trusting the pinned key, and it unlocks
+  ansible.builtin.shell:
+    cmd: clevis luks unlock -d {{ nbde_test_dev }} -n nbde-test && test -b /dev/mapper/nbde-test && cryptsetup close nbde-test
+  changed_when: false
+
+- name: NBDE | token shape
+  ansible.builtin.assert:
+    that:
+      - (nbde_test_tokens.stdout | from_json).tokens | length == 1
+      - (nbde_test_tokens.stdout | from_json).tokens[0].pin == 'sss'
+      - (nbde_test_tokens.stdout | from_json).tokens[0].pins[0].url == nbde_test_url
+      - nbde_test_thp in (nbde_test_tokens.stdout | from_json).tokens[0].pins[0].thp
+
+- name: NBDE | second run
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars: *nbde_vars
+
+- name: NBDE | keyslot digests after the second run
+  ansible.builtin.shell:
+    cmd: >-
+      cryptsetup luksDump --dump-json-metadata {{ nbde_test_dev }}
+      | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["keyslots"], sort_keys=True))'
+  register: nbde_test_slots2
+  changed_when: false
+
+- name: NBDE | a second run rewrites nothing
+  ansible.builtin.assert:
+    that: nbde_test_slots1.stdout == nbde_test_slots2.stdout
+
+- name: NBDE | a wrong thumbprint is refused
+  block:
+    - name: NBDE | run with a wrong thumbprint
+      ansible.builtin.include_role:
+        name: nbde_client
+        apply:
+          tags: [nbde_client]
+      vars:
+        <<: *nbde_vars
+        nbde_client_tang_servers: [{url: "{{ nbde_test_url }}", thp: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}]
+    - name: NBDE | the wrong thumbprint was accepted
+      ansible.builtin.fail:
+        msg: nbde_client bound to an advertisement its pinned key did not sign
+  rescue:
+    - name: NBDE | keyslots after the refused run
+      ansible.builtin.shell:
+        cmd: >-
+          cryptsetup luksDump --dump-json-metadata {{ nbde_test_dev }}
+          | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["keyslots"], sort_keys=True))'
+      register: nbde_test_slots3
+      changed_when: false
+    - name: NBDE | the refusal left the device unchanged
+      ansible.builtin.assert:
+        that:
+          - nbde_test_slots3.stdout == nbde_test_slots1.stdout
+          - "'did not sign' in (ansible_failed_result.results | default([ansible_failed_result]) | map(attribute='stderr') | select('defined') | join(' '))"
+
+- name: NBDE | a private IP no interface holds is refused before anything is written
+  block:
+    - name: NBDE | run with an unknown private IP
+      ansible.builtin.include_role:
+        name: nbde_client
+        apply:
+          tags: [nbde_client]
+      vars:
+        <<: *nbde_vars
+        nbde_client_private_ip: 192.0.2.250
+    - name: NBDE | the unknown private IP was accepted
+      ansible.builtin.fail:
+        msg: nbde_client accepted a private IP that no interface holds
+  rescue:
+    - name: NBDE | the failure named the address
+      ansible.builtin.assert:
+        that: "'192.0.2.250' in ansible_failed_result.msg"
+
+- name: NBDE | the runner's own address resolves to its interface
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars:
+    <<: *nbde_vars
+    nbde_client_private_ip: "{{ ansible_default_ipv4.address }}"
+
+- name: NBDE | the interface is the one holding the address
+  ansible.builtin.assert:
+    that: nbde_client_interface == ansible_default_ipv4.interface
+
+- name: NBDE | add a duplicate token by hand (an interrupted re-bind)
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      printf %s test-passphrase | clevis luks bind -y -d {{ nbde_test_dev }} -k - tang '{"url":"{{ nbde_test_url }}"}'
+    executable: /bin/bash
+  changed_when: true
+
+- name: NBDE | run over the extra token
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars: *nbde_vars
+
+- name: NBDE | inspect after the cleanup
+  ansible.builtin.command:
+    argv: [/usr/local/sbin/nbde-token-thumbprints, "{{ nbde_test_dev }}"]
+  register: nbde_test_tokens
+  changed_when: false
+
+- name: NBDE | only the matching token is left
+  ansible.builtin.assert:
+    that:
+      - (nbde_test_tokens.stdout | from_json).tokens | length == 1
+      - (nbde_test_tokens.stdout | from_json).tokens[0].pin == 'sss'
+
+- name: NBDE | metrics with the binding current
+  ansible.builtin.command:
+    cmd: cat {{ nbde_test_metrics }}/nbde.prom
+  register: nbde_test_prom
+  changed_when: false
+
+- name: NBDE | ok and not rotated
+  ansible.builtin.assert:
+    that:
+      - nbde_test_prom.stdout is search('nbde_binding_report_ok\{device="' ~ nbde_test_dev ~ '"\} 1')
+      - nbde_test_prom.stdout is search('nbde_binding_rotated_keys\{device="' ~ nbde_test_dev ~ '"\} 0')
+
+- name: NBDE | rotate the Tang keys
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [nbde_client]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+    tang_server_rotate_keys: true
+
+- name: NBDE | report before re-binding
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/nbde-report
+  changed_when: true
+
+- name: NBDE | metrics after the rotation
+  ansible.builtin.command:
+    cmd: cat {{ nbde_test_metrics }}/nbde.prom
+  register: nbde_test_prom
+  changed_when: false
+
+- name: NBDE | ok and rotated
+  ansible.builtin.assert:
+    that:
+      - nbde_test_prom.stdout is search('nbde_binding_report_ok\{[^}]*\} 1')
+      - nbde_test_prom.stdout is search('nbde_binding_rotated_keys\{[^}]*\} 1')
+
+- name: NBDE | re-bind to the new key
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars:
+    <<: *nbde_vars
+    nbde_client_tang_servers: [{url: "{{ nbde_test_url }}", thp: "{{ tang_server_thumbprints[0] }}"}]
+
+- name: NBDE | inspect after the re-bind
+  ansible.builtin.command:
+    argv: [/usr/local/sbin/nbde-token-thumbprints, "{{ nbde_test_dev }}"]
+  register: nbde_test_tokens
+  changed_when: false
+
+- name: NBDE | the binding trusts the new key
+  ansible.builtin.assert:
+    that:
+      - (nbde_test_tokens.stdout | from_json).tokens | length == 1
+      - tang_server_thumbprints[0] in (nbde_test_tokens.stdout | from_json).tokens[0].pins[0].thp
+
+- name: NBDE | stop Tang and report
+  ansible.builtin.shell:
+    cmd: systemctl stop tangd.socket && /usr/local/sbin/nbde-report; systemctl start tangd.socket
+  changed_when: true
+
+- name: NBDE | metrics with Tang unreachable
+  ansible.builtin.command:
+    cmd: cat {{ nbde_test_metrics }}/nbde.prom
+  register: nbde_test_prom
+  changed_when: false
+
+- name: NBDE | not ok, and no rotated verdict at all
+  ansible.builtin.assert:
+    that:
+      - nbde_test_prom.stdout is search('nbde_binding_report_ok\{[^}]*\} 0')
+      - "'nbde_binding_rotated_keys' not in nbde_test_prom.stdout"
+
+- name: NBDE | render the watchdog scripts
+  ansible.builtin.template:
+    src: ../roles/nbde_client/templates/nbde-watchdog-{{ item }}.j2
+    dest: /var/tmp/nbde-watchdog-{{ item }}
+    mode: "0755"
+  loop: [top, bottom]
+  vars:
+    nbde_client_watchdog_seconds: 1
+    nbde_client_mapper_name: nbde-absent
+
+- name: NBDE | watchdog behaviour
+  ansible.builtin.shell:
+    cmd: |
+      set -eu
+      t=/var/tmp/nbde-wd; rm -rf "$t"; mkdir -p "$t/fast" "$t/slow"
+      # fake reboot (marker file); "slow" also stretches the timer to 30 s
+      for d in fast slow; do printf '#!/bin/sh\ntouch %s/rebooted\n' "$t" > "$t/$d/reboot"; chmod +x "$t/$d/reboot"; done
+      printf '#!/bin/sh\nexec /bin/sleep 30\n' > "$t/slow/sleep"; chmod +x "$t/slow/sleep"
+      echo root=/dev/sda1 > "$t/cmdline"; echo 'root=/dev/sda1 nbde_watchdog=0' > "$t/cmdline-off"
+      echo 'nbde-absent UUID=0 none luks' > "$t/crypttab"; echo 'other UUID=0 none luks' > "$t/crypttab-other"
+      wd() { env PATH="$t/$1:$PATH" NBDE_PIDFILE="$t/pid" NBDE_CMDLINE="$t/$2" NBDE_CRYPTTAB="$t/${5:-crypttab}" /var/tmp/nbde-watchdog-$3 ${4:-}; }
+      # an initramfs that does not unlock the mapping: no timer, ever
+      wd fast cmdline top "" crypttab-other; sleep 2
+      [ ! -e "$t/rebooted" ] && [ ! -e "$t/pid" ] || { echo "watchdog armed for a mapping the initramfs never opens"; exit 1; }
+      # build time (mkinitramfs): answers prereqs at once and starts nothing
+      start=$(date +%s); wd fast cmdline top prereqs; sleep 2
+      [ ! -e "$t/rebooted" ] && [ ! -e "$t/pid" ] && [ $(( $(date +%s) - start )) -le 3 ] || { echo "prereqs started a timer"; exit 1; }
+      # nbde_watchdog=0 on the command line: no timer
+      wd fast cmdline-off top; sleep 2
+      [ ! -e "$t/rebooted" ] || { echo "nbde_watchdog=0 did not disable it"; exit 1; }
+      # root still locked when the timer ends: reboot
+      wd fast cmdline top; sleep 3
+      [ -e "$t/rebooted" ] || { echo "no reboot with the root still locked"; exit 1; }
+      # local-bottom kills a pending timer
+      rm -f "$t/rebooted" "$t/pid"
+      wd slow cmdline top; pid=$(cat "$t/pid"); kill -0 "$pid"
+      wd slow cmdline bottom; sleep 1
+      ! kill -0 "$pid" 2>/dev/null || { echo "local-bottom left the timer running"; exit 1; }
+      [ ! -e "$t/pid" ] || { echo "local-bottom left the pid file"; exit 1; }
+      echo watchdog-ok
+    executable: /bin/bash
+  register: nbde_test_wd
+  changed_when: false
+
+- name: NBDE | clean up the loop device
+  ansible.builtin.shell:
+    cmd: losetup -d {{ nbde_test_dev }} && rm -f {{ nbde_test_img }}
+  changed_when: true

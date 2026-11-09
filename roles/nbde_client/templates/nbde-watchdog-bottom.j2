@@ -1,0 +1,20 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# The root is unlocked and mounted: stop the watchdog started in local-top.
+PREREQ=""
+prereqs() {
+	echo "$PREREQ"
+}
+case "$1" in
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+pidfile="${NBDE_PIDFILE:-/run/nbde-watchdog.pid}"
+if [ -s "$pidfile" ]; then
+	kill "$(cat "$pidfile")" 2>/dev/null
+fi
+rm -f "$pidfile"
+exit 0

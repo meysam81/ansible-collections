@@ -158,3 +158,6 @@
     - name: Test tang_server
       ansible.builtin.import_tasks: tests/tang-server-test.yml
       tags: tang_server
+    - name: Test nbde_client
+      ansible.builtin.import_tasks: tests/nbde-client-test.yml
+      tags: nbde_client

@@ -1,0 +1,47 @@
+---
+# LUKS2 device to bind, preferably by UUID: /dev/disk/by-uuid/<luks uuid>.
+nbde_client_device: ""
+
+# Tang servers as [{url, thp}]. "thp" is the server's signing-key thumbprint
+# (tang-show-keys on the server). The role binds and re-binds only to an
+# advertisement signed by that key, so a server answering with other keys is
+# refused instead of trusted.
+nbde_client_tang_servers: []
+
+# How many of the servers must answer to unlock (clevis sss "t").
+nbde_client_threshold: 1
+
+# An existing LUKS passphrase. Needed only for the first binding of a device
+# that has no clevis token yet; afterwards the role re-binds with the key the
+# current binding unlocks.
+nbde_client_luks_passphrase: ""
+
+# The client's address on the network that reaches the Tang servers. When
+# set, the initramfs configures (DHCP) only the interface holding it; when
+# empty, the role adds no ip= kernel parameter.
+nbde_client_private_ip: ""
+
+# Kernel command line, initramfs scripts and their rebuilds. Off where boot is
+# not this role's business, such as a data volume or a test runner.
+nbde_client_manage_boot: true
+
+# Name of the root device mapping in crypttab; the watchdog waits for it.
+nbde_client_mapper_name: cryptroot
+
+# Reboot when nbde_client_mapper_name is still locked this many seconds into
+# the initramfs; 0 installs no watchdog. The unlocker configures the network
+# only once, so a failed DHCP would otherwise wait at the console forever.
+# The kernel parameter nbde_watchdog=0 disables it for one boot.
+nbde_client_watchdog_seconds: 0
+
+# Directory a textfile collector reads (node_exporter or Alloy); empty writes
+# no binding metrics.
+nbde_client_textfile_dir: ""
+
+nbde_client_report_on_calendar: daily
+
+nbde_client_report_random_delay_sec: 3600
+
+nbde_client_helper_path: /usr/local/sbin/nbde-token-thumbprints
+
+nbde_client_report_path: /usr/local/sbin/nbde-report
