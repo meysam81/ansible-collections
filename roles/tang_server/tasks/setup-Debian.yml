@@ -3,6 +3,7 @@
   ansible.builtin.assert:
     that:
       - tang_server_listen_address | length > 0
+      - tang_server_listen_address not in ['0.0.0.0', '::', '[::]', '*']
       - tang_server_keys is mapping
       - tang_server_keys.keys() | reject('match', '^\.?[A-Za-z0-9_-]+\.jwk$') | list | length == 0
     fail_msg: >-

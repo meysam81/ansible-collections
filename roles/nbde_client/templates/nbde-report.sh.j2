@@ -14,12 +14,18 @@ rotated=0
 
 if slot="$({{ nbde_client_helper_path }} --slot "$dev" 2>/dev/null)"; then
 	out="$(clevis luks report -q -d "$dev" -s "$slot" 2>&1)"
-	ok=1
-	case "$out" in
-	*Unable* | *malformed* | *"missing signatures"* | *"not found"* | *Invalid*) ok=0 ;;
-	esac
+	rc=$?
 	case "$out" in
 	*"probably rotated"*) rotated=1 ;;
+	esac
+	# ok only for a verdict clevis reached: exit 0, or exit 1 with rotated
+	# keys listed; and never with any pin's error in the output (an sss
+	# report's status is its last pin's only).
+	if [ "$rc" = 0 ] || { [ "$rc" = 1 ] && [ "$rotated" = 1 ]; }; then
+		ok=1
+	fi
+	case "$out" in
+	*Unable* | *malformed* | *"missing signatures"* | *"not found"* | *Invalid* | *"doesn't exist"* | *rror*) ok=0 ;;
 	esac
 fi
 

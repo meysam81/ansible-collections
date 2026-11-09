@@ -131,6 +131,24 @@
           - nbde_test_slots3.stdout == nbde_test_slots1.stdout
           - "'did not sign' in (ansible_failed_result.results | default([ansible_failed_result]) | map(attribute='stderr') | select('defined') | join(' '))"
 
+- name: NBDE | an empty thumbprint is refused (clevis would read it as "trust any key")
+  block:
+    - name: NBDE | run with an empty thumbprint
+      ansible.builtin.include_role:
+        name: nbde_client
+        apply:
+          tags: [nbde_client]
+      vars:
+        <<: *nbde_vars
+        nbde_client_tang_servers: [{url: "{{ nbde_test_url }}", thp: ""}]
+    - name: NBDE | the empty thumbprint was accepted
+      ansible.builtin.fail:
+        msg: nbde_client accepted an empty thumbprint
+  rescue:
+    - name: NBDE | refused by the input check
+      ansible.builtin.assert:
+        that: ansible_failed_task.name is search('Assert required variables')
+
 - name: NBDE | a private IP no interface holds is refused before anything is written
   block:
     - name: NBDE | run with an unknown private IP
@@ -243,6 +261,47 @@
   changed_when: false
 
 - name: NBDE | the binding trusts the new key
+  ansible.builtin.assert:
+    that:
+      - (nbde_test_tokens.stdout | from_json).tokens | length == 1
+      - tang_server_thumbprints[0] in (nbde_test_tokens.stdout | from_json).tokens[0].pins[0].thp
+
+# The client missed a rotation and the server purged the key it was bound to:
+# the binding unlocks nothing, so the role must fall back to the passphrase.
+- name: NBDE | rotate and purge on the Tang server
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [nbde_client]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+    tang_server_rotate_keys: true
+
+- name: NBDE | purge
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [nbde_client]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+    tang_server_purge_rotated_keys: true
+
+- name: NBDE | re-bind after the purge
+  ansible.builtin.include_role:
+    name: nbde_client
+    apply:
+      tags: [nbde_client]
+  vars:
+    <<: *nbde_vars
+    nbde_client_tang_servers: [{url: "{{ nbde_test_url }}", thp: "{{ tang_server_thumbprints[0] }}"}]
+
+- name: NBDE | inspect after the purge re-bind
+  ansible.builtin.command:
+    argv: [/usr/local/sbin/nbde-token-thumbprints, "{{ nbde_test_dev }}"]
+  register: nbde_test_tokens
+  changed_when: false
+
+- name: NBDE | the passphrase bound the current key, and nothing stale is left
   ansible.builtin.assert:
     that:
       - (nbde_test_tokens.stdout | from_json).tokens | length == 1

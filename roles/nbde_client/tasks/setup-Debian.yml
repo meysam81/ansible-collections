@@ -6,6 +6,9 @@
       - nbde_client_tang_servers | length > 0
       - nbde_client_tang_servers | rejectattr('url', 'defined') | list | length == 0
       - nbde_client_tang_servers | rejectattr('thp', 'defined') | list | length == 0
+      # clevis reads an empty thp next to an adv as "trust any key": a SHA-256
+      # thumbprint is 43 base64url characters, nothing shorter is a pin.
+      - nbde_client_tang_servers | map(attribute='thp') | map('string') | reject('match', '^[A-Za-z0-9_-]{43,}$') | list | length == 0
       - nbde_client_threshold | int >= 1
       - nbde_client_threshold | int <= nbde_client_tang_servers | length
       - nbde_client_watchdog_seconds | int >= 0
@@ -128,7 +131,8 @@
 - name: Bind a token to the pinned keys
   when: (nbde_client_inspect.stdout | from_json).tokens | selectattr('matches') | list | length == 0
   vars:
-    nbde_client_tokens: "{{ (nbde_client_inspect.stdout | from_json).tokens }}"
+    # A token without a keyslot (an interrupted bind) unlocks nothing.
+    nbde_client_tokens: "{{ (nbde_client_inspect.stdout | from_json).tokens | selectattr('keyslots') | list }}"
     nbde_client_config: "{{ {'t': nbde_client_threshold | int, 'pins': {'tang': nbde_client_pins}} | to_json }}"
   block:
     # The current binding unlocks the key, so no stored passphrase is needed
@@ -140,24 +144,29 @@
           clevis luks pass -d {{ nbde_client_device | quote }} -s {{ nbde_client_tokens[0].keyslots[0] | quote }}
           | clevis luks bind -d {{ nbde_client_device | quote }} -k - sss {{ nbde_client_config | quote }}
         executable: /bin/bash
+      register: nbde_client_rebind
       when: nbde_client_tokens | length > 0
-      changed_when: true
+      failed_when: false
+      changed_when: nbde_client_rebind.rc == 0
       notify: Run the binding report
 
-    - name: Require a passphrase for the first binding
+    # No token, or the current binding no longer unlocks (its Tang keys were
+    # purged before this host re-bound): only a passphrase can bind now.
+    - name: Require a passphrase when no binding unlocks the device
       ansible.builtin.assert:
         that: nbde_client_luks_passphrase | length > 0
         fail_msg: >-
-          {{ nbde_client_device }} has no clevis token yet: set
+          {{ nbde_client_device }} has no clevis token that still unlocks it
+          ({{ nbde_client_rebind.stderr | default('no token') | trim }}): set
           nbde_client_luks_passphrase to an existing LUKS passphrase.
-      when: nbde_client_tokens | length == 0
+      when: nbde_client_tokens | length == 0 or nbde_client_rebind.rc | default(0) != 0
 
     - name: Bind with the LUKS passphrase
       ansible.builtin.command:
         argv: [clevis, luks, bind, -d, "{{ nbde_client_device }}", -k, "-", sss, "{{ nbde_client_config }}"]
         stdin: "{{ nbde_client_luks_passphrase }}"
         stdin_add_newline: false
-      when: nbde_client_tokens | length == 0
+      when: nbde_client_tokens | length == 0 or nbde_client_rebind.rc | default(0) != 0
       changed_when: true
       no_log: true
       notify: Run the binding report
@@ -290,10 +299,13 @@
         enabled: true
         daemon_reload: true
 
-    - name: Write the first report
+    # Every run leaves a report written after it, so a purge of rotated Tang
+    # keys can demand reports newer than the rotation.
+    - name: Write a fresh report
       ansible.builtin.command:
         cmd: "{{ nbde_client_report_path }}"
-        creates: "{{ nbde_client_textfile_dir }}/nbde.prom"
+      changed_when: false
+      when: not ansible_check_mode
 
 # The initramfs, GRUB and the report must be current before anything later in
 # the play (a reboot, another role) relies on them.
