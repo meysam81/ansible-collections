@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.14.3](https://github.com/meysam81/ansible-collections/compare/v1.14.2...v0.14.3) (2026-11-09)
+
+
+### Features
+
+* tang_server and nbde_client roles for network-bound disk encryption ([#144](https://github.com/meysam81/ansible-collections/issues/144)) ([eef01c2](https://github.com/meysam81/ansible-collections/commit/eef01c246059677fba1b097851f8079dcddba405))
+* **zot:** OCI registry and pull-through cache role ([#140](https://github.com/meysam81/ansible-collections/issues/140)) ([cf421a0](https://github.com/meysam81/ansible-collections/commit/cf421a0d378a70f1be312fa5f5c5c42d593e2b86))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#141](https://github.com/meysam81/ansible-collections/issues/141)) ([7e04d23](https://github.com/meysam81/ansible-collections/commit/7e04d23b1d02b59f46852b6f9cb9f6b85e020d15))
+
 ## [1.14.2](https://github.com/meysam81/ansible-collections/compare/v1.14.1...v1.14.2) (2026-11-03)
 
 
