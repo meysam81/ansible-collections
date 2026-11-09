@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+[Socket]
+# Drop the package's ListenStream=80 (every address), then listen on the
+# given address and on loopback, which tang-show-keys queries.
+ListenStream=
+ListenStream={{ ('[' ~ tang_server_listen_address ~ ']') if ':' in tang_server_listen_address else tang_server_listen_address }}:{{ tang_server_port }}
+{% if tang_server_listen_address != '127.0.0.1' %}
+ListenStream=127.0.0.1:{{ tang_server_port }}
+{% endif %}
+# The address may appear after the socket starts (a DHCP-configured NIC).
+FreeBind=true
+MaxConnectionsPerSource={{ tang_server_max_connections_per_source }}

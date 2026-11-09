@@ -1,0 +1,11 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+# A changed ListenStream only takes effect when the socket is re-created.
+- name: Restart tangd socket
+  ansible.builtin.systemd:
+    name: tangd.socket
+    state: restarted
+    daemon_reload: true

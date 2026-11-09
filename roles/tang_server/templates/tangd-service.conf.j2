@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+[Service]
+RuntimeMaxSec={{ tang_server_runtime_max_sec }}
+# Keys are written by the role only. A read-only tangd can never mint a key
+# pair of its own, which it otherwise does on the first request to an empty
+# key directory.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
