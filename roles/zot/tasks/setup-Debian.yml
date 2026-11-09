@@ -1,0 +1,127 @@
+---
+- name: Assert zot_config sets what the unit and the healthcheck need
+  ansible.builtin.assert:
+    that:
+      - zot_config.storage.rootDirectory is defined
+      - zot_config.http.address is defined
+      - zot_config.http.port is defined
+    fail_msg: "zot_config must set storage.rootDirectory, http.address and http.port"
+    quiet: true
+
+- name: Assert zot logs to the journal
+  ansible.builtin.assert:
+    that:
+      - zot_config.log.output is not defined
+    fail_msg: >-
+      Leave zot_config.log.output unset: `zot verify` runs as root and creates
+      that file root-owned, after which the service cannot open it and exits.
+    quiet: true
+
+- name: Create group {{ zot_group }}
+  ansible.builtin.group:
+    name: "{{ zot_group }}"
+    system: true
+    state: present
+
+- name: Create user {{ zot_user }}
+  ansible.builtin.user:
+    name: "{{ zot_user }}"
+    group: "{{ zot_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    state: present
+
+- name: Download zot {{ zot_version }}
+  ansible.builtin.get_url:
+    url: "{{ zot_download_base_url }}/zot-linux-{{ zot_arch }}"
+    dest: "{{ zot_bin_dir }}/zot-{{ zot_version }}"
+    checksum: "sha256:{{ zot_download_base_url }}/checksums.sha256.txt"
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart zot
+
+- name: Point the zot entrypoint at {{ zot_version }}
+  ansible.builtin.file:
+    src: "{{ zot_bin_dir }}/zot-{{ zot_version }}"
+    dest: "{{ zot_bin_dir }}/zot"
+    state: link
+    force: true
+  notify: Restart zot
+
+- name: Ensure zot directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ zot_config_dir }}", owner: root, group: "{{ zot_group }}", mode: "0750" }
+    - { path: "{{ zot_config.storage.rootDirectory }}", owner: "{{ zot_user }}", group: "{{ zot_group }}", mode: "0750" }
+  loop_control:
+    label: "{{ item.path }}"
+
+# Written before the config: `zot verify` checks the files it references.
+- name: Write the htpasswd file
+  ansible.builtin.copy:
+    content: "{{ zot_htpasswd_entries | join('\n') }}\n"
+    dest: "{{ zot_htpasswd_path }}"
+    owner: root
+    group: "{{ zot_group }}"
+    mode: "0640"
+  when: zot_htpasswd_entries | length > 0
+  no_log: true
+  notify: Restart zot
+
+- name: Write the sync credentials file
+  ansible.builtin.copy:
+    content: "{{ zot_sync_credentials | to_nice_json }}\n"
+    dest: "{{ zot_sync_credentials_path }}"
+    owner: root
+    group: "{{ zot_group }}"
+    mode: "0640"
+  when: zot_sync_credentials | length > 0
+  no_log: true
+  notify: Restart zot
+
+- name: Write zot configuration
+  ansible.builtin.copy:
+    content: "{{ zot_config | to_nice_json }}\n"
+    dest: "{{ zot_config_dir }}/config.json"
+    owner: root
+    group: "{{ zot_group }}"
+    mode: "0640"
+    validate: "{{ zot_bin_dir }}/zot-{{ zot_version }} verify %s"
+  notify: Restart zot
+
+- name: Install the zot unit
+  ansible.builtin.template:
+    src: zot.service.j2
+    dest: /etc/systemd/system/zot.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart zot
+
+- name: Start zot
+  ansible.builtin.systemd_service:
+    name: zot
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Flush handlers so the healthcheck sees the new config
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for zot to be ready
+  ansible.builtin.uri:
+    url: "{{ zot_healthcheck_url }}"
+    status_code: 200
+    validate_certs: "{{ zot_healthcheck_validate_certs }}"
+  register: zot_readyz
+  until: zot_readyz.status == 200
+  retries: 10
+  delay: 3
+  when: zot_healthcheck_enabled | bool

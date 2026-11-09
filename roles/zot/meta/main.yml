@@ -1,0 +1,28 @@
+galaxy_info:
+  author: Meysam Azad
+  description: Install the zot OCI registry from GitHub releases
+  company: Self employed
+
+  license: Apache-2.0
+
+  min_ansible_version: "2.17"
+
+  platforms:
+    - name: Debian
+      versions:
+        - all
+        - trixie
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - all
+        - noble
+        - jammy
+
+  galaxy_tags:
+    - registry
+    - oci
+    - containers
+    - zot
+
+dependencies: []

@@ -1,0 +1,64 @@
+---
+# zot: an OCI-native registry, also usable as a pull-through cache.
+
+# Release to install. The binary and its sha256 come from the GitHub release.
+# renovate: github=project-zot/zot
+zot_version: "2.1.23"
+
+# Release asset architecture (amd64, arm64).
+zot_arch: "{{ (ansible_architecture | default('amd64')) | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
+
+# Where release assets are fetched from. Point it at a mirror when the host
+# cannot reach GitHub; the mirror must serve checksums.sha256.txt too.
+zot_download_base_url: "https://github.com/project-zot/zot/releases/download/v{{ zot_version }}"
+
+# The binary lands as zot-<version> in this directory and `zot` links to it,
+# so an upgrade swaps one symlink and a rollback is a version change.
+zot_bin_dir: /usr/local/bin
+
+# System user and group the service runs as.
+zot_user: zot
+zot_group: zot
+
+# Holds config.json and the secret files below (root-owned, group-readable).
+zot_config_dir: /etc/zot
+
+# Full zot configuration as a dict, written to <zot_config_dir>/config.json.
+# Required: storage.rootDirectory, http.address, http.port. Leave log.output
+# unset: logs go to the journal (see README). The caller builds it so the role
+# stays deployment-agnostic; validated with `zot verify` before it is written.
+zot_config: {}
+
+# htpasswd lines ("user:<bcrypt hash>"), written verbatim so re-runs stay
+# idempotent. Generate one with `htpasswd -nbBC 12 <user> <password>`.
+# Reference the file from zot_config as http.auth.htpasswd.path:
+# "{{ zot_htpasswd_path }}". Secret: pass it via a lookup, never commit it.
+zot_htpasswd_entries: []
+# Where zot_htpasswd_entries are written (root-owned, group-readable).
+zot_htpasswd_path: "{{ zot_config_dir }}/htpasswd"
+
+# Upstream credentials for the sync extension, keyed by registry host:
+#   { "registry.example.com": { "username": "...", "password": "..." } }
+# Reference the file from zot_config as extensions.sync.credentialsFile:
+# "{{ zot_sync_credentials_path }}". Secret: pass it via a lookup.
+zot_sync_credentials: {}
+# Where zot_sync_credentials are written (root-owned, group-readable).
+zot_sync_credentials_path: "{{ zot_config_dir }}/sync-credentials.json"
+
+# Mount points the unit requires before it starts (systemd RequiresMountsFor).
+# List the mount that holds storage.rootDirectory: without it, a missing
+# volume at boot makes zot start an empty store on the root disk.
+zot_requires_mounts_for: []
+
+# Extra paths the sandboxed unit may write to; storage.rootDirectory is
+# always writable.
+zot_read_write_paths: []
+
+# Whether to block until zot's /readyz answers 200 after deploy.
+zot_healthcheck_enabled: true
+# Readiness endpoint polled when zot_healthcheck_enabled is true; /readyz needs
+# no credentials.
+zot_healthcheck_url: "{{ 'https' if zot_config.http.tls is defined else 'http' }}://{{ zot_config.http.address }}:{{ zot_config.http.port }}/readyz"
+# The check sends no credentials and dials the listen address, which a
+# certificate issued for a hostname does not name.
+zot_healthcheck_validate_certs: false

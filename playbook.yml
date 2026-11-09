@@ -19,6 +19,9 @@
     - name: Generate test TLS certificate for HAProxy
       ansible.builtin.import_tasks: tests/generate-test-cert.yml
       tags: haproxy
+    - name: Generate test TLS certificate for zot
+      ansible.builtin.import_tasks: tests/generate-zot-test-cert.yml
+      tags: zot
   roles:
     - role: haproxy
       tags: haproxy
@@ -82,3 +85,73 @@
       tags: oathkeeper
     - role: vm_identity_gcp
       tags: vm_identity_gcp
+    - role: zot
+      tags: zot
+      vars:
+        # Password: ci-password (test-only hash).
+        zot_htpasswd_entries:
+          - "ci:$2y$10$lirsF1K8LmPTiSeTSbMEautrdRETF/bJ2jRjIUo5QoOxySLxyzx0m"
+        zot_requires_mounts_for: [/var/lib]
+        zot_config:
+          distSpecVersion: "1.1.1"
+          storage:
+            rootDirectory: /var/lib/zot
+          http:
+            address: 127.0.0.1
+            port: "443"
+            tls:
+              cert: /etc/zot-test/cert.pem
+              key: /etc/zot-test/key.pem
+            auth:
+              htpasswd:
+                path: "{{ zot_htpasswd_path }}"
+            accessControl:
+              repositories:
+                "**":
+                  policies:
+                    - users: [ci]
+                      actions: [read]
+                  defaultPolicy: []
+  post_tasks:
+    - name: Zot refuses anonymous requests
+      ansible.builtin.uri:
+        url: https://127.0.0.1/v2/
+        validate_certs: false
+        status_code: 401
+      tags: zot
+    - name: Zot answers an authenticated user
+      ansible.builtin.uri:
+        url: https://127.0.0.1/v2/
+        validate_certs: false
+        url_username: ci
+        url_password: ci-password
+        force_basic_auth: true
+        status_code: 200
+      tags: zot
+    - name: Read the zot unit's properties
+      ansible.builtin.systemd_service:
+        name: zot
+      register: zot_test_unit
+      tags: zot
+    - name: Stat the htpasswd file
+      ansible.builtin.stat:
+        path: /etc/zot/htpasswd
+      register: zot_test_htpasswd
+      tags: zot
+    - name: The unit waits for the data mount and the htpasswd file is private
+      ansible.builtin.assert:
+        that:
+          - "'/var/lib' in zot_test_unit.status.RequiresMountsFor"
+          - zot_test_htpasswd.stat.mode == '0640'
+      tags: zot
+    - name: Stat the zot entrypoint
+      ansible.builtin.stat:
+        path: /usr/local/bin/zot
+      register: zot_test_entrypoint
+      tags: zot
+    - name: The entrypoint is a symlink to the pinned release
+      ansible.builtin.assert:
+        that:
+          - zot_test_entrypoint.stat.islnk
+          - zot_test_entrypoint.stat.lnk_target is search('zot-2\.1\.23$')
+      tags: zot

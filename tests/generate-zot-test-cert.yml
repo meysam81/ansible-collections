@@ -1,0 +1,30 @@
+---
+# Self-signed certificate for the zot harness: the role serves TLS from
+# caller-provided files. Production playbooks never include this file.
+- name: Create the zot group the key is shared with
+  ansible.builtin.group:
+    name: zot
+    system: true
+    state: present
+
+- name: Create the zot test certificate directory
+  ansible.builtin.file:
+    path: /etc/zot-test
+    state: directory
+    owner: root
+    group: zot
+    mode: "0750"
+
+- name: Generate the zot test certificate
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost"
+      -keyout /etc/zot-test/key.pem -out /etc/zot-test/cert.pem
+    creates: /etc/zot-test/cert.pem
+
+- name: Let the zot group read the test key
+  ansible.builtin.file:
+    path: /etc/zot-test/key.pem
+    owner: root
+    group: zot
+    mode: "0640"

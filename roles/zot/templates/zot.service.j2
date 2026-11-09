@@ -1,0 +1,80 @@
+# {{ ansible_managed }}
+[Unit]
+Description=zot OCI registry
+Documentation=https://zotregistry.dev/
+Wants=network-online.target
+After=network-online.target
+{% if zot_requires_mounts_for | length > 0 %}
+RequiresMountsFor={{ zot_requires_mounts_for | join(' ') }}
+{% endif %}
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStartPre={{ zot_bin_dir }}/zot verify {{ zot_config_dir }}/config.json
+ExecStart={{ zot_bin_dir }}/zot serve {{ zot_config_dir }}/config.json
+
+# ── Identity ──────────────────────────────────────────────────────────
+User={{ zot_user }}
+Group={{ zot_group }}
+
+# ── Capabilities ──────────────────────────────────────────────────────
+{% if zot_config.http.port | int < 1024 %}
+# Binding a port below 1024 is the only privilege zot gets.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+{% else %}
+CapabilityBoundingSet=
+{% endif %}
+NoNewPrivileges=yes
+
+# ── Filesystem isolation ──────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths={{ ([zot_config.storage.rootDirectory] + zot_read_write_paths) | join(' ') }}
+
+# ── Kernel isolation ─────────────────────────────────────────────────
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# ── Network isolation ────────────────────────────────────────────────
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# ── Syscall filtering ───────────────────────────────────────────────
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# ── Logging ─────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zot
+
+# ── Misc hardening ──────────────────────────────────────────────────
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+
+# ── Resource limits ──────────────────────────────────────────────────
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
