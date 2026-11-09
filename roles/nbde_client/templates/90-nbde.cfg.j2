@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+# The clevis unlocker in the initramfs configures one interface: the one that
+# reaches the Tang servers. Without ip=, DHCP takes whichever NIC answers first.
+GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX ip=:::::{{ nbde_client_interface }}:dhcp"

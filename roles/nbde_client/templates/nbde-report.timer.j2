@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Report the clevis binding state
+
+[Timer]
+OnCalendar={{ nbde_client_report_on_calendar }}
+RandomizedDelaySec={{ nbde_client_report_random_delay_sec }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,301 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - nbde_client_device | length > 0
+      - nbde_client_tang_servers | length > 0
+      - nbde_client_tang_servers | rejectattr('url', 'defined') | list | length == 0
+      - nbde_client_tang_servers | rejectattr('thp', 'defined') | list | length == 0
+      - nbde_client_threshold | int >= 1
+      - nbde_client_threshold | int <= nbde_client_tang_servers | length
+      - nbde_client_watchdog_seconds | int >= 0
+    fail_msg: >-
+      nbde_client_device and nbde_client_tang_servers ([{url, thp}], thp being
+      each server's signing-key thumbprint) are required, and
+      nbde_client_threshold must be between 1 and the number of servers.
+
+- name: Find the interface that holds the private address
+  when: nbde_client_private_ip | length > 0
+  block:
+    - name: Gather current network facts
+      ansible.builtin.setup:
+        gather_subset: ["!all", "!min", network]
+
+    - name: Select the interfaces holding the address
+      ansible.builtin.set_fact:
+        # Interface facts are keyed by name with "-", "." and ":" as "_".
+        nbde_client_interfaces: >-
+          {{ ansible_facts.interfaces | map('regex_replace', '[-.:]', '_') | map('extract', ansible_facts)
+             | selectattr('ipv4', 'defined') | selectattr('ipv4.address', 'equalto', nbde_client_private_ip)
+             | map(attribute='device') | list }}
+
+    - name: Require exactly one such interface
+      ansible.builtin.assert:
+        that: nbde_client_interfaces | length == 1
+        fail_msg: >-
+          {{ nbde_client_interfaces | length }} interfaces hold
+          {{ nbde_client_private_ip }}; the initramfs must DHCP exactly one.
+
+    - name: Remember the interface
+      ansible.builtin.set_fact:
+        nbde_client_interface: "{{ nbde_client_interfaces[0] }}"
+
+- name: Install clevis
+  ansible.builtin.apt:
+    name: "{{ ['clevis', 'clevis-luks', 'curl'] + (['clevis-initramfs'] if nbde_client_manage_boot | bool else []) }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install the token inspection helper
+  ansible.builtin.copy:
+    src: nbde-token-thumbprints
+    dest: "{{ nbde_client_helper_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Require a LUKS2 device
+  ansible.builtin.command:
+    cmd: cryptsetup isLuks --type luks2 {{ nbde_client_device }}
+  changed_when: false
+  check_mode: false
+
+- name: Create a private directory for the advertisements
+  ansible.builtin.file:
+    path: /run/nbde
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Fetch each Tang advertisement
+  ansible.builtin.get_url:
+    url: "{{ item.url }}/adv"
+    dest: /run/nbde/adv-{{ index }}.jws
+    mode: "0600"
+    force: true
+    timeout: 10
+  loop: "{{ nbde_client_tang_servers }}"
+  loop_control:
+    index_var: index
+    label: "{{ item.url }}"
+  changed_when: false
+  check_mode: false
+
+# clevis itself decides trust: with "thp" set it refuses an advertisement that
+# key did not sign, and with "-y" or not. Failing here leaves the device as it was.
+- name: Require each advertisement to be signed by its pinned key
+  ansible.builtin.command:
+    argv:
+      - clevis
+      - encrypt
+      - tang
+      - "{{ {'url': item.url, 'adv': '/run/nbde/adv-' ~ index ~ '.jws', 'thp': item.thp} | to_json }}"
+    stdin: probe
+  loop: "{{ nbde_client_tang_servers }}"
+  loop_control:
+    index_var: index
+    label: "{{ item.url }}"
+  changed_when: false
+  check_mode: false
+
+- name: Start the pin list
+  ansible.builtin.set_fact:
+    nbde_client_pins: []
+
+# Every pin carries the checked advertisement and its thumbprint, so binding
+# never fetches or trusts anything new.
+- name: Build one pin per Tang server
+  ansible.builtin.set_fact:
+    nbde_client_pins: "{{ nbde_client_pins + [{'url': item.url, 'adv': '/run/nbde/adv-' ~ index ~ '.jws', 'thp': item.thp}] }}"
+  loop: "{{ nbde_client_tang_servers }}"
+  loop_control:
+    index_var: index
+    label: "{{ item.url }}"
+
+- name: Inspect the clevis tokens
+  ansible.builtin.command:
+    argv:
+      - "{{ nbde_client_helper_path }}"
+      - "{{ nbde_client_device }}"
+      - --expect
+      - "{{ {'t': nbde_client_threshold | int, 'pins': nbde_client_tang_servers} | to_json }}"
+  register: nbde_client_inspect
+  changed_when: false
+  check_mode: false
+
+- name: Bind a token to the pinned keys
+  when: (nbde_client_inspect.stdout | from_json).tokens | selectattr('matches') | list | length == 0
+  vars:
+    nbde_client_tokens: "{{ (nbde_client_inspect.stdout | from_json).tokens }}"
+    nbde_client_config: "{{ {'t': nbde_client_threshold | int, 'pins': {'tang': nbde_client_pins}} | to_json }}"
+  block:
+    # The current binding unlocks the key, so no stored passphrase is needed
+    # to re-bind; the old token goes only after the new one exists.
+    - name: Bind with the key the current binding unlocks
+      ansible.builtin.shell:
+        cmd: >-
+          set -o pipefail;
+          clevis luks pass -d {{ nbde_client_device | quote }} -s {{ nbde_client_tokens[0].keyslots[0] | quote }}
+          | clevis luks bind -d {{ nbde_client_device | quote }} -k - sss {{ nbde_client_config | quote }}
+        executable: /bin/bash
+      when: nbde_client_tokens | length > 0
+      changed_when: true
+      notify: Run the binding report
+
+    - name: Require a passphrase for the first binding
+      ansible.builtin.assert:
+        that: nbde_client_luks_passphrase | length > 0
+        fail_msg: >-
+          {{ nbde_client_device }} has no clevis token yet: set
+          nbde_client_luks_passphrase to an existing LUKS passphrase.
+      when: nbde_client_tokens | length == 0
+
+    - name: Bind with the LUKS passphrase
+      ansible.builtin.command:
+        argv: [clevis, luks, bind, -d, "{{ nbde_client_device }}", -k, "-", sss, "{{ nbde_client_config }}"]
+        stdin: "{{ nbde_client_luks_passphrase }}"
+        stdin_add_newline: false
+      when: nbde_client_tokens | length == 0
+      changed_when: true
+      no_log: true
+      notify: Run the binding report
+
+- name: Inspect the clevis tokens again
+  ansible.builtin.command:
+    argv:
+      - "{{ nbde_client_helper_path }}"
+      - "{{ nbde_client_device }}"
+      - --expect
+      - "{{ {'t': nbde_client_threshold | int, 'pins': nbde_client_tang_servers} | to_json }}"
+  register: nbde_client_inspect
+  changed_when: false
+  check_mode: false
+
+- name: Keep one matching token, remove every other clevis token
+  vars:
+    nbde_client_tokens: "{{ (nbde_client_inspect.stdout | from_json).tokens }}"
+    nbde_client_matching: "{{ nbde_client_tokens | selectattr('matches') | list }}"
+  when: not ansible_check_mode
+  block:
+    - name: Require a matching token before removing any
+      ansible.builtin.assert:
+        that: nbde_client_matching | length >= 1
+        fail_msg: No clevis token on {{ nbde_client_device }} matches the pinned Tang servers.
+
+    # A token without a keyslot blocks the passphrase prompt in the initramfs
+    # (Debian #1109055), so it goes by token id.
+    - name: Remove the other clevis tokens
+      ansible.builtin.command:
+        argv: >-
+          {{ ['clevis', 'luks', 'unbind', '-f', '-d', nbde_client_device, '-s', item.keyslots[0]]
+             if item.keyslots | length > 0
+             else ['cryptsetup', 'token', 'remove', '--token-id', item.id, nbde_client_device] }}
+      loop: "{{ (nbde_client_tokens | rejectattr('matches') | list) + nbde_client_matching[1:] }}"
+      loop_control:
+        label: "token {{ item.id }}"
+      changed_when: true
+      notify: Run the binding report
+
+- name: Configure the initramfs
+  when: nbde_client_manage_boot | bool
+  block:
+    - name: Find what the root filesystem sits on
+      ansible.builtin.shell:
+        cmd: lsblk -s -n -o NAME "$(findmnt -n -o SOURCE /)"
+      register: nbde_client_root_stack
+      changed_when: false
+      check_mode: false
+      when: nbde_client_watchdog_seconds | int > 0
+
+    # A watchdog waiting for a mapping this boot never opens reboots forever.
+    - name: Require the root to sit on the mapping the watchdog waits for
+      ansible.builtin.assert:
+        that: nbde_client_mapper_name in (nbde_client_root_stack.stdout_lines | map('regex_replace', '^[^A-Za-z0-9]+', '') | list)
+        fail_msg: >-
+          / does not sit on /dev/mapper/{{ nbde_client_mapper_name }}
+          ({{ nbde_client_root_stack.stdout_lines | join(' <- ') }}); the watchdog
+          would reboot this host on every boot.
+      when: nbde_client_watchdog_seconds | int > 0
+
+    - name: Pin the initramfs network to the private interface
+      ansible.builtin.template:
+        src: 90-nbde.cfg.j2
+        dest: /etc/default/grub.d/90-nbde.cfg
+        owner: root
+        group: root
+        mode: "0644"
+      when: nbde_client_interface is defined
+      notify: Update GRUB
+
+    - name: Remove the initramfs network pin
+      ansible.builtin.file:
+        path: /etc/default/grub.d/90-nbde.cfg
+        state: absent
+      when: nbde_client_interface is not defined
+      notify: Update GRUB
+
+    - name: Install the boot watchdog
+      ansible.builtin.template:
+        src: nbde-watchdog-{{ item }}.j2
+        dest: /etc/initramfs-tools/scripts/local-{{ item }}/nbde-watchdog
+        owner: root
+        group: root
+        mode: "0755"
+      loop: [top, bottom]
+      when: nbde_client_watchdog_seconds | int > 0
+      notify: Rebuild the initramfs
+
+    - name: Remove the boot watchdog
+      ansible.builtin.file:
+        path: /etc/initramfs-tools/scripts/local-{{ item }}/nbde-watchdog
+        state: absent
+      loop: [top, bottom]
+      when: nbde_client_watchdog_seconds | int == 0
+      notify: Rebuild the initramfs
+
+- name: Report the binding state
+  when: nbde_client_textfile_dir | length > 0
+  block:
+    - name: Create the textfile directory if missing
+      ansible.builtin.file:
+        path: "{{ nbde_client_textfile_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install the report script
+      ansible.builtin.template:
+        src: nbde-report.sh.j2
+        dest: "{{ nbde_client_report_path }}"
+        owner: root
+        group: root
+        mode: "0700"
+      notify: Run the binding report
+
+    - name: Install the report service and timer
+      ansible.builtin.template:
+        src: nbde-report.{{ item }}.j2
+        dest: /etc/systemd/system/nbde-report.{{ item }}
+        owner: root
+        group: root
+        mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+      loop: [service, timer]
+      notify: Reload systemd daemon
+
+    - name: Enable the report timer
+      ansible.builtin.systemd:
+        name: nbde-report.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Write the first report
+      ansible.builtin.command:
+        cmd: "{{ nbde_client_report_path }}"
+        creates: "{{ nbde_client_textfile_dir }}/nbde.prom"
+
+# The initramfs, GRUB and the report must be current before anything later in
+# the play (a reboot, another role) relies on them.
+- name: Apply the boot and report changes now
+  ansible.builtin.meta: flush_handlers

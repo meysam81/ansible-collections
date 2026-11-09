@@ -1,0 +1,20 @@
+---
+- name: Rebuild the initramfs
+  ansible.builtin.command:
+    cmd: update-initramfs -u -k all
+  changed_when: true
+
+- name: Update GRUB
+  ansible.builtin.command:
+    cmd: update-grub
+  changed_when: true
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Run the binding report
+  ansible.builtin.command:
+    cmd: "{{ nbde_client_report_path }}"
+  changed_when: true
+  when: nbde_client_textfile_dir | length > 0

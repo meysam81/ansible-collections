@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Report whether the clevis binding matches the Tang servers' keys
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ nbde_client_report_path }}

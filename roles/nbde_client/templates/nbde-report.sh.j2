@@ -1,0 +1,41 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Writes whether the clevis binding of {{ nbde_client_device }} still matches
+# the keys its Tang servers advertise. clevis luks report exits 1 both for
+# "rotated keys found" and for "could not check", and for an sss binding its
+# status is the last pin's only, so the verdict comes from its output.
+set -u
+
+dev='{{ nbde_client_device }}'
+dir='{{ nbde_client_textfile_dir }}'
+label="device=\"$dev\""
+ok=0
+rotated=0
+
+if slot="$({{ nbde_client_helper_path }} --slot "$dev" 2>/dev/null)"; then
+	out="$(clevis luks report -q -d "$dev" -s "$slot" 2>&1)"
+	ok=1
+	case "$out" in
+	*Unable* | *malformed* | *"missing signatures"* | *"not found"* | *Invalid*) ok=0 ;;
+	esac
+	case "$out" in
+	*"probably rotated"*) rotated=1 ;;
+	esac
+fi
+
+tmp="$(mktemp "$dir/.nbde.prom.XXXXXX")" || exit 1
+{
+	echo "# HELP nbde_binding_report_ok 1 if every Tang server of the clevis binding was checked."
+	echo "# TYPE nbde_binding_report_ok gauge"
+	echo "nbde_binding_report_ok{$label} $ok"
+	if [ "$ok" = 1 ]; then
+		echo "# HELP nbde_binding_rotated_keys 1 if the binding uses a key its Tang server no longer advertises."
+		echo "# TYPE nbde_binding_rotated_keys gauge"
+		echo "nbde_binding_rotated_keys{$label} $rotated"
+	fi
+	echo "# HELP nbde_binding_report_timestamp_seconds Unix time of the last report run."
+	echo "# TYPE nbde_binding_report_timestamp_seconds gauge"
+	echo "nbde_binding_report_timestamp_seconds{$label} $(date +%s)"
+} >"$tmp"
+chmod 0644 "$tmp"
+mv "$tmp" "$dir/nbde.prom"

@@ -1,0 +1,121 @@
+---
+# tang_server: listener, key restore, rotation, purge, connection limits.
+# Runs on the CI runner (become: true), listening on its own non-loopback address.
+- name: Tang | first run generates a key pair
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [tang_server]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+
+- name: Tang | remember the generated identity
+  ansible.builtin.set_fact:
+    tang_test_keys: "{{ tang_server_current_keys }}"
+    tang_test_thp: "{{ tang_server_thumbprints }}"
+  no_log: true
+
+- name: Tang | the advertisement is served on the listen address
+  ansible.builtin.uri:
+    url: http://{{ ansible_default_ipv4.address }}/adv
+    return_content: true
+  register: tang_test_adv
+
+- name: Tang | listeners
+  ansible.builtin.command:
+    cmd: ss -Hltn 'sport = :80'
+  register: tang_test_ss
+  changed_when: false
+
+- name: Tang | serves an advertisement on the given address and loopback only
+  ansible.builtin.assert:
+    that:
+      - tang_test_thp | length >= 1
+      - tang_test_adv.json.payload is defined
+      - (ansible_default_ipv4.address ~ ':80') in tang_test_ss.stdout
+      - "'127.0.0.1:80' in tang_test_ss.stdout"
+      - "'*:80' not in tang_test_ss.stdout"
+      - "'0.0.0.0:80' not in tang_test_ss.stdout"
+
+- name: Tang | plant a key that is not in the set
+  ansible.builtin.copy:
+    content: '{"kty":"EC"}'
+    dest: /var/lib/tang/planted.jwk
+    mode: "0440"
+
+- name: Tang | restore the remembered keys
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [tang_server]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+    tang_server_keys: "{{ tang_test_keys }}"
+
+- name: Tang | the restore keeps the identity and removes the planted key
+  ansible.builtin.assert:
+    that:
+      - tang_server_thumbprints == tang_test_thp
+      - tang_server_current_keys.keys() | sort == tang_test_keys.keys() | sort
+      - "'planted.jwk' not in tang_server_current_keys"
+
+- name: Tang | rotate
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [tang_server]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+    tang_server_keys: "{{ tang_test_keys }}"
+    tang_server_rotate_keys: true
+
+- name: Tang | rotation advertises a new key and hides the old ones
+  ansible.builtin.assert:
+    that:
+      - tang_server_thumbprints != tang_test_thp
+      - tang_server_current_keys.keys() | select('match', '^\.') | list | length == tang_test_keys | length
+
+- name: Tang | purge the rotated keys
+  ansible.builtin.include_role:
+    name: tang_server
+    apply:
+      tags: [tang_server]
+  vars:
+    tang_server_listen_address: "{{ ansible_default_ipv4.address }}"
+    tang_server_keys: "{{ tang_server_current_keys }}"
+    tang_server_purge_rotated_keys: true
+
+- name: Tang | no hidden key is left
+  ansible.builtin.assert:
+    that: tang_server_current_keys.keys() | select('match', '^\.') | list | length == 0
+
+# Four idle connections from one source are held; the fifth is closed at
+# once (MaxConnectionsPerSource), and idle ones end at RuntimeMaxSec.
+- name: Tang | connection limits
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import socket, sys, time
+        addr = (sys.argv[1], 80)
+        held = [socket.create_connection(addr) for _ in range(4)]
+        fifth = socket.create_connection(addr)
+        fifth.settimeout(3)
+        assert fifth.recv(1) == b"", "fifth connection from one source was served"
+        held[0].settimeout(20)
+        start = time.monotonic()
+        assert held[0].recv(1) == b"", "idle connection was not closed"
+        assert time.monotonic() - start < 15, "idle connection outlived RuntimeMaxSec"
+      - "{{ ansible_default_ipv4.address }}"
+  changed_when: false
+
+- name: Tang | tangd runs read-only
+  ansible.builtin.command:
+    cmd: systemctl show tangd@probe.service -p ProtectSystem --value
+  register: tang_test_protect
+  changed_when: false
+
+- name: Tang | ProtectSystem is strict
+  ansible.builtin.assert:
+    that: tang_test_protect.stdout == 'strict'

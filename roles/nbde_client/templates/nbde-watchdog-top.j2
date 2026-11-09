@@ -1,0 +1,32 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Reboots when /dev/mapper/{{ nbde_client_mapper_name }} is still locked
+# {{ nbde_client_watchdog_seconds }} s into the initramfs. The clevis unlocker
+# configures the network once; after a failed DHCP it would wait forever.
+PREREQ=""
+prereqs() {
+	echo "$PREREQ"
+}
+# mkinitramfs calls every script with "prereqs" at build time: answer and
+# exit, or the build host itself would schedule a reboot.
+case "$1" in
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+grep -qw 'nbde_watchdog=0' "${NBDE_CMDLINE:-/proc/cmdline}" && exit 0
+# Only an initramfs that unlocks this mapping may count down: otherwise the
+# device never appears and every boot would end in a reboot.
+grep -q '^{{ nbde_client_mapper_name }}[[:space:]]' "${NBDE_CRYPTTAB:-/cryptroot/crypttab}" 2>/dev/null || exit 0
+
+(
+	sleep {{ nbde_client_watchdog_seconds }}
+	if [ ! -b /dev/mapper/{{ nbde_client_mapper_name }} ]; then
+		echo "nbde-watchdog: {{ nbde_client_mapper_name }} still locked after {{ nbde_client_watchdog_seconds }} s, rebooting" >/dev/console 2>/dev/null
+		reboot -f
+	fi
+) &
+echo $! >"${NBDE_PIDFILE:-/run/nbde-watchdog.pid}"
+exit 0

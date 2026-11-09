@@ -1,0 +1,178 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - tang_server_listen_address | length > 0
+      - tang_server_keys is mapping
+      - tang_server_keys.keys() | reject('match', '^\.?[A-Za-z0-9_-]+\.jwk$') | list | length == 0
+    fail_msg: >-
+      tang_server_listen_address is required (Tang answers anyone who can
+      reach it, so the role never listens on every interface), and every
+      tang_server_keys name must be a bare "<thumbprint>.jwk" or
+      ".<thumbprint>.jwk".
+
+# Everything that decides what the socket serves goes in before the package:
+# its postinst starts tangd.socket, and tangd writes a fresh key pair on the
+# first request to an empty key directory. With the drop-ins and keys in
+# place first, the socket's very first start is already the final one.
+- name: Create the systemd drop-in directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/systemd/system/tangd.socket.d
+    - /etc/systemd/system/tangd@.service.d
+
+- name: Listen on the given address and loopback only
+  ansible.builtin.template:
+    src: tangd-socket.conf.j2
+    dest: /etc/systemd/system/tangd.socket.d/listen.conf
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+  notify: Restart tangd socket
+
+- name: Limit and sandbox each tangd connection
+  ansible.builtin.template:
+    src: tangd-service.conf.j2
+    dest: /etc/systemd/system/tangd@.service.d/hardening.conf
+    owner: root
+    group: root
+    mode: "0644" # NOSONAR: systemd unit files are world-readable by convention
+  notify: Reload systemd daemon
+
+- name: Look up the Tang system user
+  ansible.builtin.getent:
+    database: passwd
+    key: _tang
+    fail_key: false
+
+- name: Create the key directory
+  ansible.builtin.file:
+    path: "{{ tang_server_keys_dir }}"
+    state: directory
+    mode: "0750"
+
+# Before the package exists there is no _tang user: the files start as root's
+# and the socket's ExecStartPre hands the directory to _tang on its first start.
+- name: Install the given keys
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ tang_server_keys_dir }}/{{ item.key }}"
+    owner: "{{ '_tang' if (ansible_facts.getent_passwd | default({})).get('_tang') else omit }}"
+    group: "{{ '_tang' if (ansible_facts.getent_passwd | default({})).get('_tang') else omit }}"
+    mode: "0440"
+  loop: "{{ tang_server_keys | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  no_log: true
+  diff: false
+
+- name: Find the keys on disk
+  ansible.builtin.find:
+    paths: "{{ tang_server_keys_dir }}"
+    patterns: "*.jwk"
+    hidden: true
+    file_type: file
+  register: tang_server_found_keys
+
+- name: Remove keys that are not in the given set
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ tang_server_found_keys.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when:
+    - tang_server_keys | length > 0
+    - item.path | basename not in tang_server_keys
+
+- name: Install Tang
+  ansible.builtin.apt:
+    name:
+      - tang
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Generate a key pair when there is none
+  ansible.builtin.command:
+    cmd: "{{ tang_server_libexec_dir }}/tangd-keygen {{ tang_server_keys_dir }}"
+  when:
+    - tang_server_keys | length == 0
+    - tang_server_found_keys.files | map(attribute='path') | map('basename') | reject('match', '^\.') | list | length == 0
+  changed_when: true
+
+- name: Rotate the keys
+  ansible.builtin.command:
+    cmd: "{{ tang_server_libexec_dir }}/tangd-rotate-keys -d {{ tang_server_keys_dir }}"
+  when: tang_server_rotate_keys | bool
+  changed_when: true
+
+- name: Find the rotated keys
+  ansible.builtin.find:
+    paths: "{{ tang_server_keys_dir }}"
+    patterns: ".*.jwk"
+    hidden: true
+    file_type: file
+  register: tang_server_rotated_keys
+  when: tang_server_purge_rotated_keys | bool
+
+- name: Purge the rotated keys
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ tang_server_rotated_keys.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: tang_server_purge_rotated_keys | bool
+
+- name: Enable and start the Tang socket
+  ansible.builtin.systemd:
+    name: tangd.socket
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Apply a changed listener now
+  ansible.builtin.meta: flush_handlers
+
+- name: Find the keys to read back
+  ansible.builtin.find:
+    paths: "{{ tang_server_keys_dir }}"
+    patterns: "*.jwk"
+    hidden: true
+    file_type: file
+  register: tang_server_final_keys
+
+- name: Read back the keys
+  ansible.builtin.slurp:
+    src: "{{ item.path }}"
+  loop: "{{ tang_server_final_keys.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  register: tang_server_slurped_keys
+  no_log: true
+
+- name: Expose the installed keys
+  ansible.builtin.set_fact:
+    tang_server_current_keys: >-
+      {{ dict(tang_server_slurped_keys.results | map(attribute='item.path') | map('basename')
+         | zip(tang_server_slurped_keys.results | map(attribute='content') | map('b64decode') | map('trim'))) }}
+  no_log: true
+
+- name: Read the signing-key thumbprints
+  ansible.builtin.command:
+    cmd: tang-show-keys {{ tang_server_port }}
+  register: tang_server_show_keys
+  changed_when: false
+  check_mode: false
+  when: not ansible_check_mode
+
+- name: Expose the signing-key thumbprints
+  ansible.builtin.set_fact:
+    tang_server_thumbprints: "{{ tang_server_show_keys.stdout_lines | default([]) }}"

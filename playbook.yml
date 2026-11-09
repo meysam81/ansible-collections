@@ -155,3 +155,9 @@
           - zot_test_entrypoint.stat.islnk
           - zot_test_entrypoint.stat.lnk_target is search('zot-2\.1\.23$')
       tags: zot
+    - name: Test tang_server
+      ansible.builtin.import_tasks: tests/tang-server-test.yml
+      tags: tang_server
+    - name: Test nbde_client
+      ansible.builtin.import_tasks: tests/nbde-client-test.yml
+      tags: nbde_client

@@ -1,0 +1,35 @@
+---
+# Address the socket listens on, besides 127.0.0.1 (tang-show-keys and
+# tangd-rotate-keys query localhost). Required: Tang answers anyone who can
+# reach it, so the role never listens on every interface.
+tang_server_listen_address: ""
+
+tang_server_port: 80
+
+tang_server_keys_dir: /var/lib/tang
+
+# Where the package installs tangd-keygen and tangd-rotate-keys.
+tang_server_libexec_dir: /usr/libexec
+
+# Keys to install, as {file name: JWK JSON string}, hidden rotated keys
+# (".<thumbprint>.jwk") included. Non-empty makes the key directory hold
+# exactly this set, so a rebuilt server keeps the identity its clients
+# pinned. Empty: the role generates one key pair on first run and keeps it.
+tang_server_keys: {}
+
+# One source cannot hold more than this many connections at once; without a
+# cap, a few idle connections fill the socket's 64 slots for everyone.
+tang_server_max_connections_per_source: 4
+
+# tangd blocks in read() with no timeout, so an idle client would hold its
+# connection forever. A real exchange takes milliseconds.
+tang_server_runtime_max_sec: 10
+
+# Generate a new key pair; the previous keys stay as hidden ".*.jwk" files
+# and keep decrypting until purged.
+tang_server_rotate_keys: false
+
+# Delete the hidden (rotated) keys. Only after every client re-bound to the
+# current keys: a client still bound to a purged key can no longer unlock
+# through this server.
+tang_server_purge_rotated_keys: false
