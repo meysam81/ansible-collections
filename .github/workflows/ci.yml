@@ -106,7 +106,7 @@ jobs:
       - name: Test the haproxy_config log format
         if: matrix.role == 'haproxy_config'
         run: |
-          py=$(head -1 "$(command -v ansible)" | sed 's/^#! *//')
+          py=$(head -1 "$(command -v ansible)" | sed 's/^#! *//; s/ .*//')
           "$py" tests/haproxy_config_log_format_test.py -v
       - name: Cache Ansible collections
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
