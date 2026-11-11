@@ -1,0 +1,32 @@
+---
+- name: Require the server left up to answer from the host, {{ nbde_hcloud_convert_alone.url }}
+  ansible.builtin.uri:
+    url: "{{ nbde_hcloud_convert_alone.url }}/adv"
+    timeout: 5
+
+- name: Reboot with one Tang server up, {{ nbde_hcloud_convert_alone.url }}
+  vars:
+    nbde_hcloud_convert_others: "{{ nbde_hcloud_convert_tang_servers | reject('equalto', nbde_hcloud_convert_alone) | list }}"
+  block:
+    - name: Stop Tang on every other server
+      ansible.builtin.systemd:
+        name: tangd.socket
+        state: stopped
+      delegate_to: "{{ item.ssh_host }}"
+      loop: "{{ nbde_hcloud_convert_others }}"
+      loop_control:
+        label: "{{ item.ssh_host }}"
+
+    - name: Reboot; the host must unlock through {{ nbde_hcloud_convert_alone.url }}
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ nbde_hcloud_convert_boot_timeout | int }}"
+
+  always:
+    - name: Start Tang again on every other server
+      ansible.builtin.systemd:
+        name: tangd.socket
+        state: started
+      delegate_to: "{{ item.ssh_host }}"
+      loop: "{{ nbde_hcloud_convert_others }}"
+      loop_control:
+        label: "{{ item.ssh_host }}"

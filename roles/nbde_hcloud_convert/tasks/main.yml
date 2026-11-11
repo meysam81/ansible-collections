@@ -1,0 +1,138 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - nbde_hcloud_convert_private_ip | length > 0
+      - nbde_hcloud_convert_luks_passphrase | length >= 20
+      - nbde_hcloud_convert_tang_servers | length > 0
+      - nbde_hcloud_convert_tang_servers | rejectattr('url', 'defined') | list | length == 0
+      - nbde_hcloud_convert_tang_servers | rejectattr('thp', 'defined') | list | length == 0
+      - nbde_hcloud_convert_tang_servers | rejectattr('ssh_host', 'defined') | list | length == 0
+      - nbde_hcloud_convert_threshold | int >= 1
+      - nbde_hcloud_convert_threshold | int <= nbde_hcloud_convert_tang_servers | length
+      - nbde_hcloud_convert_rescue_ssh_key | length > 0
+      - nbde_hcloud_convert_rescue_private_key_file | length > 0
+      - nbde_hcloud_convert_rescue_firewall | length > 0
+      - (nbde_hcloud_convert_api_token or lookup('ansible.builtin.env', 'HCLOUD_TOKEN')) | length > 0
+    fail_msg: >-
+      nbde_hcloud_convert needs private_ip, luks_passphrase (20+ bytes),
+      tang_servers ([{url, thp, ssh_host}]), rescue_ssh_key,
+      rescue_private_key_file, rescue_firewall, and an API token
+      (nbde_hcloud_convert_api_token or HCLOUD_TOKEN).
+
+# An acceptance run killed while one Tang server was stopped leaves it stopped.
+- name: Start Tang on every server
+  ansible.builtin.systemd:
+    name: tangd.socket
+    state: started
+  delegate_to: "{{ item.ssh_host }}"
+  loop: "{{ nbde_hcloud_convert_tang_servers }}"
+  loop_control:
+    label: "{{ item.ssh_host }}"
+
+- name: Hetzner Cloud state
+  delegate_to: localhost
+  become: false
+  block:
+    - name: List the servers
+      hetzner.hcloud.server_info:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+      register: nbde_hcloud_convert_servers
+      check_mode: false
+
+    - name: Start the list of servers holding the private address
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_server_matches: []
+
+    - name: Select the servers holding the private address
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_server_matches: "{{ nbde_hcloud_convert_server_matches + [item] }}"
+      loop: "{{ nbde_hcloud_convert_servers.hcloud_server_info }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: nbde_hcloud_convert_private_ip in item.private_networks_info | map(attribute='ip')
+
+    - name: Require exactly one such server, with a public IPv4 for rescue
+      ansible.builtin.assert:
+        that:
+          - nbde_hcloud_convert_server_matches | length == 1
+          - nbde_hcloud_convert_server_matches[0].ipv4_address
+        fail_msg: >-
+          {{ nbde_hcloud_convert_server_matches | map(attribute='name') | list }} hold
+          {{ nbde_hcloud_convert_private_ip }}: exactly one server must, and it needs a
+          public IPv4 (rescue is reached over it).
+
+    - name: Remember the server
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_server: "{{ nbde_hcloud_convert_server_matches[0] }}"
+
+    - name: Read the rescue firewall
+      hetzner.hcloud.firewall_info:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        name: "{{ nbde_hcloud_convert_rescue_firewall }}"
+      register: nbde_hcloud_convert_firewall
+      check_mode: false
+
+    # Attached to another server, it means another conversion is running or one
+    # was killed before it detached the firewall: neither is this run's to undo.
+    - name: Require one 22/tcp rule, attached to no other server
+      vars:
+        nbde_hcloud_convert_fw: "{{ nbde_hcloud_convert_firewall.hcloud_firewall_info | first | default({}) }}"
+        nbde_hcloud_convert_rules: "{{ nbde_hcloud_convert_fw.rules | default([]) }}"
+      ansible.builtin.assert:
+        that:
+          - nbde_hcloud_convert_fw | length > 0
+          - nbde_hcloud_convert_rules | length == 1
+          - nbde_hcloud_convert_rules[0].direction == 'in'
+          - nbde_hcloud_convert_rules[0].protocol == 'tcp'
+          - nbde_hcloud_convert_rules[0].port | string == '22'
+          - nbde_hcloud_convert_fw.applied_to | rejectattr('server', 'equalto', nbde_hcloud_convert_server.id) | list | length == 0
+        fail_msg: >-
+          Firewall {{ nbde_hcloud_convert_rescue_firewall }} must exist, admit only
+          22/tcp in, and be attached to nothing but this server; it has rules
+          {{ nbde_hcloud_convert_rules }} and is attached to
+          {{ nbde_hcloud_convert_fw.applied_to | default([]) }}.
+
+- name: Probe the host
+  ansible.builtin.wait_for_connection:
+    timeout: 20
+  register: nbde_hcloud_convert_probe
+  ignore_errors: true
+
+- name: Read what the root is mounted from
+  ansible.builtin.command:
+    cmd: findmnt -n -o SOURCE /
+  register: nbde_hcloud_convert_root_source
+  changed_when: false
+  check_mode: false
+  when: nbde_hcloud_convert_probe is succeeded
+
+- name: Remember whether the root is already encrypted
+  ansible.builtin.set_fact:
+    nbde_hcloud_convert_encrypted: >-
+      {{ nbde_hcloud_convert_probe is succeeded
+         and nbde_hcloud_convert_root_source.stdout == '/dev/mapper/cryptroot' }}
+
+- name: Convert the root
+  ansible.builtin.include_tasks: convert.yml
+  when: not nbde_hcloud_convert_encrypted
+
+# A run killed between the reboot into the encrypted root and its cleanup
+# leaves the firewall attached and the state files behind.
+- name: Tidy up after an earlier run
+  when: nbde_hcloud_convert_encrypted
+  delegate_to: localhost
+  become: false
+  block:
+    - name: Detach the rescue firewall
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: absent
+
+    - name: Remove the conversion state
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ query('ansible.builtin.fileglob', nbde_hcloud_convert_state_dir ~ '/' ~ inventory_hostname ~ '.*') }}"

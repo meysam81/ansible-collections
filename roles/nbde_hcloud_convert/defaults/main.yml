@@ -1,0 +1,53 @@
+---
+# The host's address on the Hetzner Cloud private network that reaches Tang.
+# The role finds the server by it, so no server name is needed, and refuses to
+# go on unless exactly one server holds it.
+nbde_hcloud_convert_private_ip: ""
+
+# Recovery passphrase for the new LUKS2 container, exact bytes (at least 20).
+# It gets a keyslot of its own and stays the way in at a console. Store it
+# before the run; the role never writes it anywhere but the rescue tmpfs.
+nbde_hcloud_convert_luks_passphrase: ""
+
+# Tang servers as [{url, thp, ssh_host}]. "thp" is the signing-key thumbprint
+# to pin; "ssh_host" is how the controller reaches the Tang server over SSH
+# (an inventory name or an SSH alias): the advertisement is taken from the
+# server itself, and acceptance stops one server at a time.
+nbde_hcloud_convert_tang_servers: []
+
+# How many of the servers must answer to unlock (clevis sss "t").
+nbde_hcloud_convert_threshold: 1
+
+# Name of the Hetzner Cloud SSH key the rescue system admits, and the local
+# private key that matches it.
+nbde_hcloud_convert_rescue_ssh_key: ""
+
+nbde_hcloud_convert_rescue_private_key_file: ""
+
+# Name of an existing Hetzner Cloud firewall with exactly one rule: 22/tcp in,
+# from the address the controller reaches rescue from. The role attaches it
+# for the rescue boot and detaches it afterwards; it refuses a firewall
+# attached to any other server.
+nbde_hcloud_convert_rescue_firewall: ""
+
+# SSH jump host for the rescue system (ProxyJump); empty connects directly.
+nbde_hcloud_convert_rescue_jump: ""
+
+# Ask for the host name before the reboot into rescue, where downtime starts.
+nbde_hcloud_convert_confirm: true
+
+# Hetzner Cloud API token (read & write); empty reads HCLOUD_TOKEN from the
+# controller's environment.
+nbde_hcloud_convert_api_token: ""
+
+# Controller directory for the state a resumed run needs (root PARTUUID,
+# private interface, snapshot id, advertisements).
+nbde_hcloud_convert_state_dir: "{{ lookup('ansible.builtin.env', 'HOME') }}/.local/state/nbde"
+
+# Seconds to wait for the in-place encryption; a run past it can be resumed.
+nbde_hcloud_convert_encrypt_timeout: 7200
+
+# Seconds to wait for the rescue system, then for the encrypted root to boot.
+nbde_hcloud_convert_rescue_timeout: 300
+
+nbde_hcloud_convert_boot_timeout: 600
