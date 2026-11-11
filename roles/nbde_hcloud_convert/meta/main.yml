@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Meysam Azad
+  role_name: nbde_hcloud_convert
+  description: Converts a running Hetzner Cloud host to a LUKS2-encrypted, Tang-bound root in place through rescue, resumably.
+  min_ansible_version: "2.21"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+  license: Apache-2.0
+  galaxy_tags:
+    - security
+    - encryption
+    - luks
+    - clevis
+    - tang
+    - hetzner
+allow_duplicates: false
+
+dependencies: []

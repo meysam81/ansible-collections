@@ -1,0 +1,108 @@
+---
+# Proves the host unlocks unattended through each Tang server alone: for each
+# server, every other one is stopped and the host reboots. Reboots the host
+# once per server.
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - nbde_hcloud_convert_luks_passphrase | length >= 20
+      - nbde_hcloud_convert_tang_servers | length > 1
+      - nbde_hcloud_convert_tang_servers | rejectattr('ssh_host', 'defined') | list | length == 0
+      - nbde_hcloud_convert_threshold | int == 1
+    fail_msg: >-
+      Acceptance needs luks_passphrase, two or more tang_servers with ssh_host,
+      and threshold 1 (each server alone must unlock).
+
+- name: Read what the root is mounted from
+  ansible.builtin.command:
+    cmd: findmnt -n -o SOURCE /
+  register: nbde_hcloud_convert_root_source
+  changed_when: false
+  check_mode: false
+
+- name: Require the encrypted root
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_root_source.stdout == '/dev/mapper/cryptroot'
+    fail_msg: "/ is on {{ nbde_hcloud_convert_root_source.stdout }}, not /dev/mapper/cryptroot."
+
+- name: Start Tang on every server
+  ansible.builtin.systemd:
+    name: tangd.socket
+    state: started
+  delegate_to: "{{ item.ssh_host }}"
+  loop: "{{ nbde_hcloud_convert_tang_servers }}"
+  loop_control:
+    label: "{{ item.ssh_host }}"
+
+- name: Unlock through each server alone
+  ansible.builtin.include_tasks: accept-alone.yml
+  loop: "{{ nbde_hcloud_convert_tang_servers }}"
+  loop_control:
+    loop_var: nbde_hcloud_convert_alone
+    label: "{{ nbde_hcloud_convert_alone.url }}"
+
+- name: Find the LUKS device behind the root
+  ansible.builtin.shell:
+    cmd: set -o pipefail && cryptsetup status cryptroot | awk '/device:/ {print $2}'
+    executable: /bin/bash
+  register: nbde_hcloud_convert_device
+  changed_when: false
+
+- name: Require the recovery passphrase to open a keyslot
+  ansible.builtin.command:
+    argv: [cryptsetup, open, --test-passphrase, --key-file, "-", "{{ nbde_hcloud_convert_device.stdout }}"]
+    stdin: "{{ nbde_hcloud_convert_luks_passphrase }}"
+    stdin_add_newline: false
+  changed_when: false
+  no_log: true
+
+- name: Trim the root
+  ansible.builtin.command:
+    cmd: fstrim -v /
+  register: nbde_hcloud_convert_trim
+  changed_when: false
+
+- name: Require discards to reach the disk
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_trim.stdout is not search(' 0 B ')
+    fail_msg: "fstrim trimmed nothing ({{ nbde_hcloud_convert_trim.stdout }}): discards do not reach the disk."
+
+- name: List failed units # noqa: command-instead-of-module (the module cannot list them)
+  ansible.builtin.command:
+    cmd: systemctl --failed --no-legend --plain
+  register: nbde_hcloud_convert_failed
+  changed_when: false
+
+- name: Require no failed units
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_failed.stdout | trim | length == 0
+    fail_msg: "Failed units: {{ nbde_hcloud_convert_failed.stdout_lines }}"
+
+# Listed to a file first: `lsinitramfs | grep -q` under pipefail fails on the
+# SIGPIPE grep causes.
+- name: Require a rebuilt initramfs to unlock unattended
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      update-initramfs -u -k all >/dev/null
+      l=$(mktemp)
+      trap 'rm -f "$l"' EXIT
+      lsinitramfs "/boot/initrd.img-$(uname -r)" >"$l"
+      for f in usr/bin/clevis-decrypt-tang cryptroot/crypttab; do
+        grep -qx "$f" "$l" || { echo "initramfs lacks $f"; exit 1; }
+      done
+      if grep -q luks-keys "$l"; then echo "a key file is in the initramfs"; exit 1; fi
+    executable: /bin/bash
+  changed_when: false
+
+- name: Read the LUKS UUID
+  ansible.builtin.command:
+    argv: [cryptsetup, luksUUID, "{{ nbde_hcloud_convert_device.stdout }}"]
+  register: nbde_hcloud_convert_luks_uuid
+  changed_when: false
+
+- name: Report acceptance
+  ansible.builtin.debug:
+    msg: >-
+      Accepted: {{ inventory_hostname }} unlocked through each Tang server alone; the recovery
+      passphrase opens a keyslot; LUKS UUID {{ nbde_hcloud_convert_luks_uuid.stdout }}.

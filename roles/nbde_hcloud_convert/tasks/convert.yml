@@ -1,0 +1,591 @@
+---
+# Rescue has a fresh host key on every boot and Hetzner publishes none, so it
+# cannot be pinned. Reached with plain ssh from the controller: rescue needs no
+# Python, and a dropped connection is an ordinary retry, never an unreachable
+# host that ends the play.
+- name: Set the conversion parameters
+  ansible.builtin.set_fact:
+    nbde_hcloud_convert_state_file: "{{ nbde_hcloud_convert_state_dir }}/{{ inventory_hostname }}.state.yml"
+    nbde_hcloud_convert_in_rescue: "{{ nbde_hcloud_convert_probe is failed }}"
+    nbde_hcloud_convert_rescue_ssh: >-
+      {{ ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'UserKnownHostsFile=/dev/null',
+          '-o', 'StrictHostKeyChecking=no', '-o', 'LogLevel=ERROR',
+          '-i', nbde_hcloud_convert_rescue_private_key_file | expanduser]
+         + (['-J', nbde_hcloud_convert_rescue_jump] if nbde_hcloud_convert_rescue_jump else [])
+         + ['root@' ~ nbde_hcloud_convert_server.ipv4_address] }}
+
+- name: Create the state directory
+  ansible.builtin.file:
+    path: "{{ nbde_hcloud_convert_state_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+
+- name: Preflight on the running host (nothing changes yet)
+  when: not nbde_hcloud_convert_in_rescue
+  block:
+    # A run stopped before the rescue boot leaves it attached, and it denies
+    # the running host every other public connection.
+    - name: Detach the rescue firewall a stopped run left attached
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: absent
+      delegate_to: localhost
+      become: false
+
+    - name: Read the root's layout
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          read -r dev fs < <(findmnt -n -o SOURCE,FSTYPE /)
+          disk=/dev/$(lsblk -n -o PKNAME "$dev")
+          last=$(lsblk -l -n -p -o NAME,START,TYPE "$disk" | awk '$3 == "part"' | sort -k2 -n | tail -1 | awk '{print $1}')
+          nic=$(ip -o -4 addr show | awk -v ip={{ nbde_hcloud_convert_private_ip | quote }} '{split($4, a, "/")} a[1] == ip {print $2}' | paste -sd ' ')
+          printf '{"arch": "%s", "dev": "%s", "fs": "%s", "last": "%s", "used_k": %d, "size_k": %d, "partuuid": "%s", "nic": "%s"}\n' \
+            "$(uname -m)" "$dev" "$fs" "$last" "$(df -k --output=used / | tail -1)" \
+            "$(($(lsblk -b -d -n -o SIZE "$dev") / 1024))" "$(lsblk -d -n -o PARTUUID "$dev")" "$nic"
+        executable: /bin/bash
+      register: nbde_hcloud_convert_layout_raw
+      changed_when: false
+      check_mode: false
+
+    - name: Parse the layout
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_layout: "{{ nbde_hcloud_convert_layout_raw.stdout | from_json }}"
+
+    # 1 GiB for /boot plus the 64 MiB margin the rescue script leaves.
+    - name: Require a layout the rescue script converts
+      ansible.builtin.assert:
+        that:
+          - nbde_hcloud_convert_layout.arch == 'aarch64'
+          - nbde_hcloud_convert_layout.fs == 'ext4'
+          - nbde_hcloud_convert_layout.last == nbde_hcloud_convert_layout.dev
+          - nbde_hcloud_convert_layout.used_k | int + 1258291 + 65536 < nbde_hcloud_convert_layout.size_k | int
+          - nbde_hcloud_convert_layout.partuuid is match('^[0-9a-f-]{36}$')
+          - nbde_hcloud_convert_layout.nic is match('^[A-Za-z0-9._-]{1,15}$')
+        fail_msg: >-
+          Converts only an arm64 host whose ext4 root is the last partition of its
+          disk, with room to carve 1 GiB for /boot, and exactly one interface
+          holding {{ nbde_hcloud_convert_private_ip }}. Found: {{ nbde_hcloud_convert_layout }}.
+
+    - name: Remember the root and the private interface
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_state:
+          root_partuuid: "{{ nbde_hcloud_convert_layout.partuuid }}"
+          priv_if: "{{ nbde_hcloud_convert_layout.nic }}"
+
+    - name: Install clevis into the root the initramfs is built from
+      ansible.builtin.apt:
+        name: [clevis, clevis-luks, clevis-initramfs, cryptsetup-initramfs, curl]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+# The state file is data from the remote host, validated, never trusted.
+- name: Resume an interrupted run
+  when: nbde_hcloud_convert_in_rescue
+  block:
+    - name: Find the state of the interrupted run
+      ansible.builtin.stat:
+        path: "{{ nbde_hcloud_convert_state_file }}"
+      register: nbde_hcloud_convert_state_stat
+      delegate_to: localhost
+      become: false
+
+    - name: Require it
+      ansible.builtin.assert:
+        that: nbde_hcloud_convert_state_stat.stat.exists
+        fail_msg: >-
+          {{ inventory_hostname }} is unreachable and {{ nbde_hcloud_convert_state_file }}
+          does not exist: nothing to resume. Reach the host first.
+
+    - name: Load it
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_state: "{{ lookup('ansible.builtin.file', nbde_hcloud_convert_state_file) | from_yaml }}"
+
+    - name: Require well-formed values
+      ansible.builtin.assert:
+        that:
+          - nbde_hcloud_convert_state.root_partuuid | default('') is match('^[0-9a-f-]{36}$')
+          - nbde_hcloud_convert_state.priv_if | default('') is match('^[A-Za-z0-9._-]{1,15}$')
+          - nbde_hcloud_convert_state.image_id | default(0) | string is match('^[0-9]+$')
+        fail_msg: "{{ nbde_hcloud_convert_state_file }} is malformed; check it, delete it, re-run."
+
+    - name: Report the resume
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} is unreachable; resuming from {{ nbde_hcloud_convert_state_file }} (expected in rescue)."
+
+    # The state file exists only once a conversion was confirmed.
+    - name: Keep the rescue firewall attached
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: present
+      delegate_to: localhost
+      become: false
+
+# Taken over SSH from each Tang server itself and checked against the pin;
+# clevis checks the signature again when it binds. Cached for a resume, when
+# the way to a Tang server may run through the host now in rescue.
+- name: Read each Tang server's thumbprints and advertisement
+  ansible.builtin.shell:
+    cmd: >-
+      tang-show-keys {{ item.url | urlsplit('port') | default(80, true) }} && echo --- &&
+      curl -sf -m 10 http://127.0.0.1:{{ item.url | urlsplit('port') | default(80, true) }}/adv
+  delegate_to: "{{ item.ssh_host }}"
+  loop: "{{ nbde_hcloud_convert_tang_servers }}"
+  loop_control:
+    label: "{{ item.url }}"
+  register: nbde_hcloud_convert_tang
+  changed_when: false
+  check_mode: false
+  ignore_errors: "{{ nbde_hcloud_convert_in_rescue }}"
+  ignore_unreachable: "{{ nbde_hcloud_convert_in_rescue }}"
+
+- name: Require each answering server to sign with its pinned key
+  ansible.builtin.assert:
+    that: item.item.thp in item.stdout.split('---')[0].split()
+    fail_msg: "{{ item.item.url }} does not sign with the pinned {{ item.item.thp }}."
+  loop: "{{ nbde_hcloud_convert_tang.results | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0) }}"
+  loop_control:
+    label: "{{ item.item.url }}"
+
+- name: Cache each advertisement
+  ansible.builtin.copy:
+    content: "{{ item.stdout_lines[-1] }}"
+    dest: "{{ nbde_hcloud_convert_state_dir }}/{{ inventory_hostname }}.adv-{{ index }}.jws"
+    mode: "0600"
+  loop: "{{ nbde_hcloud_convert_tang.results }}"
+  loop_control:
+    index_var: index
+    label: "{{ item.item.url }}"
+  when: item.rc | default(1) == 0
+  delegate_to: localhost
+  become: false
+
+- name: Find the cached advertisements
+  ansible.builtin.stat:
+    path: "{{ nbde_hcloud_convert_state_dir }}/{{ inventory_hostname }}.adv-{{ index }}.jws"
+  loop: "{{ nbde_hcloud_convert_tang_servers }}"
+  loop_control:
+    index_var: index
+    label: "{{ item.url }}"
+  register: nbde_hcloud_convert_advs
+  delegate_to: localhost
+  become: false
+
+- name: Require an advertisement for every server
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_advs.results | rejectattr('stat.exists') | list | length == 0
+    fail_msg: A Tang server did not answer and no advertisement of it is cached.
+  when: not ansible_check_mode
+
+- name: Report the preflight in check mode
+  ansible.builtin.debug:
+    msg: >-
+      Preflight passed: {{ nbde_hcloud_convert_server.name }} ({{ nbde_hcloud_convert_server.ipv4_address }}),
+      root {{ nbde_hcloud_convert_layout.dev | default('?') }}, Tang over {{ nbde_hcloud_convert_state.priv_if }}.
+      A real run reboots it into rescue here.
+  when: ansible_check_mode
+
+- name: End the check-mode run before the rescue boot
+  ansible.builtin.meta: end_host
+  when: ansible_check_mode
+
+- name: Ask before the downtime
+  ansible.builtin.pause:
+    prompt: >-
+      Type {{ inventory_hostname }} to reboot {{ nbde_hcloud_convert_server.name }}
+      ({{ nbde_hcloud_convert_server.ipv4_address }}) into rescue and encrypt its root.
+      DOWNTIME STARTS
+  register: nbde_hcloud_convert_answer
+  when: nbde_hcloud_convert_confirm | bool and not nbde_hcloud_convert_in_rescue
+
+- name: Require the host name
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_answer.user_input | default('') | trim == inventory_hostname
+    fail_msg: Stopped; nothing changed.
+  when: nbde_hcloud_convert_confirm | bool and not nbde_hcloud_convert_in_rescue
+
+- name: Reboot into rescue
+  when: not nbde_hcloud_convert_in_rescue
+  block:
+    # Only now: a state file is what makes a later run treat an unreachable
+    # host as one in rescue.
+    - name: Save the root and the private interface for a resumed run
+      ansible.builtin.copy:
+        content: "{{ nbde_hcloud_convert_state | to_nice_yaml }}"
+        dest: "{{ nbde_hcloud_convert_state_file }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    # The result carries the rescue root password.
+    - name: Arm rescue for the next boot
+      hetzner.hcloud.server:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        id: "{{ nbde_hcloud_convert_server.id }}"
+        rescue_mode: linux64
+        ssh_keys: ["{{ nbde_hcloud_convert_rescue_ssh_key }}"]
+        state: present
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+    - name: Attach the rescue firewall
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: present
+      delegate_to: localhost
+      become: false
+
+    # From the host, not the API: an orderly shutdown, where the API's restart
+    # is a power cut.
+    - name: Reboot the host
+      ansible.builtin.shell:
+        cmd: sleep 2 && systemctl reboot
+      async: 30
+      poll: 0
+      changed_when: true
+
+  rescue:
+    # hetzner.hcloud.server without rescue_mode disables rescue.
+    - name: Disarm rescue, so it does not catch a later reboot
+      hetzner.hcloud.server:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        id: "{{ nbde_hcloud_convert_server.id }}"
+        state: present
+      delegate_to: localhost
+      become: false
+
+    - name: Detach the rescue firewall
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: absent
+      delegate_to: localhost
+      become: false
+
+    - name: Stop
+      ansible.builtin.fail:
+        msg: "The reboot into rescue failed ({{ ansible_failed_result.msg | default('') }}); rescue is disarmed."
+
+# The old system's sshd may still answer for a moment: wait for the rescue
+# hostname, not for any answer.
+- name: Wait for the rescue system
+  ansible.builtin.command:
+    argv: "{{ nbde_hcloud_convert_rescue_ssh + ['hostname'] }}"
+  register: nbde_hcloud_convert_hostname
+  until: nbde_hcloud_convert_hostname.stdout | default('') == 'rescue'
+  retries: "{{ (nbde_hcloud_convert_rescue_timeout | int / 10) | int }}"
+  delay: 10
+  changed_when: false
+  ignore_errors: true
+  delegate_to: localhost
+  become: false
+
+# Only right after this run's own reboot: a resumed run that finds no rescue
+# stops instead of power-cycling a host that may be unreachable for another
+# reason.
+- name: Require rescue on a resumed run
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_hostname is succeeded
+    fail_msg: >-
+      {{ inventory_hostname }} is unreachable and its public IPv4 does not answer as rescue.
+      Check the server in the Hetzner console; delete {{ nbde_hcloud_convert_state_file }}
+      if no conversion is under way.
+  when: nbde_hcloud_convert_in_rescue
+
+- name: Power-cycle into rescue
+  when: nbde_hcloud_convert_hostname is failed and not nbde_hcloud_convert_in_rescue
+  block:
+    - name: Ask before the power cycle
+      ansible.builtin.pause:
+        prompt: >-
+          No rescue on {{ nbde_hcloud_convert_server.ipv4_address }} after the reboot. Type
+          {{ inventory_hostname }} to power-cycle {{ nbde_hcloud_convert_server.name }} into
+          rescue (a power cut)
+      register: nbde_hcloud_convert_answer
+      when: nbde_hcloud_convert_confirm | bool
+
+    - name: Require the host name
+      ansible.builtin.assert:
+        that: nbde_hcloud_convert_answer.user_input | default('') | trim == inventory_hostname
+        fail_msg: >-
+          Stopped. Rescue is armed and the rescue firewall attached: check the server
+          in the Hetzner console, then re-run or detach the firewall.
+      when: nbde_hcloud_convert_confirm | bool
+
+    - name: Power-cycle the server with rescue armed
+      hetzner.hcloud.server:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        id: "{{ nbde_hcloud_convert_server.id }}"
+        rescue_mode: linux64
+        ssh_keys: ["{{ nbde_hcloud_convert_rescue_ssh_key }}"]
+        state: restarted
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+    - name: Wait for the rescue system again
+      ansible.builtin.command:
+        argv: "{{ nbde_hcloud_convert_rescue_ssh + ['hostname'] }}"
+      register: nbde_hcloud_convert_hostname
+      until: nbde_hcloud_convert_hostname.stdout | default('') == 'rescue'
+      retries: "{{ (nbde_hcloud_convert_rescue_timeout | int / 10) | int }}"
+      delay: 10
+      changed_when: false
+      delegate_to: localhost
+      become: false
+
+# The rollback point: a snapshot of the quiet disk, required before anything
+# is encrypted. Kept in state, so a resume checks it rather than skipping it.
+- name: Look up the rollback snapshot of an earlier run
+  hetzner.hcloud.image_info:
+    api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+    id: "{{ nbde_hcloud_convert_state.image_id }}"
+  register: nbde_hcloud_convert_image
+  when: nbde_hcloud_convert_state.image_id is defined
+  failed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: Snapshot the disk (plaintext; delete it after acceptance)
+  when: >-
+    (nbde_hcloud_convert_image.hcloud_image_info | default([]) | map(attribute='status') | first | default(''))
+    not in ['available', 'creating']
+  delegate_to: localhost
+  become: false
+  block:
+    # No module creates a server snapshot. The request carries the API token.
+    - name: Create the snapshot
+      ansible.builtin.uri:
+        url: https://api.hetzner.cloud/v1/servers/{{ nbde_hcloud_convert_server.id }}/actions/create_image
+        method: POST
+        headers:
+          Authorization: Bearer {{ nbde_hcloud_convert_api_token or lookup('ansible.builtin.env', 'HCLOUD_TOKEN') }}
+        body_format: json
+        body:
+          type: snapshot
+          description: nbde pre-conversion {{ inventory_hostname }}
+          labels:
+            nbde: pre-conversion
+        status_code: 201
+      register: nbde_hcloud_convert_snapshot
+      no_log: true
+
+    - name: Keep its id for a resumed run
+      ansible.builtin.set_fact:
+        nbde_hcloud_convert_state: "{{ nbde_hcloud_convert_state | combine({'image_id': nbde_hcloud_convert_snapshot.json.image.id}) }}"
+
+    - name: Save the state
+      ansible.builtin.copy:
+        content: "{{ nbde_hcloud_convert_state | to_nice_yaml }}"
+        dest: "{{ nbde_hcloud_convert_state_file }}"
+        mode: "0600"
+
+- name: Wait for the snapshot
+  hetzner.hcloud.image_info:
+    api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+    id: "{{ nbde_hcloud_convert_state.image_id }}"
+  register: nbde_hcloud_convert_image
+  until: (nbde_hcloud_convert_image.hcloud_image_info | first).status == 'available'
+  retries: 360
+  delay: 10
+  delegate_to: localhost
+  become: false
+
+- name: Report the rollback point
+  ansible.builtin.debug:
+    msg: "Rollback snapshot: image {{ nbde_hcloud_convert_state.image_id }} (plaintext; delete it after acceptance)."
+
+- name: Read the rescue run's progress
+  ansible.builtin.command:
+    argv: >-
+      {{ nbde_hcloud_convert_rescue_ssh + ['mkdir -p -m 700 /run/nbde;
+         if [ -e /run/nbde/lock ] && ! flock -n /run/nbde/lock true; then echo running;
+         else cat /run/nbde/status 2>/dev/null || true; fi'] }}
+  register: nbde_hcloud_convert_progress
+  changed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: Show how the earlier run ended
+  ansible.builtin.command:
+    argv: "{{ nbde_hcloud_convert_rescue_ssh + ['tr \"\\r\" \"\\n\" < /run/nbde/log | grep -v ^Progress | tail -15'] }}"
+  register: nbde_hcloud_convert_earlier
+  changed_when: false
+  when: nbde_hcloud_convert_progress.stdout not in ['running', '0', '']
+  delegate_to: localhost
+  become: false
+
+- name: Start the pin list
+  ansible.builtin.set_fact:
+    nbde_hcloud_convert_pins: []
+
+# Every pin carries its checked advertisement, so the bind fetches nothing.
+- name: Build one pin per Tang server
+  ansible.builtin.set_fact:
+    nbde_hcloud_convert_pins: "{{ nbde_hcloud_convert_pins + [{'url': item.url, 'thp': item.thp, 'adv': '/run/nbde/adv-' ~ index ~ '.jws'}] }}"
+  loop: "{{ nbde_hcloud_convert_tang_servers }}"
+  loop_control:
+    index_var: index
+    label: "{{ item.url }}"
+
+- name: Start the encryption
+  when: nbde_hcloud_convert_progress.stdout not in ['running', '0']
+  delegate_to: localhost
+  become: false
+  vars:
+    nbde_hcloud_convert_sss: {t: "{{ nbde_hcloud_convert_threshold | int }}", pins: {tang: "{{ nbde_hcloud_convert_pins }}"}}
+  block:
+    - name: Copy the rescue script
+      ansible.builtin.command:
+        argv: "{{ nbde_hcloud_convert_rescue_ssh + ['cat > /run/nbde/encrypt.sh'] }}"
+        stdin: "{{ lookup('ansible.builtin.file', 'nbde-encrypt-root.sh') }}"
+      changed_when: true
+
+    # On tmpfs, never on a disk.
+    - name: Copy the recovery passphrase
+      ansible.builtin.command:
+        argv: "{{ nbde_hcloud_convert_rescue_ssh + ['umask 077 && cat > /run/nbde/pass'] }}"
+        stdin: "{{ nbde_hcloud_convert_luks_passphrase }}"
+        stdin_add_newline: false
+      changed_when: true
+      no_log: true
+
+    - name: Copy the checked advertisements
+      ansible.builtin.command:
+        argv: "{{ nbde_hcloud_convert_rescue_ssh + ['cat > /run/nbde/adv-' ~ index ~ '.jws'] }}"
+        stdin: "{{ lookup('ansible.builtin.file', nbde_hcloud_convert_state_dir ~ '/' ~ inventory_hostname ~ '.adv-' ~ index ~ '.jws') }}"
+      loop: "{{ nbde_hcloud_convert_tang_servers }}"
+      loop_control:
+        index_var: index
+        label: "{{ item.url }}"
+      changed_when: true
+
+    # Detached, so it survives this connection; through bash, since rescue may
+    # mount /run noexec.
+    - name: Start the rescue script
+      ansible.builtin.command:
+        argv: >-
+          {{ nbde_hcloud_convert_rescue_ssh + ['rm -f /run/nbde/status; setsid nohup bash /run/nbde/encrypt.sh '
+             ~ nbde_hcloud_convert_state.root_partuuid ~ ' /run/nbde/pass ' ~ nbde_hcloud_convert_state.priv_if ~ ' '
+             ~ (nbde_hcloud_convert_sss | to_json | quote) ~ ' > /run/nbde/log 2>&1 < /dev/null &'] }}
+      changed_when: true
+
+# Killed or timed out here, the run goes on in rescue: run the role again to
+# attach to it.
+- name: Wait for the encryption
+  ansible.builtin.command:
+    argv: "{{ nbde_hcloud_convert_rescue_ssh + ['cat /run/nbde/status 2>/dev/null; true'] }}"
+  register: nbde_hcloud_convert_status
+  until: nbde_hcloud_convert_status.rc == 0 and nbde_hcloud_convert_status.stdout | length > 0
+  retries: "{{ (nbde_hcloud_convert_encrypt_timeout | int / 10) | int }}"
+  delay: 10
+  changed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: Read the end of the rescue log
+  ansible.builtin.command:
+    argv: "{{ nbde_hcloud_convert_rescue_ssh + ['tr \"\\r\" \"\\n\" < /run/nbde/log | grep -v ^Progress | tail -25'] }}"
+  register: nbde_hcloud_convert_log
+  changed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: Show the end of the rescue log
+  ansible.builtin.debug:
+    var: nbde_hcloud_convert_log.stdout_lines
+
+- name: Leave rescue unchanged after a refused guard
+  when: nbde_hcloud_convert_status.stdout == '3'
+  delegate_to: localhost
+  become: false
+  block:
+    - name: Reboot out of rescue
+      ansible.builtin.command:
+        argv: "{{ nbde_hcloud_convert_rescue_ssh + ['rm -rf /run/nbde; systemctl reboot'] }}"
+      changed_when: true
+      failed_when: false
+
+    - name: Detach the rescue firewall
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: absent
+
+    - name: Stop
+      ansible.builtin.fail:
+        msg: A guard refused before anything was written (log above); the disk is unchanged.
+
+- name: Require the rescue script to have finished
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_status.stdout == '0'
+    fail_msg: "The rescue script exited {{ nbde_hcloud_convert_status.stdout }} (log above); fix the cause and re-run: it resumes."
+
+- name: Reboot into the encrypted root
+  ansible.builtin.command:
+    argv: "{{ nbde_hcloud_convert_rescue_ssh + ['rm -rf /run/nbde; systemctl reboot'] }}"
+  changed_when: true
+  failed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: Detach the rescue firewall
+  hetzner.hcloud.firewall_resource:
+    api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+    firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+    servers: ["{{ nbde_hcloud_convert_server.name }}"]
+    state: absent
+  delegate_to: localhost
+  become: false
+
+- name: Drop the connection to the old system
+  ansible.builtin.meta: reset_connection
+
+- name: Wait for the host to unlock and boot
+  ansible.builtin.wait_for_connection:
+    delay: 20
+    timeout: "{{ nbde_hcloud_convert_boot_timeout }}"
+
+- name: Read what the root is mounted from
+  ansible.builtin.command:
+    cmd: findmnt -n -o SOURCE /
+  register: nbde_hcloud_convert_root_source
+  changed_when: false
+
+- name: Require the encrypted root
+  ansible.builtin.assert:
+    that: nbde_hcloud_convert_root_source.stdout == '/dev/mapper/cryptroot'
+    fail_msg: "/ is on {{ nbde_hcloud_convert_root_source.stdout }}, not /dev/mapper/cryptroot."
+
+- name: Remove the conversion state
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ query('ansible.builtin.fileglob', nbde_hcloud_convert_state_dir ~ '/' ~ inventory_hostname ~ '.*') }}"
+  delegate_to: localhost
+  become: false
+
+- name: Record that this run converted the host
+  ansible.builtin.set_fact:
+    nbde_hcloud_convert_converted: true
+
+- name: Warn about plaintext backups
+  ansible.builtin.debug:
+    msg: >-
+      {{ nbde_hcloud_convert_server.name }} has Hetzner backups: those taken before this
+      conversion hold the plaintext disk. Disabling backups deletes all of them; enabling
+      them again starts encrypted ones.
+  when: nbde_hcloud_convert_server.backup_window
