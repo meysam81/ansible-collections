@@ -139,6 +139,16 @@ The asset `Cache-Control` values (`haproxy_cache_control_hashed`,
 path gets `haproxy_cache_control_uncacheable` (`no-store`), so a login redirect
 or a 404 for a `.js` file is never stored by a CDN or a browser.
 
+### Query strings in the access log
+
+The HTTP log line carries the request URI, query string included. Set
+`haproxy_log_redact_query: true` (default `false`, log lines unchanged) to log
+the method, path and version instead, each quoted: `%{+Q}HM %{+Q}HPO %{+Q}HV`
+replaces the stock `%{+Q}r`. All other fields, the `req_hdrs` dump and the WAF
+fields stay as they are. Headers that repeat the URL, such as `Referer`, still
+appear in `req_hdrs`. `%HPO` needs HAProxy 2.6 or newer; the role already
+needs 3.0 or newer for OCSP stapling.
+
 ### Stats
 
 The stats/Prometheus frontend (`/metrics`, `/stats`) binds loopback only by
@@ -232,6 +242,7 @@ HAProxy with full config management, TLS, and security headers
   - [haproxy_hsts_preload](#haproxy_hsts_preload)
   - [haproxy_inline_responders](#haproxy_inline_responders)
   - [haproxy_listen_sections](#haproxy_listen_sections)
+  - [haproxy_log_redact_query](#haproxy_log_redact_query)
   - [haproxy_maxconn](#haproxy_maxconn)
   - [haproxy_maxrewrite](#haproxy_maxrewrite)
   - [haproxy_ocsp_stapling_enabled](#haproxy_ocsp_stapling_enabled)
@@ -722,6 +733,14 @@ haproxy_inline_responders: []
 
 ```YAML
 haproxy_listen_sections: []
+```
+
+### haproxy_log_redact_query
+
+#### Default value
+
+```YAML
+haproxy_log_redact_query: false
 ```
 
 ### haproxy_maxconn

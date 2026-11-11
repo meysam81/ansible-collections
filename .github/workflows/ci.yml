@@ -102,6 +102,12 @@ jobs:
       - name: Test the reboot-if-required script
         if: matrix.role == 'unattended_upgrades'
         run: tests/reboot-if-required.test.sh
+      # Renders the template, so it needs the python that ships ansible.
+      - name: Test the haproxy_config log format
+        if: matrix.role == 'haproxy_config'
+        run: |
+          py=$(head -1 "$(command -v ansible)" | sed 's/^#! *//; s/ .*//')
+          "$py" tests/haproxy_config_log_format_test.py -v
       - name: Cache Ansible collections
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:

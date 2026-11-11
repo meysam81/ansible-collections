@@ -286,6 +286,16 @@ haproxy_default_redirect_url: ""
 
 # ── Misc ────────────────────────────────────────────────────────────
 haproxy_alt_svc_enabled: true
+# Opt-in: drop the query string from the HTTP access log line. Query strings
+# routinely carry tokens, emails and other personal data that the header
+# redaction of credential headers never sees. When true the request is logged as quoted
+# method, path (`%HPO`: no host, no query string) and version instead of
+# the stock `%{+Q}r`; every other field of the default HTTP log format, the
+# header dump and the WAF fields are unchanged. Headers such as `Referer`
+# can still carry a query string in the `req_hdrs` dump. Needs a HAProxy
+# build that knows `%HPO` (2.6 and newer; this role already needs >= 3.0
+# for `ocsp-update.mode`). Default false keeps the log line byte-identical.
+haproxy_log_redact_query: false
 
 # ── Escape hatches (raw lines injected into sections) ───────────────
 haproxy_global_extra: []
