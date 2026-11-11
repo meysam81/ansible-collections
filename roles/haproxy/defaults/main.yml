@@ -1,7 +1,15 @@
 ---
 # Build
-haproxy_build_source_checksum: ""
-haproxy_build_version: "3.3.6"
+# 3.4 is the current LTS branch.
+haproxy_build_version: "3.4.7"
+# Known-good tarball digests, from haproxy.org's `haproxy-<version>.tar.gz.sha256`.
+haproxy_build_source_checksums:
+  "3.4.7": "sha256:ccfd342f3724c2cd659574044d788f44e20b212467c6bd5edbbfc517a2775dca"
+# Keyed on the version so overriding `haproxy_build_version` alone never
+# verifies a different release against this digest: an unlisted version gets
+# "" (no verification, as before). Set this variable to pin any digest; an
+# explicit value always wins.
+haproxy_build_source_checksum: "{{ haproxy_build_source_checksums[haproxy_build_version] | default('') }}"
 haproxy_build_force_rebuild: false
 
 # Base

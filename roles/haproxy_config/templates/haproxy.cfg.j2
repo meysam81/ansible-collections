@@ -123,10 +123,19 @@ frontend web
     # Nothing captures txn.resp_hdrs, so resp_hdrs logs empty; any future
     # capture of `res.hdrs` must go through the same regsub.
     http-request set-var(txn.req_hdrs) "req.hdrs,regsub('(^|\\n)((Authorization|Proxy-Authorization|Cookie|Set-Cookie|X-Api-Key):)[^\\r\\n]*','\\1\\2 [redacted]',gi)"
-{% if haproxy_coraza_enabled %}
-    log-format "${HAPROXY_HTTP_LOG_FMT} spoa-error:\ %[var(txn.coraza.error)]\ waf-hit:\ %[var(txn.coraza.fail)] req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+{% if haproxy_log_redact_query %}
+    # Stock HTTP format with the request split into quoted method / path /
+    # version: %HPO is the path without host or query string, so tokens or
+    # emails carried in a query string never reach the log. Keep the rest
+    # identical to the default `option httplog` format of HAProxy >= 3.0.
+{% set haproxy_http_log_fmt = '%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}HM %{+Q}HPO %{+Q}HV' %}
 {% else %}
-    log-format "${HAPROXY_HTTP_LOG_FMT} req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+{% set haproxy_http_log_fmt = '${HAPROXY_HTTP_LOG_FMT}' %}
+{% endif %}
+{% if haproxy_coraza_enabled %}
+    log-format "{{ haproxy_http_log_fmt }} spoa-error:\ %[var(txn.coraza.error)]\ waf-hit:\ %[var(txn.coraza.fail)] req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
+{% else %}
+    log-format "{{ haproxy_http_log_fmt }} req_hdrs:%{+Q}[var(txn.req_hdrs)] resp_hdrs:%{+Q}[var(txn.resp_hdrs)]"
 {% endif %}
 
 {% if haproxy_cloudflare_enabled %}
