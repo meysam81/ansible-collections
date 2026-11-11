@@ -59,7 +59,7 @@
       ansible.builtin.assert:
         that:
           - nbde_hcloud_convert_server_matches | length == 1
-          - nbde_hcloud_convert_server_matches[0].ipv4_address
+          - nbde_hcloud_convert_server_matches[0].ipv4_address | default('', true) | length > 0
         fail_msg: >-
           {{ nbde_hcloud_convert_server_matches | map(attribute='name') | list }} hold
           {{ nbde_hcloud_convert_private_ip }}: exactly one server must, and it needs a
