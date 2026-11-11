@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.14.4](https://github.com/meysam81/ansible-collections/compare/v1.14.3...v1.14.4) (2026-11-11)
+
+
+### Features
+
+* **haproxy:** 3.4.7 by default; opt-in query-string redaction in logs ([#146](https://github.com/meysam81/ansible-collections/issues/146)) ([9f9ef2d](https://github.com/meysam81/ansible-collections/commit/9f9ef2d268c7390ec4e8cd4b9052b4f8fb47fb59))
+* **nbde_hcloud_convert:** convert a Hetzner Cloud host to a Tang-bound encrypted root ([#148](https://github.com/meysam81/ansible-collections/issues/148)) ([9b422b9](https://github.com/meysam81/ansible-collections/commit/9b422b948e98897aaffd1692b08e433fbcca9a44))
+
+
+### Miscellaneous Chores
+
+* prepare release 1.14.4 ([adc1a5d](https://github.com/meysam81/ansible-collections/commit/adc1a5d0683df2e13d34d6b9d1b75328a5a3280f))
+
 ## [1.14.3](https://github.com/meysam81/ansible-collections/compare/v0.14.3...v1.14.3) (2026-11-09)
 
 
