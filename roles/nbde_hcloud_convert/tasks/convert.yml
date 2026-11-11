@@ -588,4 +588,4 @@
       {{ nbde_hcloud_convert_server.name }} has Hetzner backups: those taken before this
       conversion hold the plaintext disk. Disabling backups deletes all of them; enabling
       them again starts encrypted ones.
-  when: nbde_hcloud_convert_server.backup_window
+  when: nbde_hcloud_convert_server.backup_window | default('', true) | length > 0
