@@ -15,18 +15,19 @@ Tang servers answer, and a recovery passphrase still opens it at a console.
   interface holding the private address.
 - Takes each Tang advertisement over SSH from the Tang server itself and
   requires it to be signed by the thumbprint you pinned (`thp`).
-- Asks for the host name before the reboot into rescue, where downtime starts.
+- Asks for the host name before the reboot into rescue, where downtime starts,
+  and again before a power cycle.
 - Arms rescue, attaches a firewall that admits SSH to rescue, and reboots the
   host from inside (an orderly shutdown); a power cycle only if rescue does not
-  come up.
+  come up within `nbde_hcloud_convert_rescue_timeout`.
 - Snapshots the quiet disk (the rollback point) before anything is encrypted.
 - In rescue (`files/nbde-encrypt-root.sh`): shrinks the root, carves `/boot` at
   the end of the disk, encrypts the root in place (`cryptsetup reencrypt`),
   then in a chroot writes crypttab, fstab and GRUB, binds the recovery
   passphrase and a clevis `sss` token built from the checked advertisements,
   and rebuilds the initramfs.
-- Reboots into the encrypted root, detaches the firewall and requires the root
-  on `/dev/mapper/cryptroot`.
+- Reboots into the encrypted root, detaches the firewall, requires the root on
+  `/dev/mapper/cryptroot` and sets `nbde_hcloud_convert_converted`.
 - `tasks_from: accept` proves the result: for each Tang server, stops every
   other one and reboots; the host must come back each time. Then the recovery
   passphrase must open a keyslot, discards must reach the disk, no unit may
@@ -37,7 +38,8 @@ Tang servers answer, and a recovery passphrase still opens it at a console.
 Run the role again after any interruption. The phase comes from the host, not
 from the run that stopped: a host already on `cryptroot` is left alone (and a
 firewall a killed run left attached is detached); an unreachable host is
-expected in rescue and resumed from the controller's state file; a rescue run
+expected in rescue and resumed from the controller's state file (written only
+once the downtime was confirmed); a rescue run
 still going is attached to, never started twice; the rescue script resumes its
 own work, including an interrupted `cryptsetup reencrypt`.
 
@@ -123,11 +125,13 @@ collections:
         nbde_client_private_ip: 192.0.2.20
         nbde_client_watchdog_seconds: 600
 
+    # Reboots once per Tang server: only after a conversion in this run.
     - name: Accept
       ansible.builtin.include_role:
         name: meysam81.general.nbde_hcloud_convert
         tasks_from: accept
       vars: *convert
+      when: nbde_hcloud_convert_converted | default(false)
 ```
 
 `--check` runs the preflight and the Tang checks and stops before the reboot
@@ -146,6 +150,7 @@ into rescue.
 | `nbde_hcloud_convert_rescue_firewall` | `""` | Required. Existing firewall: one rule, 22/tcp in. |
 | `nbde_hcloud_convert_rescue_jump` | `""` | SSH jump host for rescue; empty connects directly. |
 | `nbde_hcloud_convert_rescue_private_key_file` | `""` | Required. Local private key matching the rescue SSH key. |
+| `nbde_hcloud_convert_rescue_source_ips` | `[]` | CIDRs the firewall rule must admit, exactly; empty skips the check. |
 | `nbde_hcloud_convert_rescue_ssh_key` | `""` | Required. Hetzner Cloud SSH key name rescue admits. |
 | `nbde_hcloud_convert_rescue_timeout` | `300` | Seconds to wait for rescue before a power cycle. |
 | `nbde_hcloud_convert_state_dir` | `~/.local/state/nbde` | Controller directory for a resumed run's state. |

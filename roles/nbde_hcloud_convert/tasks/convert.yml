@@ -26,6 +26,17 @@
 - name: Preflight on the running host (nothing changes yet)
   when: not nbde_hcloud_convert_in_rescue
   block:
+    # A run stopped before the rescue boot leaves it attached, and it denies
+    # the running host every other public connection.
+    - name: Detach the rescue firewall a stopped run left attached
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: absent
+      delegate_to: localhost
+      become: false
+
     - name: Read the root's layout
       ansible.builtin.shell:
         cmd: |
@@ -107,6 +118,16 @@
     - name: Report the resume
       ansible.builtin.debug:
         msg: "{{ inventory_hostname }} is unreachable; resuming from {{ nbde_hcloud_convert_state_file }} (expected in rescue)."
+
+    # The state file exists only once a conversion was confirmed.
+    - name: Keep the rescue firewall attached
+      hetzner.hcloud.firewall_resource:
+        api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
+        firewall: "{{ nbde_hcloud_convert_rescue_firewall }}"
+        servers: ["{{ nbde_hcloud_convert_server.name }}"]
+        state: present
+      delegate_to: localhost
+      become: false
 
 # Taken over SSH from each Tang server itself and checked against the pin;
 # clevis checks the signature again when it binds. Cached for a resume, when
@@ -286,6 +307,23 @@
 - name: Power-cycle into rescue
   when: nbde_hcloud_convert_hostname is failed and not nbde_hcloud_convert_in_rescue
   block:
+    - name: Ask before the power cycle
+      ansible.builtin.pause:
+        prompt: >-
+          No rescue on {{ nbde_hcloud_convert_server.ipv4_address }} after the reboot. Type
+          {{ inventory_hostname }} to power-cycle {{ nbde_hcloud_convert_server.name }} into
+          rescue (a power cut)
+      register: nbde_hcloud_convert_answer
+      when: nbde_hcloud_convert_confirm | bool
+
+    - name: Require the host name
+      ansible.builtin.assert:
+        that: nbde_hcloud_convert_answer.user_input | default('') | trim == inventory_hostname
+        fail_msg: >-
+          Stopped. Rescue is armed and the rescue firewall attached: check the server
+          in the Hetzner console, then re-run or detach the firewall.
+      when: nbde_hcloud_convert_confirm | bool
+
     - name: Power-cycle the server with rescue armed
       hetzner.hcloud.server:
         api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
@@ -539,6 +577,10 @@
   loop: "{{ query('ansible.builtin.fileglob', nbde_hcloud_convert_state_dir ~ '/' ~ inventory_hostname ~ '.*') }}"
   delegate_to: localhost
   become: false
+
+- name: Record that this run converted the host
+  ansible.builtin.set_fact:
+    nbde_hcloud_convert_converted: true
 
 - name: Warn about plaintext backups
   ansible.builtin.debug:

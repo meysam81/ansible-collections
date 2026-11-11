@@ -30,6 +30,10 @@ nbde_hcloud_convert_rescue_private_key_file: ""
 # attached to any other server.
 nbde_hcloud_convert_rescue_firewall: ""
 
+# Source addresses the rescue firewall's rule must admit, exactly (CIDRs);
+# empty skips the comparison.
+nbde_hcloud_convert_rescue_source_ips: []
+
 # SSH jump host for the rescue system (ProxyJump); empty connects directly.
 nbde_hcloud_convert_rescue_jump: ""
 

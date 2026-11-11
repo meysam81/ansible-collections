@@ -16,7 +16,7 @@
 #
 # Layout after: p1 = LUKS2 (ext4 /), a new last partition = ext4 /boot (1 GiB),
 # ESP and BIOS-boot partitions unchanged.
-# ponytail: ext4 root on a GPT partition only (every Hetzner Cloud image);
+# Scope: ext4 root on a GPT partition only (every Hetzner Cloud image);
 # xfs cannot shrink: rebuild and restore such a host instead.
 set -euo pipefail
 # Private mount namespace: rescue services with their own namespaces (resolved,

@@ -21,6 +21,8 @@
       (nbde_hcloud_convert_api_token or HCLOUD_TOKEN).
 
 # An acceptance run killed while one Tang server was stopped leaves it stopped.
+# A server out of reach is not fatal here: a resumed run may reach it only
+# through the host now in rescue, and uses its cached advertisement.
 - name: Start Tang on every server
   ansible.builtin.systemd:
     name: tangd.socket
@@ -29,6 +31,7 @@
   loop: "{{ nbde_hcloud_convert_tang_servers }}"
   loop_control:
     label: "{{ item.ssh_host }}"
+  ignore_unreachable: true
 
 - name: Hetzner Cloud state
   delegate_to: localhost
@@ -86,10 +89,14 @@
           - nbde_hcloud_convert_rules[0].direction == 'in'
           - nbde_hcloud_convert_rules[0].protocol == 'tcp'
           - nbde_hcloud_convert_rules[0].port | string == '22'
+          - >-
+            nbde_hcloud_convert_rescue_source_ips | length == 0
+            or nbde_hcloud_convert_rules[0].source_ips | sort == nbde_hcloud_convert_rescue_source_ips | sort
           - nbde_hcloud_convert_fw.applied_to | rejectattr('server', 'equalto', nbde_hcloud_convert_server.id) | list | length == 0
         fail_msg: >-
           Firewall {{ nbde_hcloud_convert_rescue_firewall }} must exist, admit only
-          22/tcp in, and be attached to nothing but this server; it has rules
+          22/tcp in{{ (' from ' ~ nbde_hcloud_convert_rescue_source_ips | join(', '))
+          if nbde_hcloud_convert_rescue_source_ips else '' }}, and be attached to nothing but this server; it has rules
           {{ nbde_hcloud_convert_rules }} and is attached to
           {{ nbde_hcloud_convert_fw.applied_to | default([]) }}.
 
