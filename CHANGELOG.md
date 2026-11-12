@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.5](https://github.com/meysam81/ansible-collections/compare/v1.14.4...v1.14.5) (2026-11-11)
+
+
+### Bug Fixes
+
+* **nbde_hcloud_convert:** boolean conditionals for the server IPv4 and backup checks ([#149](https://github.com/meysam81/ansible-collections/issues/149)) ([dcae952](https://github.com/meysam81/ansible-collections/commit/dcae952fff11e715d308893b22ba10cf4496adb3))
+
 ## [1.14.4](https://github.com/meysam81/ansible-collections/compare/v1.14.3...v1.14.4) (2026-11-11)
 
 
