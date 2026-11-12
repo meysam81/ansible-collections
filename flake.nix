@@ -63,7 +63,7 @@
                 python3 -m venv .venv
               fi
               source .venv/bin/activate
-              pip install -q -r requirements.txt 2>/dev/null
+              pip install -q --require-hashes -r requirements.txt 2>/dev/null
             '';
           };
         }
