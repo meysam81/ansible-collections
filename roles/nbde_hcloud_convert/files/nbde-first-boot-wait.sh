@@ -5,7 +5,7 @@
 # Converting while that reboot is pending would cut the package install or the
 # rescue boot short.
 #
-# Exit: 0 ready; 77 a reboot is scheduled; 124 cloud-init still running after
+# Exit: 0 ready; 77 a reboot or shutdown is scheduled; 124 cloud-init still running after
 # NBDE_WAIT_TIMEOUT; anything else: `cloud-init status --wait` failed oddly.
 # A cloud-init that finished with errors (an old first boot) only warns.
 #
@@ -43,7 +43,7 @@ fi
 # schedule appears only after the status above reads done: keep looking.
 for ((i = 0; i <= settle; i++)); do
   if [ -e "$dir/scheduled" ]; then
-    echo "a reboot is scheduled: $(tr '\n' ' ' < "$dir/scheduled")"
+    echo "a reboot or shutdown is scheduled: $(tr '\n' ' ' < "$dir/scheduled")"
     exit 77
   fi
   if ((i < settle)); then sleep 1; fi

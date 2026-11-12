@@ -74,7 +74,7 @@ new_case scheduled 0
 touch "$dir/shutdown/scheduled"
 run
 check "reboot scheduled: rc 77 (got $rc)" test "$rc" = 77
-check "says a reboot is scheduled" grep -q 'a reboot is scheduled' "$out"
+check "says a reboot or shutdown is scheduled" grep -q 'a reboot or shutdown is scheduled' "$out"
 
 # The schedule shows up after cloud-init reads done, as power_state's does.
 new_case scheduled-late 0

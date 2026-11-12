@@ -21,7 +21,7 @@
         path: "{{ work.path }}/{{ item.0 }}/{{ item.1 }}"
         state: directory
         mode: "0755"
-      loop: "{{ ['ready', 'degraded', 'hang', 'scheduled'] | product(['bin', 'shutdown']) | list }}"
+      loop: "{{ ['ready', 'error', 'degraded', 'odd', 'hang', 'scheduled'] | product(['bin', 'shutdown']) | list }}"
 
     - name: A cloud-init stub per case ("hang" never returns)
       ansible.builtin.copy:
@@ -35,7 +35,9 @@
           esac
       loop:
         - { case: ready, rc: 0 }
+        - { case: error, rc: 1 }
         - { case: degraded, rc: 2 }
+        - { case: odd, rc: 5 }
         - { case: hang, rc: hang }
         - { case: scheduled, rc: 0 }
 
@@ -49,9 +51,11 @@
       ansible.builtin.include_tasks: nbde-hcloud-convert-first-boot-case.yml
       loop:
         - { case: ready, fails: false, says: "" }
+        - { case: error, fails: false, says: "" }
         - { case: degraded, fails: false, says: "" }
+        - { case: odd, fails: true, says: "the first-boot check failed (rc 5)" }
         - { case: hang, fails: true, says: "cloud-init still running after 1 s" }
-        - { case: scheduled, fails: true, says: "a reboot is scheduled (first boot)" }
+        - { case: scheduled, fails: true, says: "a reboot or shutdown is scheduled" }
       loop_control:
         loop_var: guard_case
 

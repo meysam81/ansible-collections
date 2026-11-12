@@ -22,7 +22,7 @@
     - name: "The warning shows, case {{ guard_case.case }}"
       ansible.builtin.assert:
         that: "'warning:' in nbde_hcloud_convert_first_boot.stdout"
-      when: guard_case.case == 'degraded'
+      when: guard_case.case in ['error', 'degraded']
 
   rescue:
     - name: "Failing was expected, with its message, case {{ guard_case.case }}"

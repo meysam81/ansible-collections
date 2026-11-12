@@ -115,9 +115,10 @@
       nbde_hcloud_convert_probe is succeeded
       or nbde_hcloud_convert_probe.msg | default('') is not search('Host key verification failed|Permission denied')
     fail_msg: >-
-      SSH to {{ inventory_hostname }} fails on its host key or its login, not by silence: fix
-      that first (a new host: pin its key; a reused address or alias: drop the old
-      known_hosts entry). Nothing changed.
+      SSH to {{ inventory_hostname }} (or its jump host) refuses the host key or the login
+      instead of not answering, so the host is up, not in rescue: fix SSH first (a new
+      host: pin its key; a reused address or alias: drop the old known_hosts entry).
+      Nothing changed.
 
 - name: Read what the root is mounted from
   ansible.builtin.command:

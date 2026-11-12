@@ -80,6 +80,9 @@
         nbde_hcloud_convert_state:
           root_partuuid: "{{ nbde_hcloud_convert_layout.partuuid }}"
           priv_if: "{{ nbde_hcloud_convert_layout.nic }}"
+          # Kept for a resume: a run resumed without the caller's setting must
+          # not snapshot a disk the rescue run is already encrypting.
+          take_snapshot: "{{ nbde_hcloud_convert_take_snapshot | bool }}"
 
     - name: Install clevis into the root the initramfs is built from
       ansible.builtin.apt:
@@ -141,6 +144,7 @@
           - nbde_hcloud_convert_state.root_partuuid | default('') is match('^[0-9a-f-]{36}$')
           - nbde_hcloud_convert_state.priv_if | default('') is match('^[A-Za-z0-9._-]{1,15}$')
           - nbde_hcloud_convert_state.image_id | default(0) | string is match('^[0-9]+$')
+          - nbde_hcloud_convert_state.take_snapshot | default(true) is boolean
         fail_msg: "{{ nbde_hcloud_convert_state_file }} is malformed; check it, delete it, re-run."
 
     - name: Report the resume
@@ -230,7 +234,7 @@
     prompt: >-
       Type {{ inventory_hostname }} to reboot {{ nbde_hcloud_convert_server.name }}
       ({{ nbde_hcloud_convert_server.ipv4_address }}) into rescue and encrypt its root.
-      DOWNTIME STARTS{{ '' if nbde_hcloud_convert_take_snapshot | bool else
+      DOWNTIME STARTS{{ '' if nbde_hcloud_convert_state.take_snapshot | default(true) else
       '. NO ROLLBACK SNAPSHOT: only for a server created for this.' }}
   register: nbde_hcloud_convert_answer
   when: nbde_hcloud_convert_confirm | bool and not nbde_hcloud_convert_in_rescue
@@ -376,8 +380,9 @@
       become: false
 
 # The rollback point: a snapshot of the quiet disk, required before anything
-# is encrypted unless nbde_hcloud_convert_take_snapshot is off (a server
-# created for this). Kept in state, so a resume checks it rather than skipping it.
+# is encrypted unless nbde_hcloud_convert_take_snapshot was off when the run
+# started (a server created for this; recorded in the state, so a resume
+# keeps the decision). Kept in state, so a resume checks it rather than skipping it.
 - name: Look up the rollback snapshot of an earlier run
   hetzner.hcloud.image_info:
     api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
@@ -390,7 +395,7 @@
 
 - name: Snapshot the disk (plaintext; delete it after acceptance)
   when:
-    - nbde_hcloud_convert_take_snapshot | bool
+    - nbde_hcloud_convert_state.take_snapshot | default(true)
     - >-
       (nbde_hcloud_convert_image.hcloud_image_info | default([]) | map(attribute='status') | first | default(''))
       not in ['available', 'creating']
@@ -432,14 +437,14 @@
   until: (nbde_hcloud_convert_image.hcloud_image_info | first).status == 'available'
   retries: 360
   delay: 10
-  when: nbde_hcloud_convert_take_snapshot | bool
+  when: nbde_hcloud_convert_state.take_snapshot | default(true)
   delegate_to: localhost
   become: false
 
 - name: Report the rollback point
   ansible.builtin.debug:
     msg: "Rollback snapshot: image {{ nbde_hcloud_convert_state.image_id }} (plaintext; delete it after acceptance)."
-  when: nbde_hcloud_convert_take_snapshot | bool
+  when: nbde_hcloud_convert_state.take_snapshot | default(true)
 
 - name: Read the rescue run's progress
   ansible.builtin.command:

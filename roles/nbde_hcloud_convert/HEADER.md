@@ -11,9 +11,9 @@ Tang servers answer, and a recovery passphrase still opens it at a console.
 - Finds the server by its private address, so no server name or id is passed,
   and refuses unless exactly one server holds it.
 - Waits for the host's first boot to settle before anything changes:
-  cloud-init finished, and no reboot scheduled (cloud-init `power_state`). A
-  scheduled reboot stops the run: let it happen, then run again. An old
-  cloud-init error only warns.
+  cloud-init finished, and no reboot or shutdown scheduled (a first boot's
+  cloud-init `power_state` schedules one). A scheduled one stops the run: let
+  it happen, then run again. An old cloud-init error only warns.
 - Preflight on the running host, before anything changes: arm64, an ext4 root
   that is the last partition of its disk, room to carve a 1 GiB `/boot`, one
   interface holding the private address, and every Tang server answering the
@@ -27,7 +27,8 @@ Tang servers answer, and a recovery passphrase still opens it at a console.
   come up within `nbde_hcloud_convert_rescue_timeout`.
 - Snapshots the quiet disk (the rollback point) before anything is encrypted,
   unless `nbde_hcloud_convert_take_snapshot` is off: then there is no rollback
-  point, and the prompt says so.
+  point, and the prompt says so. The choice is kept in the state file, so a
+  resumed run never snapshots a disk already being encrypted.
 - In rescue (`files/nbde-encrypt-root.sh`): shrinks the root, carves `/boot` at
   the end of the disk, encrypts the root in place (`cryptsetup reencrypt`),
   then in a chroot writes crypttab, fstab and GRUB, binds the recovery
