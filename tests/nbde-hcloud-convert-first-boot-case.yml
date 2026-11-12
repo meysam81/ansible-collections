@@ -1,0 +1,33 @@
+---
+# One case of nbde-hcloud-convert-first-boot.yml: run the role's first-boot
+# tasks with the case's stub first on PATH, then check the outcome.
+- name: "Case {{ guard_case.case }}"
+  environment:
+    PATH: "{{ work.path }}/{{ guard_case.case }}/bin:{{ ansible_env.PATH | default(lookup('ansible.builtin.env', 'PATH')) }}"
+    NBDE_SHUTDOWN_DIR: "{{ work.path }}/{{ guard_case.case }}/shutdown"
+  block:
+    - name: "The first-boot tasks, case {{ guard_case.case }}"
+      ansible.builtin.include_role:
+        name: "{{ role_path_under_test }}"
+        tasks_from: first-boot
+      vars:
+        nbde_hcloud_convert_first_boot_settle: 1
+        nbde_hcloud_convert_first_boot_timeout: 1
+
+    - name: "Passing was expected, case {{ guard_case.case }}"
+      ansible.builtin.assert:
+        that: not guard_case.fails
+        fail_msg: "{{ guard_case.case }} passed, but it must fail"
+
+    - name: "The warning shows, case {{ guard_case.case }}"
+      ansible.builtin.assert:
+        that: "'warning:' in nbde_hcloud_convert_first_boot.stdout"
+      when: guard_case.case == 'degraded'
+
+  rescue:
+    - name: "Failing was expected, with its message, case {{ guard_case.case }}"
+      ansible.builtin.assert:
+        that:
+          - guard_case.fails
+          - guard_case.says in ansible_failed_result.msg
+        fail_msg: "{{ guard_case.case }}: {{ ansible_failed_result.msg | default(ansible_failed_result) }}"

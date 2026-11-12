@@ -26,6 +26,9 @@
 - name: Preflight on the running host (nothing changes yet)
   when: not nbde_hcloud_convert_in_rescue
   block:
+    - name: Wait for the first boot to settle
+      ansible.builtin.include_tasks: first-boot.yml
+
     # A run stopped before the rescue boot leaves it attached, and it denies
     # the running host every other public connection.
     - name: Detach the rescue firewall a stopped run left attached
@@ -84,6 +87,31 @@
         state: present
         update_cache: true
         cache_valid_time: 3600
+
+    # The first encrypted boot asks the Tang servers from here, through the
+    # private interface: a host they do not admit would hang at the initramfs.
+    - name: Ask each Tang server from the host
+      ansible.builtin.uri:
+        url: "{{ item.url }}/adv"
+        timeout: 5
+        use_proxy: false
+      loop: "{{ nbde_hcloud_convert_tang_servers }}"
+      loop_control:
+        label: "{{ item.url }}"
+      register: nbde_hcloud_convert_tang_reach
+      failed_when: false
+      check_mode: false
+
+    - name: Require every Tang server to answer the host
+      ansible.builtin.assert:
+        that: nbde_hcloud_convert_tang_unreachable | length == 0
+        fail_msg: >-
+          {{ inventory_hostname }} cannot reach {{ nbde_hcloud_convert_tang_unreachable | join(', ') }}:
+          admit it on the Tang server first. Nothing changed.
+      vars:
+        nbde_hcloud_convert_tang_unreachable: >-
+          {{ nbde_hcloud_convert_tang_reach.results | rejectattr('status', 'equalto', 200)
+             | map(attribute='item.url') | list }}
 
 # The state file is data from the remote host, validated, never trusted.
 - name: Resume an interrupted run
@@ -202,7 +230,8 @@
     prompt: >-
       Type {{ inventory_hostname }} to reboot {{ nbde_hcloud_convert_server.name }}
       ({{ nbde_hcloud_convert_server.ipv4_address }}) into rescue and encrypt its root.
-      DOWNTIME STARTS
+      DOWNTIME STARTS{{ '' if nbde_hcloud_convert_take_snapshot | bool else
+      '. NO ROLLBACK SNAPSHOT: only for a server created for this.' }}
   register: nbde_hcloud_convert_answer
   when: nbde_hcloud_convert_confirm | bool and not nbde_hcloud_convert_in_rescue
 
@@ -347,7 +376,8 @@
       become: false
 
 # The rollback point: a snapshot of the quiet disk, required before anything
-# is encrypted. Kept in state, so a resume checks it rather than skipping it.
+# is encrypted unless nbde_hcloud_convert_take_snapshot is off (a server
+# created for this). Kept in state, so a resume checks it rather than skipping it.
 - name: Look up the rollback snapshot of an earlier run
   hetzner.hcloud.image_info:
     api_token: "{{ nbde_hcloud_convert_api_token | default(omit, true) }}"
@@ -359,9 +389,11 @@
   become: false
 
 - name: Snapshot the disk (plaintext; delete it after acceptance)
-  when: >-
-    (nbde_hcloud_convert_image.hcloud_image_info | default([]) | map(attribute='status') | first | default(''))
-    not in ['available', 'creating']
+  when:
+    - nbde_hcloud_convert_take_snapshot | bool
+    - >-
+      (nbde_hcloud_convert_image.hcloud_image_info | default([]) | map(attribute='status') | first | default(''))
+      not in ['available', 'creating']
   delegate_to: localhost
   become: false
   block:
@@ -400,12 +432,14 @@
   until: (nbde_hcloud_convert_image.hcloud_image_info | first).status == 'available'
   retries: 360
   delay: 10
+  when: nbde_hcloud_convert_take_snapshot | bool
   delegate_to: localhost
   become: false
 
 - name: Report the rollback point
   ansible.builtin.debug:
     msg: "Rollback snapshot: image {{ nbde_hcloud_convert_state.image_id }} (plaintext; delete it after acceptance)."
+  when: nbde_hcloud_convert_take_snapshot | bool
 
 - name: Read the rescue run's progress
   ansible.builtin.command:

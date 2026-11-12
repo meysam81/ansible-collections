@@ -1,0 +1,61 @@
+---
+# nbde_hcloud_convert's first-boot tasks (tasks/first-boot.yml) on this
+# machine, against a stubbed cloud-init and a temporary stand-in for
+# /run/systemd/shutdown: the exit codes of files/nbde-first-boot-wait.sh must
+# turn into the right outcome and message.
+# Run: ansible-playbook tests/nbde-hcloud-convert-first-boot.yml (no root).
+- name: NBDE convert | first-boot guard
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    role_path_under_test: "{{ playbook_dir }}/../roles/nbde_hcloud_convert"
+  tasks:
+    - name: A scratch directory
+      ansible.builtin.tempfile:
+        state: directory
+      register: work
+
+    - name: The directories of each case
+      ansible.builtin.file:
+        path: "{{ work.path }}/{{ item.0 }}/{{ item.1 }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ ['ready', 'degraded', 'hang', 'scheduled'] | product(['bin', 'shutdown']) | list }}"
+
+    - name: A cloud-init stub per case ("hang" never returns)
+      ansible.builtin.copy:
+        dest: "{{ work.path }}/{{ item.case }}/bin/cloud-init"
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          case "$*" in
+            *--wait*) [ "{{ item.rc }}" = hang ] && exec sleep 30; exit {{ item.rc }} ;;
+            *) printf 'status: degraded\ndetail: stub\n' ;;
+          esac
+      loop:
+        - { case: ready, rc: 0 }
+        - { case: degraded, rc: 2 }
+        - { case: hang, rc: hang }
+        - { case: scheduled, rc: 0 }
+
+    - name: The scheduled reboot of the "scheduled" case
+      ansible.builtin.copy:
+        dest: "{{ work.path }}/scheduled/shutdown/scheduled"
+        content: "USEC=0\nMODE=reboot\n"
+        mode: "0644"
+
+    - name: Each case
+      ansible.builtin.include_tasks: nbde-hcloud-convert-first-boot-case.yml
+      loop:
+        - { case: ready, fails: false, says: "" }
+        - { case: degraded, fails: false, says: "" }
+        - { case: hang, fails: true, says: "cloud-init still running after 1 s" }
+        - { case: scheduled, fails: true, says: "a reboot is scheduled (first boot)" }
+      loop_control:
+        loop_var: guard_case
+
+    - name: Remove the scratch directory
+      ansible.builtin.file:
+        path: "{{ work.path }}"
+        state: absent

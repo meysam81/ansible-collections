@@ -106,6 +106,19 @@
   register: nbde_hcloud_convert_probe
   ignore_errors: true
 
+# Only silence means rescue (its private interface stays down). A refused host
+# key or login is a fault here: read as rescue, it would resume a conversion
+# against a running host.
+- name: Require the host to answer, or not at all
+  ansible.builtin.assert:
+    that: >-
+      nbde_hcloud_convert_probe is succeeded
+      or nbde_hcloud_convert_probe.msg | default('') is not search('Host key verification failed|Permission denied')
+    fail_msg: >-
+      SSH to {{ inventory_hostname }} fails on its host key or its login, not by silence: fix
+      that first (a new host: pin its key; a reused address or alias: drop the old
+      known_hosts entry). Nothing changed.
+
 - name: Read what the root is mounted from
   ansible.builtin.command:
     cmd: findmnt -n -o SOURCE /
