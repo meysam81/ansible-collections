@@ -13,7 +13,7 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=800"]
@@ -63,13 +63,14 @@ repos:
   #   hooks:
   #     - id: ansible-lint
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v9.26.0
+    rev: 25d0a52aa8bc0fc242613346792dc8d726c13347 # frozen: v9.26.0
     hooks:
       - id: commitlint
+        language: node
         stages: [commit-msg]
-        additional_dependencies: ["@commitlint/config-conventional"]
+        additional_dependencies: ["@commitlint/config-conventional@21.2.4"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.5
+    rev: 1f1e8bf348ff38fc88619a38d3ca4d9c56abea49 # frozen: v0.16.5
     hooks:
       - id: ruff
         types_or:
@@ -85,7 +86,7 @@ repos:
           - pyi
           - jupyter
   - repo: https://github.com/thegeeklab/ansible-doctor
-    rev: v8.4.1
+    rev: d1c7fa94ec20955955a95c78aaf96b55b9ea58b0 # frozen: v8.4.1
     hooks:
       - id: ansible-doctor
         name: ansible-doctor
@@ -93,6 +94,6 @@ repos:
           - -rf
           - ./roles
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.12
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
     hooks:
       - id: actionlint
