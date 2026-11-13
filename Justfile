@@ -18,7 +18,7 @@ ansible-doctor:
   ansible-doctor -rf ./roles
 
 reqs:
-  pip install -U pip -r requirements.txt
+  pip install --require-hashes -r requirements.txt
 
 test-vagrant *args:
   ansible-playbook \
