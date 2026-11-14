@@ -40,6 +40,17 @@ nbde_hcloud_convert_rescue_jump: ""
 # Ask for the host name before the reboot into rescue, where downtime starts.
 nbde_hcloud_convert_confirm: true
 
+# Snapshot the disk before encrypting it: the rollback point. false only for a
+# server created for this conversion, which has nothing to roll back to.
+nbde_hcloud_convert_take_snapshot: true
+
+# After cloud-init finishes, seconds to watch for the reboot a first boot may
+# schedule (cloud-init power_state) before converting; and the most to wait
+# for cloud-init itself.
+nbde_hcloud_convert_first_boot_settle: 30
+
+nbde_hcloud_convert_first_boot_timeout: 900
+
 # Hetzner Cloud API token (read & write); empty reads HCLOUD_TOKEN from the
 # controller's environment.
 nbde_hcloud_convert_api_token: ""

@@ -132,6 +132,26 @@ jobs:
       - name: Ansible playbook
         run: ansible-playbook playbook.yml -i localhost.yml -t ${{ matrix.role }}
 
+  # nbde_hcloud_convert needs a real Hetzner Cloud server, so it is not in the
+  # role matrix (EXCLUDE above); its guard script and task contracts run here.
+  nbde-hcloud-convert:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test the first-boot guard script
+        run: tests/nbde-first-boot-wait.test.sh
+      - name: Test the first-boot tasks
+        run: ansible-playbook tests/nbde-hcloud-convert-first-boot.yml
+      # The python that ships ansible has PyYAML.
+      - name: Test that no default is shadowed by a task result
+        run: |
+          py=$(head -1 "$(command -v ansible)" | sed 's/^#! *//; s/ .*//')
+          "$py" tests/nbde_hcloud_convert_names_test.py -v
+
   release-please:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
