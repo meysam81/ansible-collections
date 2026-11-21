@@ -63,14 +63,14 @@ repos:
   #   hooks:
   #     - id: ansible-lint
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: 25d0a52aa8bc0fc242613346792dc8d726c13347 # frozen: v9.26.0
+    rev: 1f1ac45c93d1c2ce36b71330252c489a5f4f2724 # frozen: v9.27.0
     hooks:
       - id: commitlint
         language: node
         stages: [commit-msg]
         additional_dependencies: ["@commitlint/config-conventional@21.2.4"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 1f1e8bf348ff38fc88619a38d3ca4d9c56abea49 # frozen: v0.16.5
+    rev: c0f278f1254ccc8fb09676bcdb8d847e7db493e5 # frozen: v0.17.4
     hooks:
       - id: ruff
         types_or:
@@ -86,7 +86,7 @@ repos:
           - pyi
           - jupyter
   - repo: https://github.com/thegeeklab/ansible-doctor
-    rev: d1c7fa94ec20955955a95c78aaf96b55b9ea58b0 # frozen: v8.4.1
+    rev: 547f81e11c74c17053fe5c27f56515415ffec448 # frozen: v8.4.3
     hooks:
       - id: ansible-doctor
         name: ansible-doctor
