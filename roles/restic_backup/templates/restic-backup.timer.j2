@@ -1,9 +1,10 @@
+{% set _job = restic_backup_job | default(none) %}
 # {{ ansible_managed }}
 [Unit]
-Description=Periodic restic backup
+Description=Periodic restic backup{{ (' (' ~ _job.name ~ ')') if _job else '' }}
 
 [Timer]
-OnCalendar={{ restic_backup_on_calendar }}
+OnCalendar={{ (_job.on_calendar | default(restic_backup_on_calendar)) if _job else restic_backup_on_calendar }}
 Persistent=true
 RandomizedDelaySec={{ restic_backup_random_delay_sec }}
 

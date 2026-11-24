@@ -60,3 +60,41 @@ restic_init_if_missing: true
 # restic_backup_last_exit_code, and the restic_check_* equivalents.
 # Empty disables. Pair with the `alloy` role's alloy_textfile_dir.
 restic_metrics_textfile_dir: ""
+
+# Several independent backup jobs on one host, each with its own repository,
+# password, schedule, env file, systemd service and timer
+# (restic-backup-<name>.{service,timer}). Empty keeps the single-repository
+# backup above as the only job. When non-empty, the single-repository backup
+# and its integrity check are deployed only if restic_repo_url is set.
+#
+# Entry keys:
+#   name                  Required. Unique, [a-z0-9-]+. Suffix of every file and unit.
+#   repo_url, password    Required.
+#   paths                 Required, non-empty. What `restic backup` reads.
+#   pre_backup_commands   Optional list of shell commands run in order before
+#                         `restic backup`. A failing command fails the job:
+#                         nothing is backed up and the metrics report the failure.
+#   on_calendar           Optional, falls back to restic_backup_on_calendar.
+#   read_write_paths      Optional list of directories the pre-backup commands
+#                         write to (staging dirs). The unit is otherwise
+#                         read-only (ProtectSystem=strict), so they must exist.
+#   exclude_patterns, keep_daily, keep_weekly, keep_monthly, keep_yearly, tag,
+#   aws_access_key_id, aws_secret_access_key, extra_env
+#                         Optional, each falls back to the role variable of the
+#                         same meaning (restic_exclude_patterns, ...).
+# Passwords and keys live in the 0600 env file and are never logged.
+# Example:
+#   restic_backup_jobs:
+#     - name: app-one
+#       repo_url: "s3:https://s3.example.com/bucket/app-one"
+#       password: "{{ lookup('env', 'APP_ONE_RESTIC_PASSWORD') }}"
+#       paths: [/var/backups/app-one]
+#       pre_backup_commands:
+#         - sqlite3 /var/lib/app-one/app.db ".backup /var/backups/app-one/app.db"
+#       read_write_paths: [/var/backups/app-one]
+#       on_calendar: hourly
+restic_backup_jobs: []
+
+# Systemd unit started via OnFailure= when a backup service fails (single
+# backup and every job). Empty disables.
+restic_backup_on_failure_unit: ""

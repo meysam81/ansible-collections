@@ -1,3 +1,12 @@
+{% set _job = restic_backup_job | default(none) %}
+{% set _tag = (_job.tag | default(restic_snapshot_tag)) if _job else restic_snapshot_tag %}
+{% set _paths = _job.paths if _job else restic_paths %}
+{% set _exclude = (_job.exclude_patterns | default(restic_exclude_patterns)) if _job else restic_exclude_patterns %}
+{% set _daily = (_job.keep_daily | default(restic_keep_daily)) if _job else restic_keep_daily %}
+{% set _weekly = (_job.keep_weekly | default(restic_keep_weekly)) if _job else restic_keep_weekly %}
+{% set _monthly = (_job.keep_monthly | default(restic_keep_monthly)) if _job else restic_keep_monthly %}
+{% set _yearly = (_job.keep_yearly | default(restic_keep_yearly)) if _job else restic_keep_yearly %}
+{% set _labels = ('job=\\"' ~ _job.name ~ '\\",tag=\\"' ~ _tag ~ '\\"') if _job else ('tag=\\"' ~ _tag ~ '\\"') %}
 #!/usr/bin/env bash
 # {{ ansible_managed }}
 # Run a tagged restic backup, then forget+prune per retention policy.
@@ -5,7 +14,7 @@ set -euo pipefail
 umask 0077
 
 {% if restic_metrics_textfile_dir | length > 0 %}
-METRICS_FILE="{{ restic_metrics_textfile_dir }}/restic_backup.prom"
+METRICS_FILE="{{ restic_metrics_textfile_dir }}/restic_backup{{ ('_' ~ _job.name) if _job else '' }}.prom"
 write_metrics() {
   local rc="$1" now tmp
   now=$(date +%s)
@@ -13,14 +22,14 @@ write_metrics() {
   {
     echo '# HELP restic_backup_last_run_timestamp_seconds Unix time of the last restic backup run.'
     echo '# TYPE restic_backup_last_run_timestamp_seconds gauge'
-    echo "restic_backup_last_run_timestamp_seconds{tag=\"{{ restic_snapshot_tag }}\"} ${now}"
+    echo "restic_backup_last_run_timestamp_seconds{{ '{' ~ _labels ~ '}' }} ${now}"
     echo '# HELP restic_backup_last_exit_code Exit code of the last restic backup run (0 = success).'
     echo '# TYPE restic_backup_last_exit_code gauge'
-    echo "restic_backup_last_exit_code{tag=\"{{ restic_snapshot_tag }}\"} ${rc}"
+    echo "restic_backup_last_exit_code{{ '{' ~ _labels ~ '}' }} ${rc}"
     echo '# HELP restic_backup_last_success_timestamp_seconds Unix time of the last successful restic backup.'
     echo '# TYPE restic_backup_last_success_timestamp_seconds gauge'
     if [ "${rc}" -eq 0 ]; then
-      echo "restic_backup_last_success_timestamp_seconds{tag=\"{{ restic_snapshot_tag }}\"} ${now}"
+      echo "restic_backup_last_success_timestamp_seconds{{ '{' ~ _labels ~ '}' }} ${now}"
     elif [ -f "${METRICS_FILE}" ]; then
       grep '^restic_backup_last_success_timestamp_seconds' "${METRICS_FILE}" || true
     fi
@@ -31,6 +40,14 @@ write_metrics() {
 trap 'write_metrics $?' EXIT
 {% endif %}
 
+{% if _job and _job.pre_backup_commands | default([]) | length > 0 %}
+# A failing command aborts the job before restic runs, so a stale staging
+# directory is never backed up as if it were fresh.
+{% for cmd in _job.pre_backup_commands %}
+bash -euo pipefail -c {{ cmd | quote }}
+{% endfor %}
+
+{% endif %}
 {% if restic_init_if_missing %}
 if ! restic --quiet snapshots >/dev/null 2>&1; then
   logger -t restic-backup "repository absent; initialising"
@@ -39,29 +56,29 @@ fi
 {% endif %}
 
 restic backup \
-  --tag {{ restic_snapshot_tag | quote }} \
+  --tag {{ _tag | quote }} \
   --host "$(hostname)" \
-{% for ex in restic_exclude_patterns %}
+{% for ex in _exclude %}
   --exclude {{ ex | quote }} \
 {% endfor %}
-{% for p in restic_paths %}
+{% for p in _paths %}
   {{ p | quote }} \
 {% endfor %}
   --quiet
 
 restic forget \
-  --tag {{ restic_snapshot_tag | quote }} \
-{% if restic_keep_daily | int > 0 %}
-  --keep-daily {{ restic_keep_daily }} \
+  --tag {{ _tag | quote }} \
+{% if _daily | int > 0 %}
+  --keep-daily {{ _daily }} \
 {% endif %}
-{% if restic_keep_weekly | int > 0 %}
-  --keep-weekly {{ restic_keep_weekly }} \
+{% if _weekly | int > 0 %}
+  --keep-weekly {{ _weekly }} \
 {% endif %}
-{% if restic_keep_monthly | int > 0 %}
-  --keep-monthly {{ restic_keep_monthly }} \
+{% if _monthly | int > 0 %}
+  --keep-monthly {{ _monthly }} \
 {% endif %}
-{% if restic_keep_yearly | int > 0 %}
-  --keep-yearly {{ restic_keep_yearly }} \
+{% if _yearly | int > 0 %}
+  --keep-yearly {{ _yearly }} \
 {% endif %}
   --prune \
   --quiet

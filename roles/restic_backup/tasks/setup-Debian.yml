@@ -1,5 +1,12 @@
 ---
+- name: Decide whether the single-repository backup is in use
+  ansible.builtin.set_fact:
+    # With no jobs this is the original behaviour. With jobs, the single
+    # backup is opt-in by setting restic_repo_url.
+    restic_backup_single_enabled: "{{ restic_backup_jobs | length == 0 or restic_repo_url | length > 0 }}"
+
 - name: Assert required variables
+  when: restic_backup_single_enabled | bool
   ansible.builtin.assert:
     that:
       - restic_repo_url | length > 0
@@ -10,6 +17,37 @@
       restic_repo_url, restic_password, and restic_paths are required;
       restic_aws_access_key_id and restic_aws_secret_access_key are required
       when restic_repo_url uses an s3: backend.
+
+- name: Assert backup job names are unique
+  ansible.builtin.assert:
+    that:
+      - restic_backup_jobs | map(attribute='name', default='') | unique | list | length == restic_backup_jobs | length
+    fail_msg: restic_backup_jobs names must be unique.
+  when: restic_backup_jobs | length > 0
+
+- name: Assert backup jobs are complete
+  ansible.builtin.assert:
+    that:
+      - item.name | default('') is match('^[a-z0-9-]+$')
+      - item.name | default('') == item.name | default('') | trim
+      - item.repo_url | default('') | length > 0
+      - item.password | default('') | length > 0
+      - item.paths | default([]) | length > 0
+      - item.pre_backup_commands | default([]) is sequence
+      - item.pre_backup_commands | default([]) is not string
+      - >-
+        not (item.repo_url | default('') is regex('^s3:'))
+        or (item.aws_access_key_id | default(restic_aws_access_key_id) | length > 0
+        and item.aws_secret_access_key | default(restic_aws_secret_access_key) | length > 0)
+    fail_msg: >-
+      Every restic_backup_jobs entry needs a name matching ^[a-z0-9-]+$, a
+      repo_url, a password, a non-empty paths list and a list of
+      pre_backup_commands; s3: repositories also need AWS credentials on the
+      job or via restic_aws_access_key_id / restic_aws_secret_access_key.
+      Offending job: {{ item.name | default('<unnamed>') }}.
+  loop: "{{ restic_backup_jobs }}"
+  loop_control:
+    label: "{{ item.name | default('<unnamed>') }}"
 
 - name: Install restic
   ansible.builtin.apt:
@@ -42,89 +80,9 @@
     mode: "0755"
   when: restic_metrics_textfile_dir | length > 0
 
-- name: Render restic env file
-  ansible.builtin.template:
-    src: restic.env.j2
-    dest: /etc/restic/.env
-    owner: root
-    group: root
-    mode: "0600"
-  no_log: true
+- name: Import the single-repository backup
+  ansible.builtin.import_tasks: legacy.yml
+  when: restic_backup_single_enabled | bool
 
-- name: Deploy backup script
-  ansible.builtin.template:
-    src: restic-backup.sh.j2
-    dest: /usr/local/bin/restic-backup.sh
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Deploy backup service
-  ansible.builtin.template:
-    src: restic-backup.service.j2
-    dest: /etc/systemd/system/restic-backup.service
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Reload systemd daemon
-
-- name: Deploy backup timer
-  ansible.builtin.template:
-    src: restic-backup.timer.j2
-    dest: /etc/systemd/system/restic-backup.timer
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Reload systemd daemon
-
-- name: Enable backup timer
-  ansible.builtin.systemd:
-    name: restic-backup.timer
-    state: started
-    enabled: true
-    daemon_reload: true
-
-- name: Deploy check script
-  ansible.builtin.template:
-    src: restic-check.sh.j2
-    dest: /usr/local/bin/restic-check.sh
-    owner: root
-    group: root
-    mode: "0755"
-  when: restic_check_enabled
-
-- name: Deploy check service
-  ansible.builtin.template:
-    src: restic-check.service.j2
-    dest: /etc/systemd/system/restic-check.service
-    owner: root
-    group: root
-    mode: "0644"
-  when: restic_check_enabled
-  notify: Reload systemd daemon
-
-- name: Deploy check timer
-  ansible.builtin.template:
-    src: restic-check.timer.j2
-    dest: /etc/systemd/system/restic-check.timer
-    owner: root
-    group: root
-    mode: "0644"
-  when: restic_check_enabled
-  notify: Reload systemd daemon
-
-- name: Enable check timer
-  ansible.builtin.systemd:
-    name: restic-check.timer
-    state: started
-    enabled: true
-    daemon_reload: true
-  when: restic_check_enabled
-
-- name: Disable check timer when feature disabled
-  ansible.builtin.systemd:
-    name: restic-check.timer
-    state: stopped
-    enabled: false
-  failed_when: false
-  when: not restic_check_enabled
+- name: Import the backup jobs
+  ansible.builtin.import_tasks: jobs.yml
