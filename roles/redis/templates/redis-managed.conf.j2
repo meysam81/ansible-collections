@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# redis.conf double-quoted strings take the same escapes as JSON, so the
+# password is quoted with to_json.
+# Included last from /etc/redis/redis.conf, so it overrides the package defaults.
+bind {{ redis_bind }}
+port {{ redis_port }}
+protected-mode yes
+requirepass {{ redis_requirepass | to_json(ensure_ascii=False) }}
+appendonly {{ 'yes' if redis_appendonly else 'no' }}
+{% if redis_maxmemory | string | length > 0 %}
+maxmemory {{ redis_maxmemory }}
+{% endif %}
+maxmemory-policy {{ redis_maxmemory_policy }}
+{% for line in redis_extra_config %}
+{{ line }}
+{% endfor %}

@@ -1,0 +1,76 @@
+---
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - redis_requirepass | length > 0
+      - redis_requirepass is not search('[\r\n]')
+      - redis_bind | length > 0
+      - redis_port | int > 0
+      - redis_port | int < 65536
+      - redis_maxmemory_policy in redis_valid_maxmemory_policies
+      - redis_extra_config is sequence
+      - redis_extra_config is not string
+    fail_msg: >-
+      redis_requirepass is required (non-empty, single line); redis_bind must be
+      set, redis_port must be 1-65535, redis_maxmemory_policy must be one of
+      {{ redis_valid_maxmemory_policies | join(', ') }} and redis_extra_config
+      must be a list.
+  vars:
+    redis_valid_maxmemory_policies:
+      - noeviction
+      - allkeys-lru
+      - allkeys-lfu
+      - allkeys-random
+      - volatile-lru
+      - volatile-lfu
+      - volatile-random
+      - volatile-ttl
+
+- name: Install redis
+  ansible.builtin.apt:
+    name: redis-server
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# The package conffile stays as shipped except for one trailing include.
+# Redis applies later directives over earlier ones, so the managed file
+# below overrides the distro defaults without the role owning (and fighting
+# upgrades of) the whole config.
+- name: Ensure the managed config directory exists
+  ansible.builtin.file:
+    path: /etc/redis/redis.d
+    state: directory
+    owner: root
+    group: redis
+    mode: "0750"
+
+- name: Render managed redis config
+  ansible.builtin.template:
+    src: redis-managed.conf.j2
+    dest: /etc/redis/redis.d/50-managed.conf
+    owner: root
+    group: redis
+    mode: "0640"
+  no_log: true
+  notify: Restart redis
+
+- name: Include the managed config last in redis.conf
+  ansible.builtin.blockinfile:
+    path: /etc/redis/redis.conf
+    insertafter: EOF
+    marker: "# {mark} managed include"
+    block: |
+      include /etc/redis/redis.d/*.conf
+  notify: Restart redis
+
+- name: Enable and start redis
+  ansible.builtin.systemd:
+    name: redis-server
+    state: started
+    enabled: true
+
+# The package starts redis with its stock config on install. Restart now so
+# the password and bind apply before the rest of the play uses redis.
+- name: Apply pending redis restart
+  ansible.builtin.meta: flush_handlers

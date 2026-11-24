@@ -131,6 +131,12 @@ jobs:
           ansible-galaxy collection install ./
       - name: Ansible playbook
         run: ansible-playbook playbook.yml -i localhost.yml -t ${{ matrix.role }}
+      # Needs redis-server, which the role installs, and the python that ships ansible.
+      - name: Test the redis config rendering
+        if: matrix.role == 'redis'
+        run: |
+          py=$(head -1 "$(command -v ansible)" | sed 's/^#! *//; s/ .*//')
+          "$py" tests/redis_config_test.py -v
 
   release-please:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
