@@ -1,18 +1,22 @@
+{% set _job = restic_backup_job | default(none) %}
 # {{ ansible_managed }}
 [Unit]
-Description=restic backup
+Description=restic backup{{ (' (' ~ _job.name ~ ')') if _job else '' }}
 After=network-online.target
 Wants=network-online.target
+{% if restic_backup_on_failure_unit | length > 0 %}
+OnFailure={{ restic_backup_on_failure_unit }}
+{% endif %}
 
 [Service]
 Type=oneshot
-EnvironmentFile=/etc/restic/.env
-ExecStart=/usr/local/bin/restic-backup.sh
+EnvironmentFile={{ ('/etc/restic/jobs/' ~ _job.name ~ '.env') if _job else '/etc/restic/.env' }}
+ExecStart={{ ('/usr/local/bin/restic-backup-' ~ _job.name ~ '.sh') if _job else '/usr/local/bin/restic-backup.sh' }}
 
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths={{ restic_cache_dir }}{{ (' ' ~ restic_metrics_textfile_dir) if restic_metrics_textfile_dir | length > 0 else '' }}
+ReadWritePaths={{ restic_cache_dir }}{{ (' ' ~ restic_metrics_textfile_dir) if restic_metrics_textfile_dir | length > 0 else '' }}{{ (' ' ~ _job.read_write_paths | join(' ')) if _job and _job.read_write_paths | default([]) | length > 0 else '' }}
 PrivateTmp=yes
 PrivateDevices=yes
 
@@ -31,7 +35,7 @@ SystemCallFilter=@system-service
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=restic-backup
+SyslogIdentifier=restic-backup{{ ('-' ~ _job.name) if _job else '' }}
 
 RestrictNamespaces=yes
 RestrictRealtime=yes
