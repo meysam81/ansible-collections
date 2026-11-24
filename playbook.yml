@@ -33,6 +33,10 @@
         mode: "0700"
       loop: [/var/lib/restic-ci, /var/backups/restic-ci-two]
       tags: restic_backup
+    - name: Generate a throwaway redis password
+      ansible.builtin.set_fact:
+        redis_test_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+      tags: redis
   roles:
     - role: haproxy
       tags: haproxy
@@ -120,6 +124,13 @@
               - echo staged > /var/backups/restic-ci-two/dump.txt
             read_write_paths: [/var/lib/restic-ci, /var/backups/restic-ci-two]
             keep_daily: 3
+    - role: redis
+      tags: redis
+      vars:
+        redis_requirepass: "{{ redis_test_password }}"
+        redis_maxmemory: 64mb
+        redis_extra_config:
+          - slowlog-max-len 64
     - role: zot
       tags: zot
       vars:
@@ -245,6 +256,27 @@
         that:
           - restic_test_retired.results | map(attribute='stat.exists') | select | list | length == 0
       tags: restic_backup
+    - name: Ask redis for its settings with the password
+      ansible.builtin.command: redis-cli --no-auth-warning --raw config get {{ item }}
+      environment:
+        REDISCLI_AUTH: "{{ redis_test_password }}"
+      loop: [appendonly, bind, maxmemory, maxmemory-policy, protected-mode, slowlog-max-len]
+      register: redis_test_config
+      changed_when: false
+      no_log: true
+      tags: redis
+    - name: Ping redis without the password
+      ansible.builtin.command: redis-cli ping
+      register: redis_test_noauth
+      changed_when: false
+      failed_when: false
+      tags: redis
+    - name: Redis is password-protected, loopback-only, AOF on, no eviction
+      ansible.builtin.assert:
+        that:
+          - redis_test_config.results | map(attribute='stdout_lines') | map('last') | list == ['yes', '127.0.0.1', '67108864', 'noeviction', 'yes', '64']
+          - redis_test_noauth.stdout is search('NOAUTH')
+      tags: redis
     - name: Test tang_server
       ansible.builtin.import_tasks: tests/tang-server-test.yml
       tags: tang_server

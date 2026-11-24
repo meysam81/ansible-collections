@@ -1,0 +1,26 @@
+---
+# Address(es) Redis listens on, space separated as in redis.conf. Loopback by
+# default: exposing Redis beyond the host is the caller's explicit decision.
+redis_bind: "127.0.0.1"
+redis_port: 6379
+
+# Password every client must present. Required: the role fails when empty.
+# Caller MUST resolve via secret store (SSM, vault) and pass at playbook time.
+# Rendered only into a 0640 root:redis file, never logged (no_log).
+redis_requirepass: ""
+
+# Append-only-file persistence. A restart or crash loses at most about a second
+# of writes instead of everything since the last RDB snapshot.
+redis_appendonly: true
+
+# Memory cap, e.g. "256mb". Empty leaves Redis unbounded.
+redis_maxmemory: ""
+
+# What Redis does at redis_maxmemory. noeviction refuses writes instead of
+# silently dropping keys, which is what a datastore (queues, sessions) needs.
+# Switch to allkeys-lru for a pure cache.
+redis_maxmemory_policy: "noeviction"
+
+# Raw redis.conf lines appended last, so they win over everything above.
+# Example: ["slowlog-log-slower-than 10000", "latency-monitor-threshold 100"]
+redis_extra_config: []
