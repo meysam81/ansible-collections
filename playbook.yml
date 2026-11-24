@@ -22,6 +22,10 @@
     - name: Generate test TLS certificate for zot
       ansible.builtin.import_tasks: tests/generate-zot-test-cert.yml
       tags: zot
+    - name: Generate throwaway restic passwords
+      ansible.builtin.set_fact:
+        restic_test_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+      tags: restic_backup
     - name: Create the restic repository and staging directories
       ansible.builtin.file:
         path: "{{ item }}"
@@ -98,19 +102,19 @@
         # Local-directory repositories: the single backup and two jobs, the
         # second with a pre-backup command that fills its staging directory.
         restic_repo_url: /var/lib/restic-ci/single
-        restic_password: ci-single-password
+        restic_password: "{{ restic_test_password }}"
         restic_paths: [/etc/hostname]
         restic_metrics_textfile_dir: /var/lib/restic-ci/metrics
         restic_backup_jobs:
           - name: ci-one
             repo_url: /var/lib/restic-ci/one
-            password: ci-one-password
+            password: "{{ restic_test_password }}"
             paths: [/etc/hostname]
             read_write_paths: [/var/lib/restic-ci]
             on_calendar: hourly
           - name: ci-two
             repo_url: /var/lib/restic-ci/two
-            password: ci-two-password
+            password: "{{ restic_test_password }}"
             paths: [/var/backups/restic-ci-two]
             pre_backup_commands:
               - echo staged > /var/backups/restic-ci-two/dump.txt
@@ -224,7 +228,7 @@
         restic_backup_jobs:
           - name: ci-two
             repo_url: /var/lib/restic-ci/two
-            password: ci-two-password
+            password: "{{ restic_test_password }}"
             paths: [/var/backups/restic-ci-two]
             read_write_paths: [/var/lib/restic-ci, /var/backups/restic-ci-two]
       tags: restic_backup

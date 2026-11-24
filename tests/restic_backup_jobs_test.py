@@ -10,6 +10,7 @@ The goldens hold what the single-repository backup rendered before
 
 import os
 import pathlib
+import secrets
 import shutil
 import subprocess
 import tempfile
@@ -21,6 +22,8 @@ from ansible.template import Templar, trust_as_template
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ROLE = ROOT / "roles/restic_backup"
 GOLDEN = pathlib.Path(__file__).resolve().parent / "golden"
+
+JOB_SECRET = secrets.token_hex(8)
 
 PLAIN = {
     "restic_repo_url": "/srv/repo",
@@ -58,7 +61,7 @@ def job(**kw):
     base = {
         "name": "app-one",
         "repo_url": "/unused",
-        "password": "job-pw",
+        "password": JOB_SECRET,
         "paths": ["/srv/data"],
     }
     base.update(kw)
@@ -123,7 +126,7 @@ class JobUnits(unittest.TestCase):
             restic_aws_secret_access_key="RS",
             restic_extra_env=["X=1"],
         )
-        self.assertIn("RESTIC_PASSWORD=job-pw\n", out)
+        self.assertIn(f"RESTIC_PASSWORD={JOB_SECRET}\n", out)
         self.assertIn("AWS_ACCESS_KEY_ID=RA\n", out)
         self.assertIn("X=1\n", out)
         out = render(
