@@ -1,3 +1,4 @@
+playbook.yml var-naming[no-role-prefix]
 roles/haproxy_config/defaults/main.yml yaml[line-length]
 roles/kratos/defaults/main.yml yaml[line-length]
 roles/node_exporter/tasks/setup-Debian.yml yaml[line-length]

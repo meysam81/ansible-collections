@@ -1,0 +1,108 @@
+---
+- name: Ensure the per-job env directory exists
+  ansible.builtin.file:
+    path: /etc/restic/jobs
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Render per-job env files
+  ansible.builtin.template:
+    src: restic-job.env.j2
+    dest: "/etc/restic/jobs/{{ restic_backup_job.name }}.env"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: "{{ restic_backup_jobs }}"
+  loop_control:
+    loop_var: restic_backup_job
+    label: "{{ restic_backup_job.name }}"
+  no_log: true
+
+- name: Deploy per-job backup scripts
+  ansible.builtin.template:
+    src: restic-backup.sh.j2
+    dest: "/usr/local/bin/restic-backup-{{ restic_backup_job.name }}.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ restic_backup_jobs }}"
+  loop_control:
+    loop_var: restic_backup_job
+    label: "{{ restic_backup_job.name }}"
+
+- name: Deploy per-job backup services
+  ansible.builtin.template:
+    src: restic-backup.service.j2
+    dest: "/etc/systemd/system/restic-backup-{{ restic_backup_job.name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ restic_backup_jobs }}"
+  loop_control:
+    loop_var: restic_backup_job
+    label: "{{ restic_backup_job.name }}"
+  notify: Reload systemd daemon
+
+- name: Deploy per-job backup timers
+  ansible.builtin.template:
+    src: restic-backup.timer.j2
+    dest: "/etc/systemd/system/restic-backup-{{ restic_backup_job.name }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ restic_backup_jobs }}"
+  loop_control:
+    loop_var: restic_backup_job
+    label: "{{ restic_backup_job.name }}"
+  notify: Reload systemd daemon
+
+- name: Enable per-job backup timers
+  ansible.builtin.systemd:
+    name: "restic-backup-{{ restic_backup_job.name }}.timer"
+    state: started
+    enabled: true
+    daemon_reload: true
+  loop: "{{ restic_backup_jobs }}"
+  loop_control:
+    loop_var: restic_backup_job
+    label: "{{ restic_backup_job.name }}"
+
+# The env directory is owned by this role, so an env file whose job is no
+# longer listed marks a job this role created and may now retire.
+- name: Find env files of jobs this role created
+  ansible.builtin.find:
+    paths: /etc/restic/jobs
+    patterns: "*.env"
+  register: restic_backup_existing_job_envs
+
+- name: Work out which jobs are no longer listed
+  ansible.builtin.set_fact:
+    restic_backup_stale_jobs: >-
+      {{ restic_backup_existing_job_envs.files | map(attribute='path') | map('basename') | map('regex_replace', '[.]env$', '')
+         | difference(restic_backup_jobs | map(attribute='name') | list) | list }}
+
+- name: Retire timers of jobs that are no longer listed
+  ansible.builtin.systemd:
+    name: "restic-backup-{{ item }}.timer"
+    state: stopped
+    enabled: false
+  loop: "{{ restic_backup_stale_jobs }}"
+  failed_when: false
+
+- name: Remove files of jobs that are no longer listed
+  ansible.builtin.file:
+    path: "{{ item.1 | format(item.0) }}"
+    state: absent
+  loop: "{{ restic_backup_stale_jobs | product(restic_backup_job_file_patterns) | list }}"
+  loop_control:
+    label: "{{ item.1 | format(item.0) }}"
+  vars:
+    restic_backup_job_file_patterns: >-
+      {{ ['/etc/restic/jobs/%s.env',
+          '/usr/local/bin/restic-backup-%s.sh',
+          '/etc/systemd/system/restic-backup-%s.service',
+          '/etc/systemd/system/restic-backup-%s.timer']
+         + ([restic_metrics_textfile_dir ~ '/restic_backup_%s.prom'] if restic_metrics_textfile_dir | length > 0 else []) }}
+  notify: Reload systemd daemon

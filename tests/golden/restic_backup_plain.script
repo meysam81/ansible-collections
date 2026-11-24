@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Ansible managed
+# Run a tagged restic backup, then forget+prune per retention policy.
+set -euo pipefail
+umask 0077
+
+
+if ! restic --quiet snapshots >/dev/null 2>&1; then
+  logger -t restic-backup "repository absent; initialising"
+  restic init --quiet
+fi
+
+restic backup \
+  --tag auto \
+  --host "$(hostname)" \
+  /etc \
+  '/var/my data' \
+  --quiet
+
+restic forget \
+  --tag auto \
+  --keep-daily 7 \
+  --keep-weekly 4 \
+  --keep-monthly 12 \
+  --prune \
+  --quiet

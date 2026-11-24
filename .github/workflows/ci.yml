@@ -131,6 +131,12 @@ jobs:
           ansible-galaxy collection install ./
       - name: Ansible playbook
         run: ansible-playbook playbook.yml -i localhost.yml -t ${{ matrix.role }}
+      # Needs restic, which the role installs, and the python that ships ansible.
+      - name: Test the restic_backup jobs
+        if: matrix.role == 'restic_backup'
+        run: |
+          py=$(head -1 "$(command -v ansible)" | sed 's/^#! *//; s/ .*//')
+          "$py" tests/restic_backup_jobs_test.py -v
       # Needs redis-server, which the role installs, and the python that ships ansible.
       - name: Test the redis config rendering
         if: matrix.role == 'redis'

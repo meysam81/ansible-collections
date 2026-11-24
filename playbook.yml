@@ -22,6 +22,17 @@
     - name: Generate test TLS certificate for zot
       ansible.builtin.import_tasks: tests/generate-zot-test-cert.yml
       tags: zot
+    - name: Generate throwaway restic passwords
+      ansible.builtin.set_fact:
+        restic_test_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+      tags: restic_backup
+    - name: Create the restic repository and staging directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0700"
+      loop: [/var/lib/restic-ci, /var/backups/restic-ci-two]
+      tags: restic_backup
     - name: Generate a throwaway redis password
       ansible.builtin.set_fact:
         redis_test_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
@@ -89,6 +100,30 @@
       tags: oathkeeper
     - role: vm_identity_gcp
       tags: vm_identity_gcp
+    - role: restic_backup
+      tags: restic_backup
+      vars:
+        # Local-directory repositories: the single backup and two jobs, the
+        # second with a pre-backup command that fills its staging directory.
+        restic_repo_url: /var/lib/restic-ci/single
+        restic_password: "{{ restic_test_password }}"
+        restic_paths: [/etc/hostname]
+        restic_metrics_textfile_dir: /var/lib/restic-ci/metrics
+        restic_backup_jobs:
+          - name: ci-one
+            repo_url: /var/lib/restic-ci/one
+            password: "{{ restic_test_password }}"
+            paths: [/etc/hostname]
+            read_write_paths: [/var/lib/restic-ci]
+            on_calendar: hourly
+          - name: ci-two
+            repo_url: /var/lib/restic-ci/two
+            password: "{{ restic_test_password }}"
+            paths: [/var/backups/restic-ci-two]
+            pre_backup_commands:
+              - echo staged > /var/backups/restic-ci-two/dump.txt
+            read_write_paths: [/var/lib/restic-ci, /var/backups/restic-ci-two]
+            keep_daily: 3
     - role: redis
       tags: redis
       vars:
@@ -166,6 +201,61 @@
           - zot_test_entrypoint.stat.islnk
           - zot_test_entrypoint.stat.lnk_target is search('zot-2\.1\.23$')
       tags: zot
+    - name: Run both restic jobs
+      ansible.builtin.systemd:
+        name: "restic-backup-{{ item }}.service"
+        state: started
+      loop: [ci-one, ci-two]
+      tags: restic_backup
+    - name: List the staged file in the second job's latest snapshot
+      ansible.builtin.shell: |
+        set -eu
+        set -a
+        . /etc/restic/jobs/ci-two.env
+        restic ls latest
+      args:
+        executable: /bin/bash
+      register: restic_test_ls
+      changed_when: false
+      tags: restic_backup
+    - name: Read the job metrics
+      ansible.builtin.slurp:
+        src: /var/lib/restic-ci/metrics/restic_backup_ci-two.prom
+      register: restic_test_metrics
+      tags: restic_backup
+    - name: The pre-backup command ran first and the metrics carry the job label
+      ansible.builtin.assert:
+        that:
+          - "'/var/backups/restic-ci-two/dump.txt' in restic_test_ls.stdout"
+          - restic_test_metrics.content | b64decode is search('restic_backup_last_exit_code[{]job="ci-two",tag="auto"[}] 0')
+      tags: restic_backup
+    - name: Drop a job and run the role again
+      ansible.builtin.include_role:
+        name: restic_backup
+        apply:
+          tags: restic_backup
+      vars:
+        restic_metrics_textfile_dir: /var/lib/restic-ci/metrics
+        restic_backup_jobs:
+          - name: ci-two
+            repo_url: /var/lib/restic-ci/two
+            password: "{{ restic_test_password }}"
+            paths: [/var/backups/restic-ci-two]
+            read_write_paths: [/var/lib/restic-ci, /var/backups/restic-ci-two]
+      tags: restic_backup
+    - name: Stat the retired job's timer and env file
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/systemd/system/restic-backup-ci-one.timer
+        - /etc/restic/jobs/ci-one.env
+      register: restic_test_retired
+      tags: restic_backup
+    - name: The retired job is gone and the remaining one is kept
+      ansible.builtin.assert:
+        that:
+          - restic_test_retired.results | map(attribute='stat.exists') | select | list | length == 0
+      tags: restic_backup
     - name: Ask redis for its settings with the password
       ansible.builtin.command: redis-cli --no-auth-warning --raw config get {{ item }}
       environment:
