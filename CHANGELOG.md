@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.6](https://github.com/meysam81/ansible-collections/compare/v1.14.5...v1.14.6) (2026-11-24)
+
+
+### Features
+
+* **redis:** Redis server role (loopback, password, AOF, no eviction by default) ([#161](https://github.com/meysam81/ansible-collections/issues/161)) ([5248cbe](https://github.com/meysam81/ansible-collections/commit/5248cbede1ad5efd328764afae267936079d90f2))
+
+
+### Miscellaneous Chores
+
+* prepare release 1.14.6 ([d56b49c](https://github.com/meysam81/ansible-collections/commit/d56b49c390d7342e79197762a80b3f2242a907f6))
+
 ## [1.14.5](https://github.com/meysam81/ansible-collections/compare/v1.14.4...v1.14.5) (2026-11-11)
 
 
