@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.7](https://github.com/meysam81/ansible-collections/compare/v1.14.6...v1.14.7) (2026-11-24)
+
+
+### Features
+
+* **restic_backup:** several backup jobs per host, pre-backup commands, failure hook ([#162](https://github.com/meysam81/ansible-collections/issues/162)) ([3969eb3](https://github.com/meysam81/ansible-collections/commit/3969eb3ade11fc5d3aed3fe2b762c7ecec8f0a83))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#159](https://github.com/meysam81/ansible-collections/issues/159)) ([4ccb0ac](https://github.com/meysam81/ansible-collections/commit/4ccb0ac840038b59c7e89b8b77bb8d8f2bf469d2))
+
 ## [1.14.6](https://github.com/meysam81/ansible-collections/compare/v1.14.5...v1.14.6) (2026-11-24)
 
 
