@@ -1,0 +1,9 @@
+---
+# Redis has no config test mode, so a bad directive only shows up here: the
+# restart fails and the play stops on this handler rather than going on
+# against a dead service.
+- name: Restart redis
+  ansible.builtin.systemd:
+    name: redis-server
+    state: restarted
+    daemon_reload: true
