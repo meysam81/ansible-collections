@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-trivy-db-
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@d2a0b60797ff03db6132bd4e2b293f9b37081297 # master
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec # master
         with:
           format: sarif
           ignore-unfixed: true
@@ -84,7 +84,7 @@ jobs:
         ports:
           - 9090:9090
       loki:
-        image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+        image: grafana/loki:3.7.10@sha256:b43c257ccfc925d4a50b8717cac61a3b51df8c48d01847936057e5c4075a24a7
         ports:
           - 3100:3100
     strategy:
