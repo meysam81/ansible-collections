@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/meysam81/ansible-collections/compare/v1.14.7...v1.15.0) (2026-11-28)
+
+
+### Features
+
+* **nbde_hcloud_convert:** fresh-host mode, first-boot wait, Tang reachability before downtime ([#151](https://github.com/meysam81/ansible-collections/issues/151)) ([6de9307](https://github.com/meysam81/ansible-collections/commit/6de9307bc78a851491080196170ea6b440139be2))
+
 ## [1.14.7](https://github.com/meysam81/ansible-collections/compare/v1.14.6...v1.14.7) (2026-11-24)
 
 
