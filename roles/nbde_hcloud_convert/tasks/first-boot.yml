@@ -1,0 +1,32 @@
+---
+# Before anything changes on the host: cloud-init has finished and no reboot
+# is pending (files/nbde-first-boot-wait.sh). A server created moments ago may
+# still be on its first boot, or have scheduled a reboot that would cut the
+# package install or the rescue boot short. A long-running host passes at once.
+- name: Wait for the first boot to settle
+  ansible.builtin.script:
+    cmd: nbde-first-boot-wait.sh
+  environment:
+    NBDE_SETTLE: "{{ nbde_hcloud_convert_first_boot_settle }}"
+    NBDE_WAIT_TIMEOUT: "{{ nbde_hcloud_convert_first_boot_timeout }}"
+  register: nbde_hcloud_convert_first_boot
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Stop while the first boot is unsettled
+  ansible.builtin.fail:
+    msg: >-
+      {{ inventory_hostname }}:
+      {{ 'a reboot or shutdown is scheduled (a first boot schedules one): let it happen, then run this again.'
+         if nbde_hcloud_convert_first_boot.rc == 77 else
+         'cloud-init still running after ' ~ nbde_hcloud_convert_first_boot_timeout ~ ' s.'
+         if nbde_hcloud_convert_first_boot.rc == 124 else
+         'the first-boot check failed (rc ' ~ nbde_hcloud_convert_first_boot.rc ~ '):' }}
+      {{ nbde_hcloud_convert_first_boot.stdout | default('') | trim }}
+  when: nbde_hcloud_convert_first_boot.rc != 0
+
+- name: Show what cloud-init reported
+  ansible.builtin.debug:
+    msg: "{{ nbde_hcloud_convert_first_boot.stdout_lines }}"
+  when: "'warning:' in nbde_hcloud_convert_first_boot.stdout"
